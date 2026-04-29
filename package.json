@@ -71,15 +71,6 @@
       ]
     }
   },
-  "files": [
-    "dist",
-    "docs/designs/prototypes/assets",
-    "resources",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE",
-    "package.json"
-  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "watch": "tsc -watch -p tsconfig.json",
@@ -93,7 +84,8 @@
     "validate:e2e": "npm --prefix e2e run validate",
     "validate": "npm run validate:root && npm run validate:e2e",
     "precommit": "npm run validate",
-    "package": "npx @vscode/vsce package --no-dependencies",
+    "package": "vsce package",
+    "publish": "vsce publish --skip-duplicate",
     "vscode:prepublish": "npm run build",
     "prepare": "node ./scripts/setup-husky.cjs"
   },
@@ -106,6 +98,7 @@
     "@types/node": "^22.14.1",
     "@types/vscode": "^1.90.0",
     "@vitest/coverage-v8": "^3.1.1",
+    "@vscode/vsce": "^3.6.3",
     "cspell": "^8.17.1",
     "eslint": "^9.24.0",
     "globals": "^16.0.0",

@@ -1,0 +1,88 @@
+name: Publish Extension
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish.yml'
+      - '.vscodeignore'
+      - 'CHANGELOG.md'
+      - 'LICENSE'
+      - 'README.md'
+      - 'docs/designs/prototypes/assets/**'
+      - 'package-lock.json'
+      - 'package.json'
+      - 'resources/**'
+      - 'src/**'
+      - 'tsconfig*.json'
+      - 'vitest.config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install E2E dependencies
+        run: npm --prefix e2e ci
+
+      - name: Validate root package
+        run: npm run validate:root
+
+      - name: Validate E2E package
+        run: npm --prefix e2e run validate
+
+      - name: Package VSIX
+        run: npm run package -- --out "jira-ops-${{ github.sha }}.vsix"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jira-ops-vsix
+          path: jira-ops-*.vsix
+          if-no-files-found: error
+
+      - name: Check Marketplace token
+        run: |
+          if [ -z "${VSCE_PAT}" ]; then
+            echo "::error::Missing VSCE_PAT repository secret."
+            exit 1
+          fi
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Publish to VS Code Marketplace
+        run: npm run publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "::notice::Release v${VERSION} already exists. Skipping release creation."
+            exit 0
+          fi
+
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes-file CHANGELOG.md \
+            --latest
