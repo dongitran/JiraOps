@@ -1,0 +1,117 @@
+{
+  "name": "jira-ops",
+  "displayName": "JiraOps",
+  "description": "Jira issue operations for VS Code, starting with remote web link discovery.",
+  "version": "0.1.0",
+  "publisher": "dongtran",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dongitran/JiraOps"
+  },
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:jiraOps.linksView",
+    "onCommand:jiraOps.openLinksView"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "jiraOps.openLinksView",
+        "title": "Open Links View",
+        "category": "JiraOps"
+      },
+      {
+        "command": "jiraOps.connectJira",
+        "title": "Connect Jira",
+        "category": "JiraOps"
+      },
+      {
+        "command": "jiraOps.disconnectJira",
+        "title": "Disconnect Jira",
+        "category": "JiraOps"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "jiraOps",
+          "title": "JiraOps",
+          "icon": "resources/jira-ops.svg"
+        }
+      ]
+    },
+    "views": {
+      "jiraOps": [
+        {
+          "id": "jiraOps.linksView",
+          "name": "Web Links",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "jiraOps.openLinksView"
+        },
+        {
+          "command": "jiraOps.connectJira"
+        },
+        {
+          "command": "jiraOps.disconnectJira"
+        }
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "docs/designs/prototypes/assets",
+    "resources",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -watch -p tsconfig.json",
+    "typecheck": "npm run typecheck:src && npm run typecheck:test",
+    "typecheck:src": "tsc -p tsconfig.json --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "cspell": "cspell \"**/*\" --no-progress --no-must-find-files --gitignore",
+    "test:unit": "vitest run --coverage",
+    "validate:root": "npm run typecheck && npm run lint && npm run cspell && npm run test:unit",
+    "validate:e2e": "npm --prefix e2e run validate",
+    "validate": "npm run validate:root && npm run validate:e2e",
+    "precommit": "npm run validate",
+    "package": "npx @vscode/vsce package --no-dependencies",
+    "vscode:prepublish": "npm run build",
+    "prepare": "node ./scripts/setup-husky.cjs"
+  },
+  "dependencies": {
+    "jira-oauth-client": "^0.1.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "@types/node": "^22.14.1",
+    "@types/vscode": "^1.90.0",
+    "@vitest/coverage-v8": "^3.1.1",
+    "cspell": "^8.17.1",
+    "eslint": "^9.24.0",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.29.1",
+    "vitest": "^3.1.1"
+  }
+}

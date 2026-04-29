@@ -1,0 +1,16 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "allowCompoundWords": true,
+  "ignorePaths": [
+    "node_modules",
+    "playwright-report",
+    "test-results"
+  ],
+  "words": [
+    "Atlassian",
+    "Jira",
+    "JiraOps",
+    "Remotelink"
+  ]
+}

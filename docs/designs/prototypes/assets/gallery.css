@@ -1,0 +1,123 @@
+:root {
+  color-scheme: dark;
+  --gallery-bg: #1e1e1e;
+  --gallery-side: #181818;
+  --gallery-editor: #252526;
+  --gallery-border: #3c3c3c;
+  --gallery-text: #e7e7e7;
+  --gallery-muted: #a6a6a6;
+  --gallery-accent: #2aa198;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body.gallery-page {
+  background: var(--gallery-bg);
+  color: var(--gallery-text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.gallery-theme-light {
+  color-scheme: light;
+  --gallery-bg: #f3f3f3;
+  --gallery-side: #ffffff;
+  --gallery-editor: #f8f8f8;
+  --gallery-border: #d7d7d7;
+  --gallery-text: #1f1f1f;
+  --gallery-muted: #606060;
+  --gallery-accent: #0f766e;
+}
+
+body.gallery-theme-high-contrast {
+  color-scheme: dark;
+  --gallery-bg: #000000;
+  --gallery-side: #000000;
+  --gallery-editor: #000000;
+  --gallery-border: #ffffff;
+  --gallery-text: #ffffff;
+  --gallery-muted: #ffffff;
+  --gallery-accent: #f8d66d;
+}
+
+.workspace-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  min-height: 100vh;
+  background: var(--gallery-bg);
+}
+
+.sidebar-host {
+  position: relative;
+  border-right: 1px solid var(--gallery-border);
+  background: var(--gallery-side);
+  min-width: 0;
+}
+
+#prototype-frame {
+  display: block;
+  width: 100%;
+  height: 100vh;
+  border: 0;
+  background: transparent;
+}
+
+.editor-surface {
+  background:
+    linear-gradient(90deg, transparent 0, transparent 19px, rgba(127, 127, 127, 0.12) 20px),
+    linear-gradient(0deg, transparent 0, transparent 19px, rgba(127, 127, 127, 0.1) 20px),
+    var(--gallery-editor);
+  background-size: 20px 20px;
+}
+
+.floating-nav {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+}
+
+.controls-toggle,
+.floating-controls-panel button {
+  border: 1px solid var(--gallery-border);
+  background: var(--gallery-side);
+  color: var(--gallery-text);
+  font: inherit;
+}
+
+.controls-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+
+.floating-controls-panel {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--gallery-border);
+  background: var(--gallery-side);
+}
+
+.floating-controls-panel button {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 4px;
+}
+
+@media (max-width: 720px) {
+  .workspace-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-surface {
+    display: none;
+  }
+}

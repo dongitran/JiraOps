@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JiraOps Prototype</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./assets/gallery.css" />
+  </head>
+  <body class="gallery-page gallery-theme-dark">
+    <main class="workspace-shell">
+      <aside class="sidebar-host">
+        <iframe
+          id="prototype-frame"
+          title="JiraOps Prototype"
+          loading="eager"
+          src="./variants/dashboard.html"
+        ></iframe>
+        <nav class="floating-nav" aria-label="Prototype controls">
+          <button
+            id="controls-toggle"
+            class="controls-toggle"
+            type="button"
+            aria-label="Toggle prototype controls"
+            aria-expanded="false"
+            aria-controls="floating-controls-panel"
+          >
+            i
+          </button>
+          <div id="floating-controls-panel" class="floating-controls-panel" hidden>
+            <button id="theme-cycle" type="button" aria-live="polite">Theme: Dark</button>
+          </div>
+        </nav>
+      </aside>
+      <section class="editor-surface" aria-hidden="true"></section>
+    </main>
+    <script type="module" src="./assets/gallery.js"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "jira-ops-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Playwright E2E tests for the JiraOps VS Code extension.",
+  "scripts": {
+    "pretest": "npm --prefix .. run build",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"{src,tests}/**/*.ts\" playwright.config.ts",
+    "cspell": "cspell \"**/*\" --no-progress --no-must-find-files --gitignore",
+    "validate": "npm run typecheck && npm run lint && npm run cspell"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.24.0",
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.14.1",
+    "cspell": "^8.17.1",
+    "eslint": "^9.24.0",
+    "globals": "^16.0.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.29.1"
+  }
+}
