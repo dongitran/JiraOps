@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
 
 import {
+  JiraCredentialSetupCanceledError,
+  applyJiraOAuthCredentialsToEnv,
+  ensureJiraOAuthCredentials,
+  getJiraOAuthCredentials,
+  type JiraCredentialInputOptions,
+} from './jiraCredentials';
+import {
   fetchJiraRemoteLinks,
   OAuthJiraTokenProvider,
   type JiraConnectionStatus,
@@ -115,10 +122,10 @@ export class JiraOpsPanelProvider
       const status = await this.connectJira();
       this.outputChannel.appendLine('Jira connection is ready.');
       this.postConnectionChanged(status, connectionSuccessMessage(status));
-    } catch {
+    } catch (error) {
       this.postMessage({
         type: ERROR_MESSAGE_TYPE,
-        message: 'Jira connection could not be completed.',
+        message: connectionErrorMessage(error),
       });
     }
   }
@@ -198,6 +205,7 @@ export class JiraOpsPanelProvider
       return testConnectionStatus(this.testModeConnected);
     }
 
+    await this.applyKnownJiraOAuthCredentials();
     return this.tokenProvider.getConnectionStatus();
   }
 
@@ -207,6 +215,7 @@ export class JiraOpsPanelProvider
       return testConnectionStatus(true);
     }
 
+    await this.prepareJiraOAuthCredentials();
     return this.tokenProvider.connect();
   }
 
@@ -217,6 +226,19 @@ export class JiraOpsPanelProvider
     }
 
     return this.tokenProvider.disconnect();
+  }
+
+  private async applyKnownJiraOAuthCredentials(): Promise<void> {
+    const credentials = await getJiraOAuthCredentials();
+    applyJiraOAuthCredentialsToEnv(credentials);
+  }
+
+  private async prepareJiraOAuthCredentials(): Promise<void> {
+    await ensureJiraOAuthCredentials({
+      showInputBox: (options: JiraCredentialInputOptions) => {
+        return vscode.window.showInputBox(options);
+      },
+    });
   }
 
   private postConnectionChanged(
@@ -293,6 +315,22 @@ function testConnectionStatus(connected: boolean): JiraConnectionStatus {
 
 function connectionSuccessMessage(status: JiraConnectionStatus): string {
   return `Connected to ${status.cloudName ?? 'Jira Cloud'}.`;
+}
+
+function connectionErrorMessage(error: unknown): string {
+  if (error instanceof JiraCredentialSetupCanceledError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && isJiraCredentialSetupMessage(error.message)) {
+    return error.message;
+  }
+
+  return 'Jira connection could not be completed.';
+}
+
+function isJiraCredentialSetupMessage(message: string): boolean {
+  return message.startsWith('Jira OAuth client ');
 }
 
 class JiraConnectionRequiredError extends Error {}

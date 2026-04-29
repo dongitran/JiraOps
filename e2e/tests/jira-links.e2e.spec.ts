@@ -91,4 +91,40 @@ test.describe('JiraOps links workflow', () => {
       await cleanupExtensionHost(session);
     }
   });
+
+  test('User can retry Jira connection after a connection error', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openJiraOpsView(session.window);
+
+      await frame.evaluate(() => {
+        window.dispatchEvent(
+          new MessageEvent('message', {
+            data: { type: 'jiraOps.connectionLoading' },
+          })
+        );
+        window.dispatchEvent(
+          new MessageEvent('message', {
+            data: {
+              type: 'jiraOps.linksError',
+              message: 'Jira connection could not be completed.',
+            },
+          })
+        );
+      });
+
+      await expect(frame.getByText('Not connected', { exact: true })).toBeVisible();
+      await expect(frame.getByRole('status')).toContainText(
+        'Jira connection could not be completed.'
+      );
+      await expect(frame.getByRole('button', { name: 'Connect Jira' })).toBeEnabled();
+      await expect(frame.getByRole('button', { name: 'Fetch' })).toBeDisabled();
+
+      await clickWithFallback(frame.getByRole('button', { name: 'Connect Jira' }));
+      await expect(frame.getByRole('status')).toContainText('Connected to Example Jira.');
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
 });

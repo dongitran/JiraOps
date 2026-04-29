@@ -2,7 +2,7 @@
   "name": "jira-ops",
   "displayName": "JiraOps",
   "description": "Jira issue operations for VS Code, starting with remote web link discovery.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "dongtran",
   "license": "MIT",
   "repository": {
@@ -37,6 +37,11 @@
         "command": "jiraOps.disconnectJira",
         "title": "Disconnect Jira",
         "category": "JiraOps"
+      },
+      {
+        "command": "jiraOps.clearJiraCredentials",
+        "title": "Clear Saved Jira OAuth Credentials",
+        "category": "JiraOps"
       }
     ],
     "viewsContainers": {
@@ -67,6 +72,9 @@
         },
         {
           "command": "jiraOps.disconnectJira"
+        },
+        {
+          "command": "jiraOps.clearJiraCredentials"
         }
       ]
     }

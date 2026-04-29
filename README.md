@@ -1,6 +1,6 @@
 # JiraOps
 
-[![Version](https://img.shields.io/badge/version-0.1.0-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.2-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
@@ -49,13 +49,17 @@ issue key or browse URL, and select **Fetch**.
 ## 🔐 Jira Authentication
 
 JiraOps uses
-[`jira-oauth-client`](https://www.npmjs.com/package/jira-oauth-client). Set
-these environment variables before the first real connection:
+[`jira-oauth-client`](https://www.npmjs.com/package/jira-oauth-client). You can
+set these environment variables before the first real connection:
 
 ```bash
 export JIRA_CLIENT_ID="your-atlassian-oauth-client-id"
 export JIRA_CLIENT_SECRET="your-atlassian-oauth-client-secret"
 ```
+
+If those variables are not available to VS Code, **Connect Jira** asks for the
+OAuth app client ID and client secret, then saves them in VS Code SecretStorage
+(system keychain). Environment variables still take priority over saved values.
 
 Your Atlassian OAuth app must allow:
 
@@ -65,7 +69,8 @@ http://localhost:30129/callback
 
 Use **Connect Jira** to start the browser OAuth flow. **Fetch** requires an
 existing connection and refreshes expired tokens when a refresh token is
-available.
+available. Use **JiraOps: Clear Saved Jira OAuth Credentials** from the Command
+Palette to remove saved OAuth app credentials.
 
 Never log, commit, or share OAuth secrets, access tokens, refresh tokens,
 Authorization headers, or raw credential payloads.
@@ -117,7 +122,8 @@ VS Code Activity Bar
 
 | Symptom | Check |
 | --- | --- |
-| `Jira remote links could not be loaded.` | OAuth credentials, callback URL, scopes, issue access, token freshness |
+| `Jira connection could not be completed.` | Re-run **Connect Jira** and verify OAuth app credentials, callback URL, and scopes |
+| `Jira remote links could not be loaded.` | Issue access, token freshness, Jira remote-link permissions |
 | Browser login never completes | Port `30129` is free and callback URL matches the OAuth app |
 | E2E cannot find VS Code | Set `VSCODE_EXECUTABLE_PATH` |
 | E2E returns mock links | Expected. E2E uses `JIRA_OPS_TEST_MODE=1` |

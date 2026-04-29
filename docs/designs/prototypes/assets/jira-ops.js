@@ -301,6 +301,11 @@ function handleLoadedMessage(message) {
 }
 
 function handleErrorMessage(message) {
+  if (state.connection === 'connecting') {
+    state.connection = 'disconnected';
+    state.cloudName = '';
+  }
+
   state.links = [];
   state.status =
     typeof message.message === 'string' && message.message.length > 0

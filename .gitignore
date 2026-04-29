@@ -2,6 +2,7 @@ node_modules/
 dist/
 coverage/
 *.vsix
+jiraops-*.png
 .DS_Store
 .env
 .env.*

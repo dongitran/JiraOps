@@ -10,6 +10,7 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: [
         'src/issueInput.ts',
+        'src/jiraCredentials.ts',
         'src/jiraClient.ts',
         'src/remoteLinks.ts',
         'src/testModeData.ts',

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Prompt for missing Jira OAuth app credentials and store them in VS Code SecretStorage.
+- Recover the webview connection button after failed or canceled Jira connection attempts.
+
 ## 0.1.1
 
 - Bundle the extension runtime with esbuild to reduce VSIX file count and package size.
