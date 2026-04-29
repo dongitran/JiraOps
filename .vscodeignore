@@ -7,9 +7,11 @@
 .playwright-mcp/**
 AGENTS.md
 coverage/**
+dist/**/*.map
 docs/designs/prototypes/index.html
 docs/designs/prototypes/variants/**
 e2e/**
+node_modules/**
 scripts/**
 src/**
 test-results/**
@@ -19,5 +21,6 @@ plan.md
 tsconfig.test.json
 vitest.config.ts
 eslint.config.cjs
+esbuild.mjs
 tsconfig.json
 cspell.json
