@@ -2,6 +2,7 @@ export const WEBVIEW_READY_MESSAGE_TYPE = 'jiraOps.webviewReady';
 export const FETCH_LINKS_MESSAGE_TYPE = 'jiraOps.fetchLinks';
 export const CONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.connectJira';
 export const DISCONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.disconnectJira';
+export const OPEN_SETTINGS_MESSAGE_TYPE = 'jiraOps.openSettings';
 export const OPEN_EXTERNAL_LINK_MESSAGE_TYPE = 'jiraOps.openExternalLink';
 export const LOADING_MESSAGE_TYPE = 'jiraOps.linksLoading';
 export const LOADED_MESSAGE_TYPE = 'jiraOps.linksLoaded';
@@ -26,6 +27,10 @@ export interface DisconnectJiraMessage {
   readonly type: typeof DISCONNECT_JIRA_MESSAGE_TYPE;
 }
 
+export interface OpenSettingsMessage {
+  readonly type: typeof OPEN_SETTINGS_MESSAGE_TYPE;
+}
+
 export interface OpenExternalLinkMessage {
   readonly type: typeof OPEN_EXTERNAL_LINK_MESSAGE_TYPE;
   readonly url: string;
@@ -36,6 +41,7 @@ export type WebviewInboundMessage =
   | FetchLinksMessage
   | ConnectJiraMessage
   | DisconnectJiraMessage
+  | OpenSettingsMessage
   | OpenExternalLinkMessage;
 
 export function isWebviewReadyMessage(
@@ -65,6 +71,12 @@ export function isDisconnectJiraMessage(
   message: unknown
 ): message is DisconnectJiraMessage {
   return hasMessageType(message, DISCONNECT_JIRA_MESSAGE_TYPE);
+}
+
+export function isOpenSettingsMessage(
+  message: unknown
+): message is OpenSettingsMessage {
+  return hasMessageType(message, OPEN_SETTINGS_MESSAGE_TYPE);
 }
 
 export function isOpenExternalLinkMessage(

@@ -95,11 +95,27 @@ a:focus-visible {
   gap: 10px;
 }
 
-.title-row h1 {
+.title-copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.title-copy h1 {
   margin: 0;
+  overflow: hidden;
   font-size: 18px;
   font-weight: 650;
   letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
 }
 
 .connection-state {
@@ -111,6 +127,37 @@ a:focus-visible {
   color: var(--accent-color);
   font-size: 12px;
   text-align: center;
+}
+
+.icon-button,
+.back-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-color);
+}
+
+.icon-button {
+  font-size: 16px;
+}
+
+.back-button {
+  flex: 0 0 auto;
+  font-size: 17px;
+}
+
+.icon-button:hover,
+.back-button:hover {
+  background: var(--surface-2);
+}
+
+.icon-button[aria-pressed='true'] {
+  border-color: color-mix(in oklab, var(--accent-color) 50%, var(--border-color));
+  color: var(--accent-color);
 }
 
 .connection-state[data-state='connected'] {
@@ -263,6 +310,48 @@ a:focus-visible {
   padding: 10px 10px 14px;
 }
 
+.settings-page {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  min-height: 0;
+}
+
+.settings-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-bg);
+}
+
+.settings-title {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-title h2 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-color);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-title p {
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted-color);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .summary-row {
   display: flex;
   align-items: center;
@@ -337,6 +426,19 @@ a:focus-visible {
 }
 
 @media (max-width: 340px) {
+  .title-row {
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .connection-state {
+    min-width: 0;
+    max-width: 112px;
+  }
+
   .connection-region {
     align-items: stretch;
     flex-direction: column;

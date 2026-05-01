@@ -3,6 +3,7 @@ const WEBVIEW_READY_MESSAGE_TYPE = 'jiraOps.webviewReady';
 const FETCH_LINKS_MESSAGE_TYPE = 'jiraOps.fetchLinks';
 const CONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.connectJira';
 const DISCONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.disconnectJira';
+const OPEN_SETTINGS_MESSAGE_TYPE = 'jiraOps.openSettings';
 const OPEN_EXTERNAL_LINK_MESSAGE_TYPE = 'jiraOps.openExternalLink';
 const LOADING_MESSAGE_TYPE = 'jiraOps.linksLoading';
 const LOADED_MESSAGE_TYPE = 'jiraOps.linksLoaded';
@@ -43,6 +44,7 @@ const state = {
   loading: false,
   connection: 'disconnected',
   cloudName: '',
+  screen: 'home',
 };
 const vscodeApi = resolveVscodeApi();
 let didPostReadyMessage = false;
@@ -81,57 +83,48 @@ window.addEventListener('message', (event) => {
 
   if (event.data.type === CONNECTION_CHANGED_MESSAGE_TYPE) {
     handleConnectionChangedMessage(event.data);
+    return;
+  }
+
+  if (event.data.type === OPEN_SETTINGS_MESSAGE_TYPE) {
+    openSettingsScreen();
   }
 });
 
 function render() {
   appElement.innerHTML = `
-    <section class="jira-shell" aria-label="JiraOps links workspace">
-      <header class="jira-header">
-        <div class="title-row">
-          <h1>JiraOps</h1>
-          <span class="connection-state" data-state="${escapeAttribute(state.connection)}">${escapeHtml(renderConnectionPillText())}</span>
-        </div>
-        <p class="subtitle">Find web links attached to a Jira issue.</p>
-      </header>
-
-      ${renderConnectionRegion()}
-
-      <form class="search-region" aria-label="Jira issue lookup">
-        <div class="field">
-          <label for="issue-input">Jira issue URL or key</label>
-          <input id="issue-input" name="issue-input" value="${escapeHtml(state.issueInput)}" autocomplete="off" />
-        </div>
-        <button class="fetch-button" type="submit"${state.loading || state.connection !== 'connected' ? ' disabled' : ''}>Fetch</button>
-      </form>
-
-      <p class="status-line" role="status" data-tone="${state.tone}">${escapeHtml(state.status)}</p>
-
-      <section class="links-region" aria-label="Jira web links">
-        ${renderLinks()}
-      </section>
+    <section class="jira-shell" aria-label="Jira Ops links workspace">
+      ${renderHeader()}
+      ${state.screen === 'settings' ? renderSettingsScreen() : renderHomeScreen()}
     </section>
   `;
 
   const form = appElement.querySelector('form');
   const input = appElement.querySelector('#issue-input');
-  if (!(form instanceof HTMLFormElement) || !(input instanceof HTMLInputElement)) {
+  if (state.screen === 'home' && (!(form instanceof HTMLFormElement) || !(input instanceof HTMLInputElement))) {
     throw new Error('JiraOps prototype form was not rendered.');
   }
 
-  form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    submitIssueInput(input.value);
-  });
+  if (form instanceof HTMLFormElement && input instanceof HTMLInputElement) {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitIssueInput(input.value);
+    });
 
-  input.addEventListener('input', () => {
-    state.issueInput = input.value;
-  });
+    input.addEventListener('input', () => {
+      state.issueInput = input.value;
+    });
+  }
 
-  const connectionButton = appElement.querySelector('button[data-connection-action]');
-  if (connectionButton instanceof HTMLButtonElement) {
+  for (const connectionButton of appElement.querySelectorAll('button[data-connection-action]')) {
     connectionButton.addEventListener('click', () => {
       handleConnectionAction(connectionButton.dataset.connectionAction ?? '');
+    });
+  }
+
+  for (const navigationButton of appElement.querySelectorAll('button[data-nav-action]')) {
+    navigationButton.addEventListener('click', () => {
+      handleNavigationAction(navigationButton.dataset.navAction ?? '');
     });
   }
 
@@ -150,7 +143,91 @@ function render() {
   }
 }
 
+function renderHeader() {
+  return `
+    <header class="jira-header">
+      <div class="title-row">
+        <div class="title-copy">
+          <h1>Jira Ops</h1>
+          <p class="subtitle">Find web links attached to a Jira issue.</p>
+        </div>
+        <div class="header-actions">
+          <span class="connection-state" data-state="${escapeAttribute(state.connection)}">${escapeHtml(renderConnectionPillText())}</span>
+          <button class="icon-button" data-nav-action="settings" type="button" aria-label="Open Settings" aria-pressed="${state.screen === 'settings' ? 'true' : 'false'}" title="Open Settings">
+            <span aria-hidden="true">&#9881;</span>
+          </button>
+        </div>
+      </div>
+    </header>
+  `;
+}
+
+function renderHomeScreen() {
+  return `
+    ${renderConnectionRegion()}
+
+    <form class="search-region" aria-label="Jira issue lookup">
+      <div class="field">
+        <label for="issue-input">Jira issue URL or key</label>
+        <input id="issue-input" name="issue-input" value="${escapeHtml(state.issueInput)}" autocomplete="off" />
+      </div>
+      <button class="fetch-button" type="submit"${state.loading || state.connection !== 'connected' ? ' disabled' : ''}>Fetch</button>
+    </form>
+
+    <p class="status-line" role="status" data-tone="${state.tone}">${escapeHtml(state.status)}</p>
+
+    <section class="links-region" aria-label="Jira web links">
+      ${renderLinks()}
+    </section>
+  `;
+}
+
+function renderSettingsScreen() {
+  return `
+    <section class="settings-page" aria-label="Jira Ops settings">
+      <div class="settings-heading">
+        <button class="back-button" data-nav-action="home" type="button" aria-label="Back to links" title="Back to links">
+          <span aria-hidden="true">&#8592;</span>
+        </button>
+        <div class="settings-title">
+          <h2>Settings</h2>
+          <p>Jira connection</p>
+        </div>
+      </div>
+      ${renderSettingsConnectionRegion()}
+      <p class="status-line" role="status" data-tone="${state.tone}">${escapeHtml(state.status)}</p>
+    </section>
+  `;
+}
+
 function renderConnectionRegion() {
+  const connected = state.connection === 'connected';
+  const connecting = state.connection === 'connecting';
+  const title = connected
+    ? `Connected to ${state.cloudName.length > 0 ? state.cloudName : 'Jira Cloud'}`
+    : connecting
+      ? 'Connecting Jira...'
+      : 'Jira is not connected';
+  const detail = connected
+    ? 'Ready to load visible issue links.'
+    : 'Connect once to reuse OAuth tokens.';
+  const button = connected
+    ? ''
+    : `<button class="connection-button" data-variant="primary" data-connection-action="connect" type="button"${connecting ? ' disabled' : ''}>${connecting ? 'Connecting...' : 'Connect Jira'}</button>`;
+
+  return `
+    <section class="connection-region" aria-label="Jira connection">
+      <div class="connection-copy">
+        <span class="connection-eyebrow">Jira Cloud</span>
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(detail)}</span>
+      </div>
+      ${button}
+    </section>
+  `;
+}
+
+function renderSettingsConnectionRegion() {
   const connected = state.connection === 'connected';
   const connecting = state.connection === 'connecting';
   const action = connected ? 'disconnect' : 'connect';
@@ -161,11 +238,11 @@ function renderConnectionRegion() {
       ? 'Connecting Jira...'
       : 'Jira is not connected';
   const detail = connected
-    ? 'Ready to load visible issue links.'
-    : 'Connect once to reuse OAuth tokens.';
+    ? 'Saved tokens stay available until disconnected.'
+    : 'Connect Jira before fetching issue links.';
 
   return `
-    <section class="connection-region" aria-label="Jira connection">
+    <section class="connection-region settings-connection" aria-label="Jira connection settings">
       <div class="connection-copy">
         <span class="connection-eyebrow">Jira Cloud</span>
         <strong>${escapeHtml(title)}</strong>
@@ -256,6 +333,36 @@ function handleConnectionAction(action) {
   if (action === 'disconnect') {
     disconnectJira();
   }
+}
+
+function handleNavigationAction(action) {
+  if (action === 'settings') {
+    requestSettingsScreen();
+    return;
+  }
+
+  if (action === 'home') {
+    openHomeScreen();
+  }
+}
+
+function requestSettingsScreen() {
+  if (vscodeApi !== null) {
+    vscodeApi.postMessage({ type: OPEN_SETTINGS_MESSAGE_TYPE });
+    return;
+  }
+
+  openSettingsScreen();
+}
+
+function openSettingsScreen() {
+  state.screen = 'settings';
+  render();
+}
+
+function openHomeScreen() {
+  state.screen = 'home';
+  render();
 }
 
 function connectJira() {

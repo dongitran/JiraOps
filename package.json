@@ -1,8 +1,8 @@
 {
   "name": "jira-ops",
-  "displayName": "JiraOps",
+  "displayName": "Jira Ops",
   "description": "Jira issue operations for VS Code, starting with remote web link discovery.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "dongtran",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,8 @@
   ],
   "activationEvents": [
     "onView:jiraOps.linksView",
-    "onCommand:jiraOps.openLinksView"
+    "onCommand:jiraOps.openLinksView",
+    "onCommand:jiraOps.openSettings"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -26,29 +27,35 @@
       {
         "command": "jiraOps.openLinksView",
         "title": "Open Links View",
-        "category": "JiraOps"
+        "category": "Jira Ops"
       },
       {
         "command": "jiraOps.connectJira",
         "title": "Connect Jira",
-        "category": "JiraOps"
+        "category": "Jira Ops"
       },
       {
         "command": "jiraOps.disconnectJira",
         "title": "Disconnect Jira",
-        "category": "JiraOps"
+        "category": "Jira Ops"
+      },
+      {
+        "command": "jiraOps.openSettings",
+        "title": "Open Settings",
+        "category": "Jira Ops",
+        "icon": "$(gear)"
       },
       {
         "command": "jiraOps.clearJiraCredentials",
         "title": "Clear Saved Jira OAuth Credentials",
-        "category": "JiraOps"
+        "category": "Jira Ops"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "jiraOps",
-          "title": "JiraOps",
+          "title": "Jira Ops",
           "icon": "resources/jira-ops.svg"
         }
       ]
@@ -57,7 +64,7 @@
       "jiraOps": [
         {
           "id": "jiraOps.linksView",
-          "name": "Web Links",
+          "name": "Jira Ops",
           "type": "webview"
         }
       ]
@@ -74,7 +81,17 @@
           "command": "jiraOps.disconnectJira"
         },
         {
+          "command": "jiraOps.openSettings"
+        },
+        {
           "command": "jiraOps.clearJiraCredentials"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "jiraOps.openSettings",
+          "when": "view == jiraOps.linksView",
+          "group": "navigation@0"
         }
       ]
     }

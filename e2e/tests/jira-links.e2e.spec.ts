@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Frame } from '@playwright/test';
 
 import {
   cleanupExtensionHost,
@@ -7,15 +7,17 @@ import {
   openJiraOpsView,
 } from './support/jiraOpsHarness';
 
-test.describe('JiraOps links workflow', () => {
+test.describe('Jira Ops links workflow', () => {
   test('User can view remote web links for a Jira issue key', async () => {
     const session = await launchExtensionHost();
 
     try {
       const frame = await openJiraOpsView(session.window);
 
+      await expectHomeShell(frame);
       await clickWithFallback(frame.getByRole('button', { name: 'Connect Jira' }));
       await expect(frame.getByRole('status')).toContainText('Connected to Example Jira.');
+      await expect(frame.getByRole('button', { name: 'Disconnect' })).toHaveCount(0);
       await frame.getByLabel('Jira issue URL or key').fill('OPS-123');
       await clickWithFallback(frame.getByRole('button', { name: 'Fetch' }));
 
@@ -35,7 +37,7 @@ test.describe('JiraOps links workflow', () => {
       const frame = await openJiraOpsView(session.window);
 
       await clickWithFallback(frame.getByRole('button', { name: 'Connect Jira' }));
-      await expect(frame.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Disconnect' })).toHaveCount(0);
       await frame
         .getByLabel('Jira issue URL or key')
         .fill('https://example.atlassian.net/browse/OPS-123?focusedCommentId=12');
@@ -66,6 +68,32 @@ test.describe('JiraOps links workflow', () => {
     }
   });
 
+  test('User can open settings from the header and return to links', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openJiraOpsView(session.window);
+
+      await expectHomeShell(frame);
+      await openSettings(frame);
+
+      await expect(frame.getByRole('heading', { name: 'Settings' })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Back to links' })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Fetch' })).toHaveCount(0);
+      await expect(frame.getByLabel('Jira issue URL or key')).toHaveCount(0);
+      await expect(frame.getByRole('status')).toContainText(
+        'Connect Jira to fetch remote web links.'
+      );
+
+      await returnToLinks(frame);
+      await expectHomeShell(frame);
+      await expect(frame.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
   test('User can connect and disconnect Jira without exposing tokens', async () => {
     const session = await launchExtensionHost();
 
@@ -77,15 +105,25 @@ test.describe('JiraOps links workflow', () => {
       await clickWithFallback(frame.getByRole('button', { name: 'Connect Jira' }));
 
       await expect(frame.getByRole('status')).toContainText('Connected to Example Jira.');
-      await expect(frame.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Disconnect' })).toHaveCount(0);
       await expect(frame.getByRole('button', { name: 'Fetch' })).toBeEnabled();
+      await frame.getByLabel('Jira issue URL or key').fill('OPS-123');
+      await clickWithFallback(frame.getByRole('button', { name: 'Fetch' }));
+      await expect(frame.getByRole('link', { name: 'Design Review' })).toBeVisible();
 
+      await openSettings(frame);
       await clickWithFallback(frame.getByRole('button', { name: 'Disconnect' }));
 
       await expect(frame.getByText('Jira is not connected', { exact: true })).toBeVisible();
       await expect(frame.getByRole('status')).toContainText('Jira disconnected.');
       await expect(frame.getByRole('button', { name: 'Connect Jira' })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Disconnect' })).toHaveCount(0);
+      await expect(frame.getByText('sample-access-value')).toHaveCount(0);
+
+      await returnToLinks(frame);
       await expect(frame.getByRole('button', { name: 'Fetch' })).toBeDisabled();
+      await expect(frame.getByRole('link', { name: 'Design Review' })).toHaveCount(0);
+      await expect(frame.getByText('No web links', { exact: true })).toBeVisible();
       await expect(frame.getByText('sample-access-value')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
@@ -120,6 +158,7 @@ test.describe('JiraOps links workflow', () => {
       );
       await expect(frame.getByRole('button', { name: 'Connect Jira' })).toBeEnabled();
       await expect(frame.getByRole('button', { name: 'Fetch' })).toBeDisabled();
+      await expect(frame.getByRole('button', { name: 'Disconnect' })).toHaveCount(0);
 
       await clickWithFallback(frame.getByRole('button', { name: 'Connect Jira' }));
       await expect(frame.getByRole('status')).toContainText('Connected to Example Jira.');
@@ -128,3 +167,20 @@ test.describe('JiraOps links workflow', () => {
     }
   });
 });
+
+async function expectHomeShell(frame: Frame): Promise<void> {
+  await expect(frame.getByRole('heading', { name: 'Jira Ops' })).toBeVisible();
+  await expect(frame.getByRole('button', { name: 'Open Settings' })).toBeVisible();
+  await expect(frame.getByLabel('Jira issue URL or key')).toBeVisible();
+  await expect(frame.getByRole('button', { name: 'Fetch' })).toBeVisible();
+}
+
+async function openSettings(frame: Frame): Promise<void> {
+  await clickWithFallback(frame.getByRole('button', { name: 'Open Settings' }));
+  await expect(frame.getByRole('heading', { name: 'Settings' })).toBeVisible();
+}
+
+async function returnToLinks(frame: Frame): Promise<void> {
+  await clickWithFallback(frame.getByRole('button', { name: 'Back to links' }));
+  await expect(frame.getByLabel('Jira issue URL or key')).toBeVisible();
+}

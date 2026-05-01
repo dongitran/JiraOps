@@ -25,7 +25,9 @@ import {
   isDisconnectJiraMessage,
   isFetchLinksMessage,
   isOpenExternalLinkMessage,
+  isOpenSettingsMessage,
   isWebviewReadyMessage,
+  OPEN_SETTINGS_MESSAGE_TYPE,
 } from './webviewMessages';
 
 export const LINKS_VIEW_ID = 'jiraOps.linksView';
@@ -48,6 +50,7 @@ export class JiraOpsPanelProvider
 
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.webviewView = webviewView;
+    webviewView.title = 'Jira Ops';
     const assetsRoot = vscode.Uri.joinPath(this.extensionUri, ...WEBVIEW_ASSET_PATH);
 
     webviewView.webview.options = {
@@ -81,6 +84,10 @@ export class JiraOpsPanelProvider
     await this.handleDisconnectJira();
   }
 
+  public openSettingsFromCommand(): void {
+    this.handleOpenSettings();
+  }
+
   private async handleWebviewMessage(message: unknown): Promise<void> {
     if (isWebviewReadyMessage(message)) {
       await this.handleWebviewReady();
@@ -97,17 +104,23 @@ export class JiraOpsPanelProvider
       return;
     }
 
+    if (isOpenSettingsMessage(message)) {
+      this.handleOpenSettings();
+      return;
+    }
+
     if (isFetchLinksMessage(message)) {
       await this.handleFetchLinks(message.issueInput);
       return;
     }
 
     if (isOpenExternalLinkMessage(message)) {
-      await vscode.env.openExternal(vscode.Uri.parse(message.url));
+      await this.handleOpenExternalLink(message.url);
     }
   }
 
   private async handleWebviewReady(): Promise<void> {
+    this.outputChannel.appendLine('Jira Ops webview is ready.');
     const status = await this.loadConnectionStatus();
     this.postConnectionChanged(
       status,
@@ -116,6 +129,7 @@ export class JiraOpsPanelProvider
   }
 
   private async handleConnectJira(): Promise<void> {
+    this.outputChannel.appendLine('Starting Jira connection.');
     this.postMessage({ type: CONNECTION_LOADING_MESSAGE_TYPE });
 
     try {
@@ -127,10 +141,12 @@ export class JiraOpsPanelProvider
         type: ERROR_MESSAGE_TYPE,
         message: connectionErrorMessage(error),
       });
+      this.outputChannel.appendLine('Jira connection failed.');
     }
   }
 
   private async handleDisconnectJira(): Promise<void> {
+    this.outputChannel.appendLine('Clearing Jira connection.');
     try {
       const status = await this.disconnectJira();
       this.outputChannel.appendLine('Jira connection was cleared.');
@@ -140,12 +156,14 @@ export class JiraOpsPanelProvider
         type: ERROR_MESSAGE_TYPE,
         message: 'Jira connection could not be cleared.',
       });
+      this.outputChannel.appendLine('Jira connection could not be cleared.');
     }
   }
 
   private async handleFetchLinks(issueInput: string): Promise<void> {
     const parsedInput = parseIssueInput(issueInput);
     if (!parsedInput.ok) {
+      this.outputChannel.appendLine('Rejected Jira web link fetch input.');
       this.postMessage({
         type: ERROR_MESSAGE_TYPE,
         message: parsedInput.error,
@@ -153,6 +171,9 @@ export class JiraOpsPanelProvider
       return;
     }
 
+    this.outputChannel.appendLine(
+      `Loading Jira web links for ${parsedInput.issueKey}.`
+    );
     this.postMessage({
       type: LOADING_MESSAGE_TYPE,
       issueKey: parsedInput.issueKey,
@@ -176,7 +197,21 @@ export class JiraOpsPanelProvider
             ? 'Connect Jira before fetching links.'
             : 'Jira remote links could not be loaded.',
       });
+      this.outputChannel.appendLine(
+        `Failed to load Jira web links for ${parsedInput.issueKey}.`
+      );
     }
+  }
+
+  private handleOpenSettings(): void {
+    this.outputChannel.appendLine('Opening Jira Ops settings.');
+    this.postMessage({ type: OPEN_SETTINGS_MESSAGE_TYPE });
+  }
+
+  private async handleOpenExternalLink(url: string): Promise<void> {
+    const host = webLinkHost(url);
+    this.outputChannel.appendLine(`Opening Jira web link on ${host}.`);
+    await vscode.env.openExternal(vscode.Uri.parse(url));
   }
 
   private async loadRemoteLinks(issueKey: string): Promise<RemoteWebLink[]> {
@@ -276,7 +311,7 @@ export class JiraOpsPanelProvider
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
-    <title>JiraOps</title>
+    <title>Jira Ops</title>
     <link rel="stylesheet" href="${cssSrc}" />
   </head>
   <body class="jira-ops-page jira-ops-extension">
@@ -331,6 +366,14 @@ function connectionErrorMessage(error: unknown): string {
 
 function isJiraCredentialSetupMessage(message: string): boolean {
   return message.startsWith('Jira OAuth client ');
+}
+
+function webLinkHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return 'unknown host';
+  }
 }
 
 class JiraConnectionRequiredError extends Error {}

@@ -17,7 +17,7 @@ import {
   resolveVscodeExecutablePath,
 } from '../../src/launchVscode';
 
-export const ACTIVITY_BAR_TITLE = 'JiraOps';
+export const ACTIVITY_BAR_TITLE = 'Jira Ops';
 export const DEFAULT_THEME_NAME = 'Default Dark Modern';
 
 export interface ExtensionHostSession {
@@ -132,7 +132,7 @@ export async function findJiraOpsFrame(window: Page): Promise<Frame | undefined>
     .filter((frame) => frame.url().includes('vscode-webview://'));
 
   for (const frame of [...candidateFrames].reverse()) {
-    const title = frame.getByRole('heading', { name: 'JiraOps' });
+    const title = frame.getByRole('heading', { name: 'Jira Ops' });
     const input = frame.getByLabel('Jira issue URL or key');
     const titleVisible = await title.isVisible().catch(() => false);
     const inputVisible = await input.isVisible().catch(() => false);

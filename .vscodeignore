@@ -9,9 +9,11 @@ AGENTS.md
 coverage/**
 dist/**/*.map
 docs/designs/prototypes/index.html
+docs/designs/prototypes/assets/gallery.*
 docs/designs/prototypes/variants/**
 e2e/**
 node_modules/**
+notes/**
 scripts/**
 src/**
 test-results/**

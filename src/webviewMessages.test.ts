@@ -4,12 +4,14 @@ import {
   CONNECT_JIRA_MESSAGE_TYPE,
   DISCONNECT_JIRA_MESSAGE_TYPE,
   FETCH_LINKS_MESSAGE_TYPE,
+  OPEN_SETTINGS_MESSAGE_TYPE,
   OPEN_EXTERNAL_LINK_MESSAGE_TYPE,
   WEBVIEW_READY_MESSAGE_TYPE,
   isConnectJiraMessage,
   isDisconnectJiraMessage,
   isFetchLinksMessage,
   isOpenExternalLinkMessage,
+  isOpenSettingsMessage,
   isWebviewReadyMessage,
 } from './webviewMessages';
 
@@ -33,11 +35,17 @@ describe('webview message guards', () => {
         type: DISCONNECT_JIRA_MESSAGE_TYPE,
       })
     ).toBe(true);
+    expect(
+      isOpenSettingsMessage({
+        type: OPEN_SETTINGS_MESSAGE_TYPE,
+      })
+    ).toBe(true);
   });
 
   test('rejects malformed Jira connection action messages', () => {
     expect(isConnectJiraMessage(null)).toBe(false);
     expect(isDisconnectJiraMessage(null)).toBe(false);
+    expect(isOpenSettingsMessage(null)).toBe(false);
     expect(isWebviewReadyMessage({ type: FETCH_LINKS_MESSAGE_TYPE })).toBe(false);
   });
 

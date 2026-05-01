@@ -1,19 +1,19 @@
-# JiraOps
+# Jira Ops
 
-[![Version](https://img.shields.io/badge/version-0.1.2-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.4-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](./tsconfig.json)
 
-JiraOps is a VS Code extension for Jira operations. The current MVP finds
+Jira Ops is a VS Code extension for Jira operations. The current MVP finds
 supported remote web links attached to a Jira issue and displays them inside a
 focused Activity Bar webview.
 
 ## ✨ Features
 
 - **One-input Jira lookup:** paste an issue key or browse URL and fetch linked operational resources.
-- **Explicit Jira connection control:** connect, reuse, refresh, or disconnect Jira OAuth access on purpose.
+- **Explicit Jira connection control:** connect from Home, then manage disconnect from Settings.
 - **Focused VS Code experience:** review remote links in a clean Activity Bar webview and open them externally.
 - **Safe, testable foundation:** validate webview messages, parse Jira responses with Zod, and run deterministic E2E tests without real Jira credentials.
 
@@ -43,12 +43,12 @@ Launch an extension development host:
 code --extensionDevelopmentPath="$(pwd)"
 ```
 
-Then open **JiraOps** in the Activity Bar, select **Connect Jira**, enter an
+Then open **Jira Ops** in the Activity Bar, select **Connect Jira**, enter an
 issue key or browse URL, and select **Fetch**.
 
 ## 🔐 Jira Authentication
 
-JiraOps uses
+Jira Ops uses
 [`jira-oauth-client`](https://www.npmjs.com/package/jira-oauth-client). You can
 set these environment variables before the first real connection:
 
@@ -69,7 +69,7 @@ http://localhost:30129/callback
 
 Use **Connect Jira** to start the browser OAuth flow. **Fetch** requires an
 existing connection and refreshes expired tokens when a refresh token is
-available. Use **JiraOps: Clear Saved Jira OAuth Credentials** from the Command
+available. Use **Jira Ops: Clear Saved Jira OAuth Credentials** from the Command
 Palette to remove saved OAuth app credentials.
 
 Never log, commit, or share OAuth secrets, access tokens, refresh tokens,
@@ -84,7 +84,7 @@ Authorization headers, or raw credential payloads.
 | `npm --prefix e2e run validate` | Typecheck, lint, and spellcheck E2E code |
 | `npm --prefix e2e test` | Run Playwright against a VS Code extension host |
 | `npm run validate` | Run root validation and E2E validation |
-| `npm run package` | Build a local VSIX package |
+| `npm run package -- --pre-release` | Build a local pre-release VSIX package |
 
 Prototype review:
 
@@ -99,7 +99,7 @@ Open `http://127.0.0.1:4174/index.html`.
 ```text
 VS Code Activity Bar
   -> jiraOps.linksView webview
-  -> jira-ops.js posts jiraOps.connectJira, jiraOps.disconnectJira, or jiraOps.fetchLinks
+  -> jira-ops.js posts jiraOps.openSettings, jiraOps.connectJira, jiraOps.disconnectJira, or jiraOps.fetchLinks
   -> JiraOpsPanelProvider validates the message
   -> parseIssueInput normalizes the issue key
   -> OAuthJiraTokenProvider connects, disconnects, resolves, or refreshes Jira tokens
@@ -135,10 +135,14 @@ VS Code Activity Bar
 - More Jira issue operations after remote-link discovery is stable.
 - Marketplace polish with PNG icon and screenshots.
 
+## 👨‍💻 Author
+
+**dongtran** ✨
+
 ## 📄 License
 
-[MIT](./LICENSE)
+MIT
 
 ---
 
-Made with ❤️ to make Jira work easier.
+Made with ❤️ to make your work life easier!
