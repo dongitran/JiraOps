@@ -1,6 +1,6 @@
 # JiraOps
 
-[![Version](https://img.shields.io/badge/version-0.1.10-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.11--pre--release-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
@@ -16,7 +16,10 @@ issue details in a wider VS Code editor tab.
 - **Compact native header:** show connection state in the JiraOps view title bar instead of an internal webview banner.
 - **GitLab MR focus:** keep assigned-ticket cards compact and show direct plus clone-linked merge requests in Details.
 - **Wide issue details:** open a selected issue immediately with a loading state, then show formatted Jira content, comments, image attachments, merge requests, and Jira web links.
+- **Assigned issue update notifications:** poll Jira in the background, refresh assigned tickets from the same result, and surface unread updates in the sidebar.
+- **Cached detail reopen:** reuse fresh issue detail and remote-link cache entries so recently opened Details can reopen without another loading state.
 - **Explicit Jira connection control:** connect from Home, then manage disconnect from Settings.
+- **What Is New tab:** show release notes once per installed JiraOps version.
 - **Safe, testable foundation:** validate webview messages, parse Jira responses with Zod, and run deterministic E2E tests without real Jira credentials.
 
 > Current scope: assigned-issue discovery and Jira remote-link display. Jira
@@ -88,6 +91,7 @@ Authorization headers, or raw credential payloads.
 | `npm --prefix e2e test` | Run Playwright against a VS Code extension host |
 | `npm run validate` | Run root validation and E2E validation |
 | `npm run package` | Build a local stable VSIX package |
+| `npm run package:pre` | Build a local pre-release VSIX package |
 
 Prototype review:
 
@@ -109,6 +113,7 @@ VS Code Activity Bar
   -> Details opens immediately with a loading webview
   -> fetchJiraIssueDetail loads formatted description, comments, attachments, and clone links
   -> fetchJiraRemoteLinks loads direct and clone issue links with TTL cache
+  -> NotificationPoller reuses assigned-issue search results for unread update notices
   -> extractGitLabMergeRequests derives MR rows from remote links
   -> sidebar renders assigned tickets and WebviewPanel renders issue details
 ```
@@ -118,6 +123,10 @@ VS Code Activity Bar
 | [`src/extension.ts`](./src/extension.ts) | VS Code activation and view registration |
 | [`src/jiraOpsPanel.ts`](./src/jiraOpsPanel.ts) | Sidebar webview, CSP, messages, dashboard orchestration |
 | [`src/issueDetailPanel.ts`](./src/issueDetailPanel.ts) | Wide issue detail editor webview |
+| [`src/notificationPoller.ts`](./src/notificationPoller.ts) | Background assigned issue update polling |
+| [`src/jiraNotifications.ts`](./src/jiraNotifications.ts) | Local unread notification state and issue update comparison |
+| [`src/jiraOpsSettings.ts`](./src/jiraOpsSettings.ts) | Persisted JiraOps settings normalization |
+| [`src/whatsNew.ts`](./src/whatsNew.ts) | Once-per-version What Is New release notes |
 | [`src/jiraClient.ts`](./src/jiraClient.ts) | OAuth token lifecycle and Jira REST calls |
 | [`src/jiraIssueDetails.ts`](./src/jiraIssueDetails.ts) | Jira issue description, comments, attachments, and clone-link parsing |
 | [`src/dashboardItems.ts`](./src/dashboardItems.ts) | Assigned issue and web-link dashboard mapping |

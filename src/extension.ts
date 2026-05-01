@@ -5,6 +5,13 @@ import {
   setJiraSecretStorage,
 } from './jiraCredentials';
 import { JiraOpsPanelProvider, LINKS_VIEW_ID } from './jiraOpsPanel';
+import {
+  markWhatsNewSeen,
+  parseLatestChangelogSection,
+  readWhatsNewSeenVersion,
+  renderWhatsNewHtml,
+  shouldShowWhatsNew,
+} from './whatsNew';
 
 const OPEN_LINKS_VIEW_COMMAND = 'jiraOps.openLinksView';
 const CONNECT_JIRA_COMMAND = 'jiraOps.connectJira';
@@ -17,7 +24,12 @@ export function activate(context: vscode.ExtensionContext): void {
   setJiraSecretStorage(context.secrets);
 
   const outputChannel = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
-  const panelProvider = new JiraOpsPanelProvider(context.extensionUri, outputChannel);
+  outputChannel.appendLine('Activating JiraOps extension.');
+  const panelProvider = new JiraOpsPanelProvider(
+    context.extensionUri,
+    outputChannel,
+    context.globalState
+  );
 
   const viewRegistration = vscode.window.registerWebviewViewProvider(
     LINKS_VIEW_ID,
@@ -80,8 +92,67 @@ export function activate(context: vscode.ExtensionContext): void {
     openSettingsCommand,
     clearJiraCredentialsCommand
   );
+
+  void showWhatsNewIfNeeded(context, outputChannel);
 }
 
 export function deactivate(): void {
   return undefined;
+}
+
+async function showWhatsNewIfNeeded(
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel
+): Promise<void> {
+  const currentVersion = readExtensionVersion(context);
+  const suppress = process.env['JIRA_OPS_SUPPRESS_WHATS_NEW'] === '1';
+  const force = process.env['JIRA_OPS_FORCE_WHATS_NEW'] === '1';
+  const seenVersion = readWhatsNewSeenVersion(context.globalState);
+  if (!shouldShowWhatsNew({ currentVersion, force, seenVersion, suppress })) {
+    outputChannel.appendLine(`What Is New skipped for JiraOps ${currentVersion}.`);
+    return;
+  }
+
+  const changelog = await readChangelog(context, outputChannel);
+  const notes = parseLatestChangelogSection(changelog);
+  const panel = vscode.window.createWebviewPanel(
+    'jiraOps.whatsNew',
+    `JiraOps ${currentVersion}`,
+    vscode.ViewColumn.Active,
+    { enableScripts: false }
+  );
+  panel.webview.html = renderWhatsNewHtml({
+    bullets: notes.bullets,
+    version: currentVersion,
+  });
+  await markWhatsNewSeen(context.globalState, currentVersion);
+  outputChannel.appendLine(`What Is New shown for JiraOps ${currentVersion}.`);
+}
+
+async function readChangelog(
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel
+): Promise<string> {
+  try {
+    const bytes = await vscode.workspace.fs.readFile(
+      vscode.Uri.joinPath(context.extensionUri, 'CHANGELOG.md')
+    );
+    return Buffer.from(bytes).toString('utf8');
+  } catch {
+    outputChannel.appendLine('What Is New changelog could not be read.');
+    return '';
+  }
+}
+
+function readExtensionVersion(context: vscode.ExtensionContext): string {
+  const packageJson: unknown = context.extension.packageJSON;
+  if (isRecord(packageJson) && typeof packageJson['version'] === 'string') {
+    return packageJson['version'];
+  }
+
+  return '0.0.0';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }

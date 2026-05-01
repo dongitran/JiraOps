@@ -2,7 +2,7 @@
   "name": "jira-ops",
   "displayName": "JiraOps",
   "description": "Assigned Jira tickets and GitLab merge request context in VS Code.",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "publisher": "dongtran",
   "license": "MIT",
   "repository": {
@@ -110,7 +110,9 @@
     "validate": "npm run validate:root && npm run validate:e2e",
     "precommit": "npm run validate",
     "package": "vsce package --no-dependencies",
+    "package:pre": "vsce package --pre-release --no-dependencies",
     "publish": "vsce publish --skip-duplicate --no-dependencies",
+    "publish:pre": "vsce publish --pre-release --skip-duplicate --no-dependencies",
     "vscode:prepublish": "npm run build",
     "prepare": "node ./scripts/setup-husky.cjs"
   },

@@ -4,6 +4,8 @@ const controlsToggle = document.getElementById('controls-toggle');
 const controlsPanel = document.getElementById('floating-controls-panel');
 const editorSurface = document.querySelector('.editor-surface');
 const connectionStateElement = document.getElementById('prototype-connection-state');
+const settingsButton = document.querySelector('.prototype-settings-button');
+const OPEN_SETTINGS_MESSAGE_TYPE = 'jiraOps.openSettings';
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
 const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
 const PROTOTYPE_CONNECTION_STATE_MESSAGE_TYPE = 'jiraOps.prototypeConnectionState';
@@ -35,7 +37,8 @@ if (
   !(controlsToggle instanceof HTMLButtonElement) ||
   !(controlsPanel instanceof HTMLDivElement) ||
   !(editorSurface instanceof HTMLElement) ||
-  !(connectionStateElement instanceof HTMLElement)
+  !(connectionStateElement instanceof HTMLElement) ||
+  !(settingsButton instanceof HTMLButtonElement)
 ) {
   throw new Error('Prototype gallery is missing required DOM nodes.');
 }
@@ -55,6 +58,10 @@ themeButton.addEventListener('click', () => {
 
 controlsToggle.addEventListener('click', () => {
   setControlsOpen(!controlsOpen);
+});
+
+settingsButton.addEventListener('click', () => {
+  frameElement.contentWindow?.postMessage({ type: OPEN_SETTINGS_MESSAGE_TYPE }, '*');
 });
 
 window.addEventListener('keydown', (event) => {
@@ -79,13 +86,16 @@ window.addEventListener('message', (event) => {
   }
 
   if (event.data.type === PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE && isIssueDetail(event.data.issue)) {
-    renderIssueDetail(event.data.issue);
+    renderIssueDetail({
+      ...event.data.issue,
+      cached: event.data.cached === true,
+    });
   }
 });
 
 applyThemeToGallery();
 setControlsOpen(false);
-renderEmptyDetail();
+renderWhatsNewPanel();
 updateConnectionState({ connected: false });
 
 function applyThemeToGallery() {
@@ -128,6 +138,32 @@ function renderEmptyDetail() {
   `;
 }
 
+function renderWhatsNewPanel() {
+  editorSurface.innerHTML = `
+    <article class="editor-whats-new" aria-label="JiraOps release notes">
+      <header class="editor-whats-new-header">
+        <span>JiraOps 0.1.11 Pre-Release</span>
+        <h1>What Is New</h1>
+        <p>Assigned issue updates now run quietly in the background, refresh the dashboard from the same Jira query, and keep recently opened details warm.</p>
+      </header>
+      <section class="whats-new-grid" aria-label="Release highlights">
+        <article>
+          <strong>Assigned Issue Updates</strong>
+          <p>JiraOps detects new or updated assigned tickets from the existing Jira search flow and shows an unread count in the sidebar.</p>
+        </article>
+        <article>
+          <strong>Polling Settings</strong>
+          <p>The default interval is 1 minute, configurable from Settings without adding a second ticket refresh cron.</p>
+        </article>
+        <article>
+          <strong>Cached Details</strong>
+          <p>Recently loaded details reopen directly from cache when all issue and merge request data is still fresh.</p>
+        </article>
+      </section>
+    </article>
+  `;
+}
+
 function updateConnectionState(message) {
   const connected = message.connected === true;
   const connecting = message.connecting === true;
@@ -154,6 +190,7 @@ function renderIssueDetailLoading(message) {
 }
 
 function renderIssueDetail(issue) {
+  const cacheText = issue.cached === true ? 'Cached detail' : issue.status;
   editorSurface.innerHTML = `
     <article class="editor-detail" aria-label="${escapeAttribute(issue.key)} details">
       <header class="editor-detail-header">
@@ -161,7 +198,7 @@ function renderIssueDetail(issue) {
           <span class="detail-key">${escapeHtml(issue.key)}</span>
           <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
         </div>
-        <span class="detail-status-line">${escapeHtml(issue.status)}</span>
+        <span class="detail-status-line">${escapeHtml(cacheText)}</span>
       </header>
       <section class="detail-section" aria-label="Issue content">
         <div class="detail-section-heading">

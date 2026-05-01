@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.11
+
+- Show a What Is New editor tab once per JiraOps version.
+- Add configurable assigned issue update polling with a 1 minute default.
+- Surface unread assigned issue updates in the JiraOps sidebar notification button.
+- Refresh assigned tickets from the same polling result instead of running a second ticket cron.
+- Reopen recently loaded issue Details from cache when issue detail and remote-link data are still fresh.
+- Restore CI publishing to the VS Code Marketplace pre-release lane for this test build.
+
 ## 0.1.10
 
 - Promote JiraOps to a stable VS Code Marketplace release.

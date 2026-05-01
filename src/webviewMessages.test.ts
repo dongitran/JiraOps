@@ -3,17 +3,21 @@ import { describe, expect, test } from 'vitest';
 import {
   CONNECT_JIRA_MESSAGE_TYPE,
   DISCONNECT_JIRA_MESSAGE_TYPE,
+  CLEAR_NOTIFICATIONS_MESSAGE_TYPE,
   OPEN_ISSUE_DETAIL_MESSAGE_TYPE,
   OPEN_SETTINGS_MESSAGE_TYPE,
   OPEN_EXTERNAL_LINK_MESSAGE_TYPE,
   REFRESH_DASHBOARD_MESSAGE_TYPE,
+  UPDATE_SETTINGS_MESSAGE_TYPE,
   WEBVIEW_READY_MESSAGE_TYPE,
+  isClearNotificationsMessage,
   isConnectJiraMessage,
   isDisconnectJiraMessage,
   isOpenIssueDetailMessage,
   isOpenExternalLinkMessage,
   isOpenSettingsMessage,
   isRefreshDashboardMessage,
+  isUpdateSettingsMessage,
   isWebviewReadyMessage,
 } from './webviewMessages';
 
@@ -101,6 +105,39 @@ describe('webview message guards', () => {
       isOpenExternalLinkMessage({
         type: OPEN_EXTERNAL_LINK_MESSAGE_TYPE,
         url: 'file:///tmp/local-file',
+      })
+    ).toBe(false);
+  });
+
+  test('accepts notification clear and settings update messages', () => {
+    expect(
+      isClearNotificationsMessage({
+        type: CLEAR_NOTIFICATIONS_MESSAGE_TYPE,
+      })
+    ).toBe(true);
+    expect(
+      isUpdateSettingsMessage({
+        notificationsEnabled: true,
+        pollIntervalMinutes: 5,
+        type: UPDATE_SETTINGS_MESSAGE_TYPE,
+      })
+    ).toBe(true);
+  });
+
+  test('rejects malformed settings update messages', () => {
+    expect(isUpdateSettingsMessage(null)).toBe(false);
+    expect(
+      isUpdateSettingsMessage({
+        notificationsEnabled: true,
+        pollIntervalMinutes: 0,
+        type: UPDATE_SETTINGS_MESSAGE_TYPE,
+      })
+    ).toBe(false);
+    expect(
+      isUpdateSettingsMessage({
+        notificationsEnabled: 'true',
+        pollIntervalMinutes: 5,
+        type: UPDATE_SETTINGS_MESSAGE_TYPE,
       })
     ).toBe(false);
   });

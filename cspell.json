@@ -25,6 +25,7 @@
     "Remotelink",
     "accessToken",
     "cloudId",
+    "nums",
     "noreferrer"
   ]
 }

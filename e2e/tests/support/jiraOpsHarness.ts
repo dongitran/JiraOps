@@ -27,6 +27,10 @@ export interface ExtensionHostSession {
   readonly userDataDir: string;
 }
 
+export interface LaunchExtensionHostOptions {
+  readonly env?: Readonly<Record<string, string>>;
+}
+
 export function toLaunchEnv(source: NodeJS.ProcessEnv): Record<string, string> {
   const env: Record<string, string> = {};
 
@@ -49,7 +53,9 @@ export function ensureThemeSettings(userDataDir: string, colorTheme: string): vo
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 }
 
-export async function launchExtensionHost(): Promise<ExtensionHostSession> {
+export async function launchExtensionHost(
+  options: LaunchExtensionHostOptions = {}
+): Promise<ExtensionHostSession> {
   const extensionPath = getExtensionRootDir();
   const workspaceDir = getTemporaryWorkspaceDir();
   const userDataDir = getTemporaryUserDataDir();
@@ -59,6 +65,10 @@ export async function launchExtensionHost(): Promise<ExtensionHostSession> {
   env['JIRA_OPS_E2E'] = '1';
   env['JIRA_OPS_TEST_MODE'] = '1';
   env['JIRA_OPS_DETAIL_TEST_DELAY_MS'] = '1200';
+  env['JIRA_OPS_SUPPRESS_WHATS_NEW'] = '1';
+  for (const [key, value] of Object.entries(options.env ?? {})) {
+    env[key] = value;
+  }
 
   const electronApp = await electron.launch({
     executablePath: resolveVscodeExecutablePath(),
@@ -189,7 +199,7 @@ export async function resolveLoadedIssueDetailFrame(
   return frame;
 }
 
-async function findIssueDetailFrame(
+export async function findIssueDetailFrame(
   window: Page,
   issueKey: string
 ): Promise<Frame | undefined> {
@@ -201,6 +211,52 @@ async function findIssueDetailFrame(
     const detailRegion = frame.getByLabel(`${issueKey} details`);
     const detailVisible = await detailRegion.isVisible().catch(() => false);
     if (detailVisible) {
+      return frame;
+    }
+  }
+
+  return undefined;
+}
+
+export async function closeActiveEditor(window: Page, issueKey: string): Promise<void> {
+  await window.keyboard.press(process.platform === 'darwin' ? 'Meta+W' : 'Control+W');
+  await expect
+    .poll(
+      async () => {
+        return (await findIssueDetailFrame(window, issueKey)) === undefined;
+      },
+      { timeout: 10_000 }
+    )
+    .toBe(true);
+}
+
+export async function resolveWhatsNewFrame(window: Page): Promise<Frame> {
+  await expect
+    .poll(
+      async () => {
+        const frame = await findWhatsNewFrame(window);
+        return frame?.url() ?? '';
+      },
+      { timeout: 20_000 }
+    )
+    .toContain('vscode-webview://');
+
+  const frame = await findWhatsNewFrame(window);
+  if (frame === undefined) {
+    throw new Error('JiraOps What Is New frame was not found.');
+  }
+  return frame;
+}
+
+async function findWhatsNewFrame(window: Page): Promise<Frame | undefined> {
+  const candidateFrames = window
+    .frames()
+    .filter((frame) => frame.url().includes('vscode-webview://'));
+
+  for (const frame of [...candidateFrames].reverse()) {
+    const releaseNotes = frame.getByLabel('JiraOps release notes');
+    const visible = await releaseNotes.isVisible().catch(() => false);
+    if (visible) {
       return frame;
     }
   }

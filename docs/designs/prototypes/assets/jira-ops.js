@@ -11,6 +11,10 @@ const DASHBOARD_LOADED_MESSAGE_TYPE = 'jiraOps.dashboardLoaded';
 const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
 const CONNECTION_LOADING_MESSAGE_TYPE = 'jiraOps.connectionLoading';
 const CONNECTION_CHANGED_MESSAGE_TYPE = 'jiraOps.connectionChanged';
+const NOTIFICATIONS_CHANGED_MESSAGE_TYPE = 'jiraOps.notificationsChanged';
+const SETTINGS_CHANGED_MESSAGE_TYPE = 'jiraOps.settingsChanged';
+const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
+const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
 const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
 
@@ -256,6 +260,25 @@ const MOCK_ISSUES = [
   },
 ];
 
+const MOCK_NOTIFICATIONS = [
+  {
+    id: 'ops-123-2026-05-01T08-24',
+    issueKey: 'OPS-123',
+    title: 'OPS-123 was updated',
+    detail: 'Assigned issue update detected by the 1 minute poller.',
+    updated: '2026-05-01T08:24:00.000Z',
+    unread: true,
+  },
+  {
+    id: 'ops-456-2026-05-01T08-18',
+    issueKey: 'OPS-456',
+    title: 'OPS-456 moved in code review',
+    detail: 'JiraOps refreshed assigned tickets from the same poll result.',
+    updated: '2026-05-01T08:18:00.000Z',
+    unread: true,
+  },
+];
+
 const state = {
   issues: [],
   status: '',
@@ -264,6 +287,14 @@ const state = {
   connection: 'disconnected',
   cloudName: '',
   screen: 'home',
+  notifications: [],
+  notificationSettings: {
+    enabled: true,
+    intervalMinutes: 1,
+  },
+  intervalDraft: '1',
+  pollStatus: 'Notification polling is ready.',
+  cachedIssueKeys: [],
 };
 const vscodeApi = resolveVscodeApi();
 let didPostReadyMessage = false;
@@ -305,6 +336,16 @@ window.addEventListener('message', (event) => {
     return;
   }
 
+  if (event.data.type === NOTIFICATIONS_CHANGED_MESSAGE_TYPE) {
+    handleNotificationsChangedMessage(event.data);
+    return;
+  }
+
+  if (event.data.type === SETTINGS_CHANGED_MESSAGE_TYPE) {
+    handleSettingsChangedMessage(event.data);
+    return;
+  }
+
   if (event.data.type === OPEN_SETTINGS_MESSAGE_TYPE) {
     openSettingsScreen();
   }
@@ -313,15 +354,29 @@ window.addEventListener('message', (event) => {
 function render() {
   appElement.innerHTML = `
     <section class="jira-shell" aria-label="JiraOps workspace">
-      ${state.screen === 'settings' ? renderSettingsScreen() : renderHomeScreen()}
+      ${renderCurrentScreen()}
     </section>
   `;
 
   bindConnectionButtons();
   bindNavigationButtons();
   bindDashboardButtons();
+  bindNotificationButtons();
+  bindSettingsControls();
   bindExternalLinks();
   postPrototypeConnectionState();
+}
+
+function renderCurrentScreen() {
+  if (state.screen === 'settings') {
+    return renderSettingsScreen();
+  }
+
+  if (state.screen === 'notifications') {
+    return renderNotificationsScreen();
+  }
+
+  return renderHomeScreen();
 }
 
 function renderHomeScreen() {
@@ -352,6 +407,7 @@ function renderSettingsScreen() {
         </div>
         ${renderSettingsActionButton()}
       </section>
+      ${renderNotificationSettings()}
       ${renderStatusLine()}
     </section>
   `;
@@ -365,6 +421,41 @@ function renderSettingsActionButton() {
   const variant = connected ? 'secondary' : 'primary';
 
   return `<button class="connection-button" data-variant="${variant}" data-connection-action="${action}" type="button"${connecting ? ' disabled' : ''}>${escapeHtml(buttonText)}</button>`;
+}
+
+function renderNotificationSettings() {
+  const checked = state.notificationSettings.enabled ? ' checked' : '';
+
+  return `
+    <section class="settings-notifications" aria-label="Notification polling settings">
+      <div class="settings-section-title">
+        <strong>Assigned Issue Updates</strong>
+        <span>${escapeHtml(state.pollStatus)}</span>
+      </div>
+      <label class="settings-check-row">
+        <input data-setting-control="enabled" name="jiraops-notifications-enabled" type="checkbox"${checked} />
+        <span>Poll Jira for assigned issue updates</span>
+      </label>
+      <label class="settings-field" for="jiraops-notification-interval">
+        <span>Poll interval</span>
+        <input
+          id="jiraops-notification-interval"
+          data-setting-control="interval"
+          name="jiraops-notification-interval"
+          type="number"
+          min="1"
+          max="60"
+          inputmode="numeric"
+          autocomplete="off"
+          value="${escapeAttribute(state.intervalDraft)}"
+        />
+      </label>
+      <div class="settings-row">
+        <span class="settings-hint">Minutes, from 1 to 60.</span>
+        <button class="settings-save-button" data-settings-action="save" type="button">Save Polling</button>
+      </div>
+    </section>
+  `;
 }
 
 function renderStatusLine() {
@@ -385,8 +476,79 @@ function renderDashboardToolbar() {
         <span class="dashboard-eyebrow">Assigned to me</span>
         <strong>${String(issueCount)} tickets</strong>
       </div>
-      <button class="refresh-button" data-dashboard-action="refresh" type="button"${disabled ? ' disabled' : ''}>${state.loading ? 'Refreshing...' : 'Refresh'}</button>
+      <div class="dashboard-actions">
+        ${renderNotificationButton()}
+        <button class="refresh-button" data-dashboard-action="refresh" type="button"${disabled ? ' disabled' : ''}>${state.loading ? 'Refreshing...' : 'Refresh'}</button>
+      </div>
     </section>
+  `;
+}
+
+function renderNotificationButton() {
+  const unreadCount = getUnreadNotificationCount();
+  const label =
+    unreadCount === 0
+      ? 'Open notifications'
+      : `Open notifications, ${String(unreadCount)} unread`;
+
+  return `
+    <button class="notification-button" data-notification-action="open" type="button" aria-label="${escapeAttribute(label)}" title="Notifications">
+      <span class="notification-mark" aria-hidden="true"></span>
+      ${unreadCount > 0 ? `<span class="notification-count">${String(unreadCount)}</span>` : ''}
+    </button>
+  `;
+}
+
+function renderNotificationsScreen() {
+  return `
+    <section class="notifications-page" aria-label="JiraOps notifications">
+      <div class="settings-heading">
+        <button class="back-button" data-nav-action="home" type="button" aria-label="Back to dashboard" title="Back to dashboard">
+          <span aria-hidden="true">&#8592;</span>
+        </button>
+        <div class="settings-title">
+          <h2>Notifications</h2>
+          <p>${escapeHtml(state.pollStatus)}</p>
+        </div>
+      </div>
+      <div class="notification-summary" role="status">
+        <strong>${String(getUnreadNotificationCount())} unread</strong>
+        <button class="clear-notifications-button" data-notification-action="clear" type="button"${getUnreadNotificationCount() === 0 ? ' disabled' : ''}>Clear</button>
+      </div>
+      ${renderNotificationList()}
+    </section>
+  `;
+}
+
+function renderNotificationList() {
+  if (state.notifications.length === 0) {
+    return `
+      <div class="empty-state notification-empty">
+        <strong>No assigned issue updates</strong>
+        <span>JiraOps will show updates after the next successful poll.</span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="notification-list">
+      ${state.notifications.map((notification) => renderNotificationItem(notification)).join('')}
+    </div>
+  `;
+}
+
+function renderNotificationItem(notification) {
+  const unread = notification.unread === true;
+
+  return `
+    <article class="notification-item" data-unread="${String(unread)}" aria-label="${escapeAttribute(notification.title)}">
+      <div class="notification-copy">
+        <strong>${escapeHtml(notification.title)}</strong>
+        <span>${escapeHtml(notification.detail)}</span>
+        <small>${escapeHtml(formatUpdated(notification.updated))}</small>
+      </div>
+      <button class="detail-button notification-detail-button" data-notification-action="open-detail" data-detail-key="${escapeAttribute(notification.issueKey)}" type="button">Details</button>
+    </article>
   `;
 }
 
@@ -481,6 +643,39 @@ function bindDashboardButtons() {
   }
 }
 
+function bindNotificationButtons() {
+  for (const notificationButton of appElement.querySelectorAll('button[data-notification-action]')) {
+    notificationButton.addEventListener('click', () => {
+      handleNotificationAction(
+        notificationButton.dataset.notificationAction ?? '',
+        notificationButton.dataset.detailKey ?? '',
+      );
+    });
+  }
+}
+
+function bindSettingsControls() {
+  const intervalInput = appElement.querySelector('input[data-setting-control="interval"]');
+  if (intervalInput instanceof HTMLInputElement) {
+    intervalInput.addEventListener('input', () => {
+      state.intervalDraft = intervalInput.value;
+    });
+  }
+
+  const enabledInput = appElement.querySelector('input[data-setting-control="enabled"]');
+  if (enabledInput instanceof HTMLInputElement) {
+    enabledInput.addEventListener('change', () => {
+      state.notificationSettings.enabled = enabledInput.checked;
+    });
+  }
+
+  for (const settingsButton of appElement.querySelectorAll('button[data-settings-action]')) {
+    settingsButton.addEventListener('click', () => {
+      handleSettingsAction(settingsButton.dataset.settingsAction ?? '');
+    });
+  }
+}
+
 function bindExternalLinks() {
   for (const link of appElement.querySelectorAll('a[data-url]')) {
     link.addEventListener('click', (event) => {
@@ -520,8 +715,39 @@ function handleDashboardAction(action) {
   }
 }
 
+function handleNotificationAction(action, issueKey) {
+  if (action === 'open') {
+    openNotificationsScreen();
+    return;
+  }
+
+  if (action === 'clear') {
+    clearUnreadNotifications();
+    return;
+  }
+
+  if (action === 'open-detail') {
+    markIssueNotificationsRead(issueKey);
+    openHomeScreen();
+    openIssueDetail(issueKey);
+  }
+}
+
+function handleSettingsAction(action) {
+  if (action !== 'save') {
+    return;
+  }
+
+  saveNotificationSettings();
+}
+
 function openSettingsScreen() {
   state.screen = 'settings';
+  render();
+}
+
+function openNotificationsScreen() {
+  state.screen = 'notifications';
   render();
 }
 
@@ -550,6 +776,9 @@ function disconnectJira() {
     return;
   }
 
+  state.notifications = [];
+  state.cachedIssueKeys = [];
+  state.pollStatus = 'Notification polling is paused.';
   applyConnectionState(false, '', 'Jira disconnected.');
 }
 
@@ -581,11 +810,48 @@ function loadMockDashboard() {
   render();
   window.setTimeout(() => {
     state.issues = MOCK_ISSUES;
+    if (state.notificationSettings.enabled && state.notifications.length === 0) {
+      state.notifications = MOCK_NOTIFICATIONS;
+    }
+    state.pollStatus = state.notificationSettings.enabled
+      ? 'Checked assigned issue updates just now.'
+      : 'Notification polling is disabled.';
     state.loading = false;
     state.status = '';
     state.tone = 'success';
     render();
   }, 180);
+}
+
+function saveNotificationSettings() {
+  const interval = Number.parseInt(state.intervalDraft, 10);
+  if (!Number.isInteger(interval) || interval < 1 || interval > 60) {
+    state.status = 'Use a polling interval from 1 to 60 minutes.';
+    state.tone = 'error';
+    render();
+    return;
+  }
+
+  state.notificationSettings = {
+    enabled: state.notificationSettings.enabled,
+    intervalMinutes: interval,
+  };
+  state.intervalDraft = String(interval);
+  state.pollStatus = state.notificationSettings.enabled
+    ? `Polling every ${String(interval)} minute${interval === 1 ? '' : 's'}.`
+    : 'Notification polling is disabled.';
+  state.status = 'Notification polling settings saved.';
+  state.tone = 'success';
+
+  if (vscodeApi !== null) {
+    vscodeApi.postMessage({
+      type: UPDATE_SETTINGS_MESSAGE_TYPE,
+      notificationsEnabled: state.notificationSettings.enabled,
+      pollIntervalMinutes: interval,
+    });
+  }
+
+  render();
 }
 
 function openIssueDetail(issueKey) {
@@ -602,6 +868,18 @@ function openIssueDetail(issueKey) {
     return;
   }
 
+  if (state.cachedIssueKeys.includes(issue.key)) {
+    window.parent.postMessage(
+      {
+        type: PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE,
+        issue,
+        cached: true,
+      },
+      '*',
+    );
+    return;
+  }
+
   window.parent.postMessage(
     {
       type: PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE,
@@ -615,10 +893,32 @@ function openIssueDetail(issueKey) {
       {
         type: PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE,
         issue,
+        cached: false,
       },
       '*',
     );
+    state.cachedIssueKeys = [...state.cachedIssueKeys, issue.key];
   }, 240);
+}
+
+function clearUnreadNotifications() {
+  state.notifications = state.notifications.map((notification) => ({
+    ...notification,
+    unread: false,
+  }));
+
+  if (vscodeApi !== null) {
+    vscodeApi.postMessage({ type: CLEAR_NOTIFICATIONS_MESSAGE_TYPE });
+  }
+
+  render();
+}
+
+function markIssueNotificationsRead(issueKey) {
+  state.notifications = state.notifications.map((notification) => ({
+    ...notification,
+    unread: notification.issueKey === issueKey ? false : notification.unread,
+  }));
 }
 
 function handleDashboardLoadingMessage() {
@@ -669,6 +969,38 @@ function handleConnectionChangedMessage(message) {
   applyConnectionState(connected, cloudName, connected ? '' : status);
 }
 
+function handleNotificationsChangedMessage(message) {
+  state.notifications = Array.isArray(message.notifications)
+    ? message.notifications.filter(isNotificationItem)
+    : [];
+  state.pollStatus =
+    typeof message.pollStatus === 'string' && message.pollStatus.length > 0
+      ? message.pollStatus
+      : state.pollStatus;
+  render();
+}
+
+function handleSettingsChangedMessage(message) {
+  const enabled =
+    typeof message.notificationsEnabled === 'boolean'
+      ? message.notificationsEnabled
+      : state.notificationSettings.enabled;
+  const interval =
+    typeof message.pollIntervalMinutes === 'number' &&
+    Number.isInteger(message.pollIntervalMinutes) &&
+    message.pollIntervalMinutes >= 1 &&
+    message.pollIntervalMinutes <= 60
+      ? message.pollIntervalMinutes
+      : state.notificationSettings.intervalMinutes;
+
+  state.notificationSettings = {
+    enabled,
+    intervalMinutes: interval,
+  };
+  state.intervalDraft = String(interval);
+  render();
+}
+
 function applyConnectionState(connected, cloudName, status) {
   state.connection = connected ? 'connected' : 'disconnected';
   state.cloudName = connected ? cloudName : '';
@@ -677,8 +1009,14 @@ function applyConnectionState(connected, cloudName, status) {
   state.loading = false;
   if (!connected) {
     state.issues = [];
+    state.notifications = [];
+    state.cachedIssueKeys = [];
   }
   render();
+}
+
+function getUnreadNotificationCount() {
+  return state.notifications.filter((notification) => notification.unread === true).length;
 }
 
 function postPrototypeConnectionState() {
@@ -810,5 +1148,17 @@ function isRemoteWebLink(value) {
     typeof value.url === 'string' &&
     typeof value.relationship === 'string' &&
     typeof value.host === 'string'
+  );
+}
+
+function isNotificationItem(value) {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.issueKey === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.detail === 'string' &&
+    typeof value.updated === 'string' &&
+    typeof value.unread === 'boolean'
   );
 }

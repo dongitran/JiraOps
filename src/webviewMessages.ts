@@ -5,11 +5,15 @@ export const CONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.connectJira';
 export const DISCONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.disconnectJira';
 export const OPEN_SETTINGS_MESSAGE_TYPE = 'jiraOps.openSettings';
 export const OPEN_EXTERNAL_LINK_MESSAGE_TYPE = 'jiraOps.openExternalLink';
+export const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
+export const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
 export const DASHBOARD_LOADING_MESSAGE_TYPE = 'jiraOps.dashboardLoading';
 export const DASHBOARD_LOADED_MESSAGE_TYPE = 'jiraOps.dashboardLoaded';
 export const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
 export const CONNECTION_LOADING_MESSAGE_TYPE = 'jiraOps.connectionLoading';
 export const CONNECTION_CHANGED_MESSAGE_TYPE = 'jiraOps.connectionChanged';
+export const NOTIFICATIONS_CHANGED_MESSAGE_TYPE = 'jiraOps.notificationsChanged';
+export const SETTINGS_CHANGED_MESSAGE_TYPE = 'jiraOps.settingsChanged';
 
 export interface WebviewReadyMessage {
   readonly type: typeof WEBVIEW_READY_MESSAGE_TYPE;
@@ -41,6 +45,16 @@ export interface OpenExternalLinkMessage {
   readonly url: string;
 }
 
+export interface UpdateSettingsMessage {
+  readonly notificationsEnabled: boolean;
+  readonly pollIntervalMinutes: number;
+  readonly type: typeof UPDATE_SETTINGS_MESSAGE_TYPE;
+}
+
+export interface ClearNotificationsMessage {
+  readonly type: typeof CLEAR_NOTIFICATIONS_MESSAGE_TYPE;
+}
+
 export type WebviewInboundMessage =
   | WebviewReadyMessage
   | RefreshDashboardMessage
@@ -48,7 +62,9 @@ export type WebviewInboundMessage =
   | ConnectJiraMessage
   | DisconnectJiraMessage
   | OpenSettingsMessage
-  | OpenExternalLinkMessage;
+  | OpenExternalLinkMessage
+  | UpdateSettingsMessage
+  | ClearNotificationsMessage;
 
 export function isWebviewReadyMessage(
   message: unknown
@@ -102,6 +118,30 @@ export function isOpenExternalLinkMessage(
 
   const url = message['url'];
   return typeof url === 'string' && isWebUrl(url);
+}
+
+export function isUpdateSettingsMessage(
+  message: unknown
+): message is UpdateSettingsMessage {
+  if (!isRecord(message) || message['type'] !== UPDATE_SETTINGS_MESSAGE_TYPE) {
+    return false;
+  }
+
+  const notificationsEnabled = message['notificationsEnabled'];
+  const pollIntervalMinutes = message['pollIntervalMinutes'];
+  return (
+    typeof notificationsEnabled === 'boolean' &&
+    typeof pollIntervalMinutes === 'number' &&
+    Number.isInteger(pollIntervalMinutes) &&
+    pollIntervalMinutes >= 1 &&
+    pollIntervalMinutes <= 60
+  );
+}
+
+export function isClearNotificationsMessage(
+  message: unknown
+): message is ClearNotificationsMessage {
+  return hasMessageType(message, CLEAR_NOTIFICATIONS_MESSAGE_TYPE);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -49,7 +49,7 @@ jobs:
         run: npm --prefix e2e run validate
 
       - name: Package VSIX
-        run: npm run package -- --out "jira-ops-${{ github.sha }}.vsix"
+        run: npm run package:pre -- --out "jira-ops-${{ github.sha }}.vsix"
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v7
@@ -68,7 +68,7 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Publish to VS Code Marketplace
-        run: npm run publish
+        run: npm run publish:pre
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
@@ -85,4 +85,5 @@ jobs:
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --notes-file CHANGELOG.md \
-            --latest
+            --prerelease \
+            --latest=false

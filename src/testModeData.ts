@@ -6,8 +6,10 @@ const TEST_ATTACHMENT_IMAGE_DATA_URI = `data:image/svg+xml;utf8,${encodeURICompo
   '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="36"><rect width="64" height="36" fill="#2aa198"/></svg>'
 )}`;
 
+let notificationScenarioReadCount = 0;
+
 export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
-  return [
+  const issues = [
     {
       key: 'OPS-123',
       summary: 'Stabilize payment reconciliation alerts',
@@ -54,6 +56,25 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
       updated: '2026-04-30T17:45:00.000+0000',
     },
   ];
+  if (process.env['JIRA_OPS_TEST_MODE_NOTIFICATION_UPDATE'] !== '1') {
+    return issues;
+  }
+
+  notificationScenarioReadCount += 1;
+  if (notificationScenarioReadCount <= 1) {
+    return issues;
+  }
+
+  return issues.map((issue) => {
+    if (issue.key !== 'OPS-123') {
+      return issue;
+    }
+
+    return {
+      ...issue,
+      updated: '2026-05-01T08:24:00.000+0000',
+    };
+  });
 }
 
 export function resolveTestRemoteLinks(issueKey: string): RemoteWebLink[] {

@@ -8,6 +8,7 @@ const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
 
 export interface ShowIssueDetailPanelOptions {
   readonly extensionUri: vscode.Uri;
+  readonly initialDetail?: JiraIssueDetail;
   readonly outputChannel: vscode.OutputChannel;
   readonly issue: DashboardIssue;
 }
@@ -32,12 +33,16 @@ export function showIssueDetailPanel(
   const panel = createIssueDetailWebviewPanel(options.issue, assetsRoot);
   const nonce = createNonce();
   let disposed = false;
-  panel.webview.html = buildIssueDetailLoadingHtml(
-    panel.webview,
-    assetsRoot,
-    nonce,
-    options.issue
-  );
+  panel.webview.html =
+    options.initialDetail === undefined
+      ? buildIssueDetailLoadingHtml(panel.webview, assetsRoot, nonce, options.issue)
+      : buildIssueDetailHtml(
+          panel.webview,
+          assetsRoot,
+          nonce,
+          options.issue,
+          options.initialDetail
+        );
   const subscription = panel.webview.onDidReceiveMessage((message: unknown) => {
     void handleDetailMessage(message, options.outputChannel);
   });

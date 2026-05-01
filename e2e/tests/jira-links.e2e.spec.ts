@@ -10,14 +10,38 @@ import {
 import {
   cleanupExtensionHost,
   clickWithFallback,
+  closeActiveEditor,
   launchExtensionHost,
   openJiraOpsView,
   openSettingsFromViewTitle,
   resolveIssueDetailFrame,
   resolveLoadedIssueDetailFrame,
+  resolveWhatsNewFrame,
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
+  test('User can review JiraOps release notes after an extension update', async () => {
+    const session = await launchExtensionHost({
+      env: {
+        JIRA_OPS_FORCE_WHATS_NEW: '1',
+        JIRA_OPS_SUPPRESS_WHATS_NEW: '0',
+      },
+    });
+
+    try {
+      await openJiraOpsView(session.window);
+      const whatsNewFrame = await resolveWhatsNewFrame(session.window);
+      await expect(
+        whatsNewFrame.getByRole('heading', { name: 'What Is New' })
+      ).toBeVisible();
+      await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
+        'assigned issue'
+      );
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
   test('User can view a compact assigned ticket dashboard without duplicate settings controls', async () => {
     const session = await launchExtensionHost();
 
@@ -149,6 +173,34 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
+  test('User can reopen recently loaded issue details without a loading state', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      const detailsButton = frame
+        .getByLabel('OPS-123 assigned ticket')
+        .getByRole('button', { name: 'Details' });
+
+      await clickWithFallback(detailsButton);
+      await expect(
+        (await resolveLoadedIssueDetailFrame(session.window, 'OPS-123')).getByLabel(
+          'Issue content'
+        )
+      ).toBeVisible();
+      await closeActiveEditor(session.window, 'OPS-123');
+
+      await clickWithFallback(detailsButton);
+      const reopenedFrame = await resolveIssueDetailFrame(session.window, 'OPS-123');
+      await expect(reopenedFrame.getByLabel('Issue content')).toBeVisible({
+        timeout: 700,
+      });
+      await expect(reopenedFrame.getByRole('status')).toHaveCount(0);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
   test('User can review an assigned issue that has clone-only merge requests', async () => {
     const session = await launchExtensionHost();
 
@@ -194,6 +246,14 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(frame.getByRole('button', { name: 'Disconnect' })).toBeVisible();
       await expect(frame.getByRole('button', { name: 'Refresh' })).toHaveCount(0);
       await expect(frame.getByText('sample-access-value')).toHaveCount(0);
+      await expect(frame.getByRole('spinbutton', { name: 'Poll interval' })).toHaveValue(
+        '1'
+      );
+      await frame.getByRole('spinbutton', { name: 'Poll interval' }).fill('5');
+      await clickWithFallback(frame.getByRole('button', { name: 'Save Polling' }));
+      await expect(frame.getByRole('status')).toContainText(
+        'Notification polling settings saved.'
+      );
 
       await clickWithFallback(frame.getByRole('button', { name: 'Disconnect' }));
 
@@ -241,6 +301,32 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
       await expect(frame.getByLabel('OPS-123 assigned ticket')).toBeVisible();
       await expect(frame.getByRole('status')).toHaveCount(0);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User can see assigned issue updates in notifications', async () => {
+    const session = await launchExtensionHost({
+      env: {
+        JIRA_OPS_NOTIFICATION_POLL_INTERVAL_MS: '500',
+        JIRA_OPS_TEST_MODE_NOTIFICATION_UPDATE: '1',
+      },
+    });
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      const notificationButton = frame.getByRole('button', {
+        name: /Open notifications, 1 unread/u,
+      });
+      await expect(notificationButton).toBeVisible({ timeout: 8_000 });
+      await clickWithFallback(notificationButton);
+
+      await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+      await expect(frame.getByText('OPS-123 was updated')).toBeVisible();
+      await clickWithFallback(frame.getByRole('button', { name: 'Clear' }));
+      await returnToDashboard(frame);
+      await expect(frame.getByRole('button', { name: 'Open notifications' })).toBeVisible();
     } finally {
       await cleanupExtensionHost(session);
     }

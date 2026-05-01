@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
 
 import {
-  JiraCredentialSetupCanceledError,
   applyJiraOAuthCredentialsToEnv,
   ensureJiraOAuthCredentials,
   getJiraOAuthCredentials,
-  type JiraCredentialInputOptions,
 } from './jiraCredentials';
 import {
   fetchAssignedJiraIssues,
@@ -20,6 +18,10 @@ import {
   type CloneWebLinks,
   type DashboardIssue,
 } from './dashboardItems';
+import {
+  readCachedIssueDetailBundle,
+  type CachedIssueDetailBundle,
+} from './cachedIssueDetailBundle';
 import { showIssueDetailPanel, type IssueDetailPanelHandle } from './issueDetailPanel';
 import {
   fetchJiraIssueDetail,
@@ -27,12 +29,38 @@ import {
   type JiraIssueDetail,
   type JiraLinkedCloneIssue,
 } from './jiraIssueDetails';
+import {
+  buildJiraOpsPanelHtml,
+  connectionErrorMessage,
+  createNonce,
+  dashboardLoadedLogMessage,
+  initialConnectionMessage,
+  JiraConnectionRequiredError,
+  resolveNotificationPollIntervalMs,
+  testConnectionStatus,
+  testIssueDetailLoader,
+  testRemoteLinksLoader,
+  toAssignedIssue,
+  waitForConfiguredDetailDelay,
+  webLinkHost,
+  type JiraCredentialInputOptions,
+} from './jiraOpsPanelSupport';
+import {
+  markAllNotificationsRead,
+  markIssueNotificationsRead,
+  type IssueUpdateNotificationResult,
+  type JiraOpsNotification,
+} from './jiraNotifications';
+import {
+  readJiraOpsSettings,
+  writeJiraOpsSettings,
+  type JiraOpsSettings,
+} from './jiraOpsSettings';
+import { NotificationPoller } from './notificationPoller';
 import type { RemoteWebLink } from './remoteLinks';
 import {
   isJiraOpsTestMode,
   resolveTestAssignedIssues,
-  resolveTestIssueDetail,
-  resolveTestRemoteLinks,
 } from './testModeData';
 import { TtlCache, type TtlCacheResult } from './ttlCache';
 import {
@@ -41,28 +69,26 @@ import {
   DASHBOARD_ERROR_MESSAGE_TYPE,
   DASHBOARD_LOADED_MESSAGE_TYPE,
   DASHBOARD_LOADING_MESSAGE_TYPE,
+  isClearNotificationsMessage,
   isConnectJiraMessage,
   isDisconnectJiraMessage,
   isOpenExternalLinkMessage,
   isOpenIssueDetailMessage,
   isOpenSettingsMessage,
   isRefreshDashboardMessage,
+  isUpdateSettingsMessage,
   isWebviewReadyMessage,
+  NOTIFICATIONS_CHANGED_MESSAGE_TYPE,
   OPEN_SETTINGS_MESSAGE_TYPE,
+  SETTINGS_CHANGED_MESSAGE_TYPE,
 } from './webviewMessages';
 
 export const LINKS_VIEW_ID = 'jiraOps.linksView';
 
 const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
-const TEST_JIRA_CLOUD_NAME = 'Example Jira';
 const JIRA_DETAIL_CACHE_TTL_MS = 5 * 60_000;
 const JIRA_REMOTE_LINK_CACHE_TTL_MS = 5 * 60_000;
 const MAX_CLONE_ISSUES_TO_LOAD = 10;
-
-interface IssueDetailBundle {
-  readonly issue: DashboardIssue;
-  readonly detail: JiraIssueDetail;
-}
 
 export class JiraOpsPanelProvider
   implements vscode.WebviewViewProvider, vscode.Disposable
@@ -76,13 +102,34 @@ export class JiraOpsPanelProvider
   private readonly remoteLinksCache = new TtlCache<readonly RemoteWebLink[]>(
     JIRA_REMOTE_LINK_CACHE_TTL_MS
   );
+  private readonly notificationPoller: NotificationPoller;
+  private notifications: readonly JiraOpsNotification[] = [];
   private testModeConnected = false;
 
   public constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly outputChannel: vscode.OutputChannel,
+    private readonly globalState: vscode.Memento,
     private readonly tokenProvider = new OAuthJiraTokenProvider()
-  ) {}
+  ) {
+    this.notificationPoller = new NotificationPoller({
+      fetchIssues: () => this.loadAssignedIssues(),
+      log: (message) => {
+        this.outputChannel.appendLine(message);
+      },
+      onError: (error) => {
+        this.handleNotificationPollError(error);
+      },
+      onIssues: (issues) => {
+        this.applyAssignedIssues(issues, 'notification poll');
+      },
+      onNotifications: (result) => {
+        this.handleNotificationPollResult(result);
+      },
+      readSettings: () => Promise.resolve(readJiraOpsSettings(this.globalState)),
+      resolveIntervalMs: (settings) => resolveNotificationPollIntervalMs(settings),
+    });
+  }
 
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.webviewView = webviewView;
@@ -100,7 +147,7 @@ export class JiraOpsPanelProvider
     });
     this.disposables.push(subscription);
 
-    webviewView.webview.html = this.buildHtml(
+    webviewView.webview.html = buildJiraOpsPanelHtml(
       webviewView.webview,
       createNonce(),
       assetsRoot
@@ -108,6 +155,7 @@ export class JiraOpsPanelProvider
   }
 
   public dispose(): void {
+    this.notificationPoller.dispose();
     while (this.disposables.length > 0) {
       this.disposables.pop()?.dispose();
     }
@@ -158,15 +206,27 @@ export class JiraOpsPanelProvider
 
     if (isOpenExternalLinkMessage(message)) {
       await this.handleOpenExternalLink(message.url);
+      return;
+    }
+
+    if (isUpdateSettingsMessage(message)) {
+      await this.handleUpdateSettings(message.notificationsEnabled, message.pollIntervalMinutes);
+      return;
+    }
+
+    if (isClearNotificationsMessage(message)) {
+      this.handleClearNotifications();
     }
   }
 
   private async handleWebviewReady(): Promise<void> {
     this.outputChannel.appendLine('Jira Ops webview is ready.');
+    this.postSettingsChanged();
+    this.postNotificationsChanged('Notification polling is ready.');
     const status = await this.loadConnectionStatus();
     this.postConnectionChanged(status, initialConnectionMessage(status));
     if (status.connected) {
-      await this.handleRefreshDashboard();
+      await this.loadInitialDashboardAndStartPolling();
     }
   }
 
@@ -179,7 +239,7 @@ export class JiraOpsPanelProvider
       const status = await this.connectJira();
       this.outputChannel.appendLine('Jira connection is ready.');
       this.postConnectionChanged(status, '');
-      await this.handleRefreshDashboard();
+      await this.loadInitialDashboardAndStartPolling();
     } catch (error) {
       this.postMessage({
         type: DASHBOARD_ERROR_MESSAGE_TYPE,
@@ -195,6 +255,9 @@ export class JiraOpsPanelProvider
     try {
       const status = await this.disconnectJira();
       this.dashboardIssues.splice(0);
+      this.notificationPoller.dispose();
+      this.notifications = [];
+      this.postNotificationsChanged('Notification polling is paused.');
       this.clearIssueCaches();
       this.outputChannel.appendLine('Jira connection was cleared.');
       this.postConnectionChanged(status, 'Jira disconnected.');
@@ -212,11 +275,9 @@ export class JiraOpsPanelProvider
     this.postMessage({ type: DASHBOARD_LOADING_MESSAGE_TYPE });
 
     try {
-      this.clearIssueCaches();
-      const issues = await this.loadDashboardIssues();
-      this.dashboardIssues.splice(0, this.dashboardIssues.length, ...issues);
-      this.outputChannel.appendLine(dashboardLoadedLogMessage(issues));
-      this.postMessage({ type: DASHBOARD_LOADED_MESSAGE_TYPE, issues });
+      const assignedIssues = await this.loadAssignedIssues();
+      this.notificationPoller.prime(assignedIssues);
+      this.applyAssignedIssues(assignedIssues, 'manual refresh');
     } catch (error) {
       this.postMessage({
         type: DASHBOARD_ERROR_MESSAGE_TYPE,
@@ -227,6 +288,48 @@ export class JiraOpsPanelProvider
       });
       this.outputChannel.appendLine('Assigned Jira ticket refresh failed.');
     }
+  }
+
+  private async loadInitialDashboardAndStartPolling(): Promise<void> {
+    this.postMessage({ type: DASHBOARD_LOADING_MESSAGE_TYPE });
+    try {
+      const assignedIssues = await this.loadAssignedIssues();
+      this.notificationPoller.prime(assignedIssues);
+      this.applyAssignedIssues(assignedIssues, 'initial load');
+      await this.notificationPoller.start();
+    } catch (error) {
+      this.postMessage({
+        type: DASHBOARD_ERROR_MESSAGE_TYPE,
+        message:
+          error instanceof JiraConnectionRequiredError
+            ? 'Connect Jira before loading assigned tickets.'
+            : 'Assigned tickets could not be loaded.',
+      });
+      this.outputChannel.appendLine('Initial assigned Jira ticket load failed.');
+    }
+  }
+
+  private async handleUpdateSettings(notificationsEnabled: boolean, pollIntervalMinutes: number): Promise<void> {
+    const settings = await writeJiraOpsSettings(this.globalState, {
+      notificationPollIntervalMinutes: pollIntervalMinutes,
+      notificationsEnabled,
+    });
+    this.outputChannel.appendLine(`Saved JiraOps notification polling settings: enabled=${String(settings.notificationsEnabled)}, interval=${String(settings.notificationPollIntervalMinutes)} minute(s).`);
+    this.postSettingsChanged(settings);
+    const status = await this.loadConnectionStatus();
+    if (status.connected) {
+      await this.notificationPoller.restart();
+      return;
+    }
+
+    this.notificationPoller.dispose();
+    this.postNotificationsChanged('Notification polling is paused.');
+  }
+
+  private handleClearNotifications(): void {
+    this.notifications = markAllNotificationsRead(this.notifications);
+    this.outputChannel.appendLine('Marked JiraOps notifications as read.');
+    this.postNotificationsChanged('Notifications marked as read.');
   }
 
   private handleOpenIssueDetail(issueKey: string): void {
@@ -240,19 +343,37 @@ export class JiraOpsPanelProvider
       return;
     }
 
+    const cachedBundle = readCachedIssueDetailBundle({
+      detailCache: this.issueDetailCache,
+      issue,
+      maxCloneIssues: MAX_CLONE_ISSUES_TO_LOAD,
+      remoteLinksCache: this.remoteLinksCache,
+    });
+    if (cachedBundle !== null) {
+      this.outputChannel.appendLine(`Opening cached Jira issue detail panel for ${issue.key}.`);
+      showIssueDetailPanel({
+        extensionUri: this.extensionUri,
+        initialDetail: cachedBundle.detail,
+        issue: cachedBundle.issue,
+        outputChannel: this.outputChannel,
+      });
+      this.notifications = markIssueNotificationsRead(this.notifications, issue.key);
+      this.postNotificationsChanged('Opened cached issue details.');
+      return;
+    }
+
     this.outputChannel.appendLine(`Opening Jira issue detail panel for ${issue.key}.`);
     const panel = showIssueDetailPanel({
       extensionUri: this.extensionUri,
       outputChannel: this.outputChannel,
       issue,
     });
+    this.notifications = markIssueNotificationsRead(this.notifications, issue.key);
+    this.postNotificationsChanged('Opening issue details.');
     void this.populateIssueDetailPanel(panel, issue);
   }
 
-  private async populateIssueDetailPanel(
-    panel: IssueDetailPanelHandle,
-    issue: DashboardIssue
-  ): Promise<void> {
+  private async populateIssueDetailPanel(panel: IssueDetailPanelHandle, issue: DashboardIssue): Promise<void> {
     try {
       await waitForConfiguredDetailDelay();
       const bundle = await this.loadIssueDetailBundle(issue);
@@ -274,13 +395,13 @@ export class JiraOpsPanelProvider
     await vscode.env.openExternal(vscode.Uri.parse(url));
   }
 
-  private async loadDashboardIssues(): Promise<DashboardIssue[]> {
+  private async loadAssignedIssues(): Promise<readonly JiraAssignedIssue[]> {
     if (isJiraOpsTestMode()) {
       if (!this.testModeConnected) {
         throw new JiraConnectionRequiredError();
       }
 
-      return this.createDashboardIssues(resolveTestAssignedIssues());
+      return resolveTestAssignedIssues();
     }
 
     const tokens = await this.tokenProvider.getStoredOrRefreshTokens();
@@ -288,16 +409,28 @@ export class JiraOpsPanelProvider
       throw new JiraConnectionRequiredError();
     }
 
-    const issues = await fetchAssignedJiraIssues({
+    return fetchAssignedJiraIssues({
       accessToken: tokens.accessToken,
       cloudId: tokens.cloudId,
     });
-    return this.createDashboardIssues(issues);
   }
 
-  private createDashboardIssues(
-    issues: readonly JiraAssignedIssue[]
-  ): DashboardIssue[] {
+  private applyAssignedIssues(
+    issues: readonly JiraAssignedIssue[],
+    source: string
+  ): void {
+    const dashboardIssues = this.createDashboardIssues(issues);
+    this.dashboardIssues.splice(0, this.dashboardIssues.length, ...dashboardIssues);
+    this.outputChannel.appendLine(
+      `${dashboardLoadedLogMessage(dashboardIssues)} Source: ${source}.`
+    );
+    this.postMessage({
+      type: DASHBOARD_LOADED_MESSAGE_TYPE,
+      issues: dashboardIssues,
+    });
+  }
+
+  private createDashboardIssues(issues: readonly JiraAssignedIssue[]): DashboardIssue[] {
     return issues.map((issue) => {
       return createDashboardIssue(issue, []);
     });
@@ -319,7 +452,9 @@ export class JiraOpsPanelProvider
     return cloneWebLinks;
   }
 
-  private async loadIssueDetailBundle(issue: DashboardIssue): Promise<IssueDetailBundle> {
+  private async loadIssueDetailBundle(
+    issue: DashboardIssue
+  ): Promise<CachedIssueDetailBundle> {
     if (isJiraOpsTestMode()) {
       return this.loadIssueDetailBundleWithLoaders(
         issue,
@@ -348,7 +483,7 @@ export class JiraOpsPanelProvider
     issue: DashboardIssue,
     loadDetail: (issueKey: string) => Promise<JiraIssueDetail>,
     loadLinks: (issueKey: string) => Promise<RemoteWebLink[]>
-  ): Promise<IssueDetailBundle> {
+  ): Promise<CachedIssueDetailBundle> {
     const detail = await this.loadIssueDetailFromCache(issue.key, loadDetail);
     const webLinks = await this.loadRemoteLinksFromCache(issue.key, loadLinks);
     const cloneWebLinks = await this.loadCloneWebLinks(detail.linkedCloneIssues, loadLinks);
@@ -501,6 +636,44 @@ export class JiraOpsPanelProvider
     });
   }
 
+  private postSettingsChanged(settings?: JiraOpsSettings): void {
+    const resolvedSettings = settings ?? readJiraOpsSettings(this.globalState);
+    this.postMessage({
+      type: SETTINGS_CHANGED_MESSAGE_TYPE,
+      notificationsEnabled: resolvedSettings.notificationsEnabled,
+      pollIntervalMinutes: resolvedSettings.notificationPollIntervalMinutes,
+    });
+  }
+
+  private postNotificationsChanged(pollStatus: string): void {
+    this.postMessage({
+      type: NOTIFICATIONS_CHANGED_MESSAGE_TYPE,
+      notifications: this.notifications,
+      pollStatus,
+    });
+  }
+
+  private handleNotificationPollResult(
+    result: IssueUpdateNotificationResult
+  ): void {
+    this.notifications = result.notifications;
+    const count = result.newNotifications.length;
+    this.postNotificationsChanged('Checked assigned issue updates just now.');
+    if (count === 0) {
+      return;
+    }
+
+    void vscode.window.showInformationMessage(
+      `JiraOps found ${String(count)} assigned issue update${count === 1 ? '' : 's'}.`
+    );
+  }
+
+  private handleNotificationPollError(error: unknown): void {
+    const message = error instanceof Error ? error.message : 'Unknown poll error';
+    this.outputChannel.appendLine(`JiraOps notification poll failed: ${message}`);
+    this.postNotificationsChanged('Last assigned issue update check failed.');
+  }
+
   private postMessage(message: Record<string, unknown>): void {
     void this.webviewView?.webview.postMessage(message);
   }
@@ -520,138 +693,4 @@ export class JiraOpsPanelProvider
     );
   }
 
-  private buildHtml(
-    webview: vscode.Webview,
-    nonce: string,
-    assetsRoot: vscode.Uri
-  ): string {
-    const scriptSrc = webview
-      .asWebviewUri(vscode.Uri.joinPath(assetsRoot, 'jira-ops.js'))
-      .toString();
-    const cssSrc = webview
-      .asWebviewUri(vscode.Uri.joinPath(assetsRoot, 'jira-ops.css'))
-      .toString();
-    const csp = buildCsp(webview, nonce);
-
-    return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta http-equiv="Content-Security-Policy" content="${csp}" />
-    <title>JiraOps</title>
-    <link rel="stylesheet" href="${cssSrc}" />
-  </head>
-  <body class="jira-ops-page jira-ops-extension">
-    <main id="app"></main>
-    <script nonce="${nonce}" type="module" src="${scriptSrc}"></script>
-  </body>
-</html>`;
-  }
 }
-
-function testRemoteLinksLoader(issueKey: string): Promise<RemoteWebLink[]> {
-  return Promise.resolve(resolveTestRemoteLinks(issueKey));
-}
-
-function testIssueDetailLoader(issueKey: string): Promise<JiraIssueDetail> {
-  return Promise.resolve(resolveTestIssueDetail(issueKey));
-}
-
-function toAssignedIssue(issue: DashboardIssue): JiraAssignedIssue {
-  return {
-    key: issue.key,
-    summary: issue.summary,
-    status: issue.status,
-    statusCategory: issue.statusCategory,
-    priority: issue.priority === 'No priority' ? null : issue.priority,
-    assigneeDisplayName: null,
-    updated: issue.updated,
-  };
-}
-
-async function waitForConfiguredDetailDelay(): Promise<void> {
-  if (!isJiraOpsTestMode()) {
-    return;
-  }
-
-  const delayMs = parseNonNegativeInteger(
-    process.env['JIRA_OPS_DETAIL_TEST_DELAY_MS']
-  );
-  if (delayMs === 0) {
-    return;
-  }
-
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, delayMs);
-  });
-}
-
-function parseNonNegativeInteger(value: string | undefined): number {
-  if (value === undefined || !/^\d+$/.test(value)) {
-    return 0;
-  }
-
-  return Number(value);
-}
-
-function buildCsp(webview: vscode.Webview, nonce: string): string {
-  return [
-    "default-src 'none'",
-    `style-src ${webview.cspSource}`,
-    `font-src ${webview.cspSource}`,
-    `script-src 'nonce-${nonce}' ${webview.cspSource}`,
-  ].join('; ');
-}
-
-function createNonce(): string {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let nonce = '';
-  for (let index = 0; index < 24; index += 1) {
-    const randomIndex = Math.floor(Math.random() * alphabet.length);
-    nonce += alphabet[randomIndex] ?? 'A';
-  }
-  return nonce;
-}
-
-function testConnectionStatus(connected: boolean): JiraConnectionStatus {
-  return {
-    connected,
-    cloudName: connected ? TEST_JIRA_CLOUD_NAME : null,
-  };
-}
-
-function initialConnectionMessage(status: JiraConnectionStatus): string {
-  return status.connected ? '' : 'Connect Jira to load assigned tickets.';
-}
-
-function connectionErrorMessage(error: unknown): string {
-  if (error instanceof JiraCredentialSetupCanceledError) {
-    return error.message;
-  }
-
-  if (error instanceof Error && isJiraCredentialSetupMessage(error.message)) {
-    return error.message;
-  }
-
-  return 'Jira connection could not be completed.';
-}
-
-function isJiraCredentialSetupMessage(message: string): boolean {
-  return message.startsWith('Jira OAuth client ');
-}
-
-function dashboardLoadedLogMessage(issues: readonly DashboardIssue[]): string {
-  const issueCount = issues.length;
-  return `Loaded ${String(issueCount)} assigned Jira tickets.`;
-}
-
-function webLinkHost(url: string): string {
-  try {
-    return new URL(url).host;
-  } catch {
-    return 'unknown host';
-  }
-}
-
-class JiraConnectionRequiredError extends Error {}
