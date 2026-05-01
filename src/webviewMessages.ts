@@ -1,12 +1,13 @@
 export const WEBVIEW_READY_MESSAGE_TYPE = 'jiraOps.webviewReady';
-export const FETCH_LINKS_MESSAGE_TYPE = 'jiraOps.fetchLinks';
+export const REFRESH_DASHBOARD_MESSAGE_TYPE = 'jiraOps.refreshDashboard';
+export const OPEN_ISSUE_DETAIL_MESSAGE_TYPE = 'jiraOps.openIssueDetail';
 export const CONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.connectJira';
 export const DISCONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.disconnectJira';
 export const OPEN_SETTINGS_MESSAGE_TYPE = 'jiraOps.openSettings';
 export const OPEN_EXTERNAL_LINK_MESSAGE_TYPE = 'jiraOps.openExternalLink';
-export const LOADING_MESSAGE_TYPE = 'jiraOps.linksLoading';
-export const LOADED_MESSAGE_TYPE = 'jiraOps.linksLoaded';
-export const ERROR_MESSAGE_TYPE = 'jiraOps.linksError';
+export const DASHBOARD_LOADING_MESSAGE_TYPE = 'jiraOps.dashboardLoading';
+export const DASHBOARD_LOADED_MESSAGE_TYPE = 'jiraOps.dashboardLoaded';
+export const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
 export const CONNECTION_LOADING_MESSAGE_TYPE = 'jiraOps.connectionLoading';
 export const CONNECTION_CHANGED_MESSAGE_TYPE = 'jiraOps.connectionChanged';
 
@@ -14,9 +15,13 @@ export interface WebviewReadyMessage {
   readonly type: typeof WEBVIEW_READY_MESSAGE_TYPE;
 }
 
-export interface FetchLinksMessage {
-  readonly type: typeof FETCH_LINKS_MESSAGE_TYPE;
-  readonly issueInput: string;
+export interface RefreshDashboardMessage {
+  readonly type: typeof REFRESH_DASHBOARD_MESSAGE_TYPE;
+}
+
+export interface OpenIssueDetailMessage {
+  readonly type: typeof OPEN_ISSUE_DETAIL_MESSAGE_TYPE;
+  readonly issueKey: string;
 }
 
 export interface ConnectJiraMessage {
@@ -38,7 +43,8 @@ export interface OpenExternalLinkMessage {
 
 export type WebviewInboundMessage =
   | WebviewReadyMessage
-  | FetchLinksMessage
+  | RefreshDashboardMessage
+  | OpenIssueDetailMessage
   | ConnectJiraMessage
   | DisconnectJiraMessage
   | OpenSettingsMessage
@@ -50,14 +56,22 @@ export function isWebviewReadyMessage(
   return hasMessageType(message, WEBVIEW_READY_MESSAGE_TYPE);
 }
 
-export function isFetchLinksMessage(message: unknown): message is FetchLinksMessage {
+export function isRefreshDashboardMessage(
+  message: unknown
+): message is RefreshDashboardMessage {
+  return hasMessageType(message, REFRESH_DASHBOARD_MESSAGE_TYPE);
+}
+
+export function isOpenIssueDetailMessage(
+  message: unknown
+): message is OpenIssueDetailMessage {
   if (!isRecord(message)) {
     return false;
   }
 
   return (
-    message['type'] === FETCH_LINKS_MESSAGE_TYPE &&
-    typeof message['issueInput'] === 'string'
+    message['type'] === OPEN_ISSUE_DETAIL_MESSAGE_TYPE &&
+    typeof message['issueKey'] === 'string'
   );
 }
 

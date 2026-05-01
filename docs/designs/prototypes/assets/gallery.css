@@ -57,6 +57,8 @@ body.gallery-theme-high-contrast {
 
 .sidebar-host {
   position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   border-right: 1px solid var(--gallery-border);
   background: var(--gallery-side);
   min-width: 0;
@@ -65,12 +67,16 @@ body.gallery-theme-high-contrast {
 #prototype-frame {
   display: block;
   width: 100%;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   border: 0;
   background: transparent;
 }
 
 .editor-surface {
+  min-width: 0;
+  overflow: auto;
+  padding: 28px;
   background:
     linear-gradient(90deg, transparent 0, transparent 19px, rgba(127, 127, 127, 0.12) 20px),
     linear-gradient(0deg, transparent 0, transparent 19px, rgba(127, 127, 127, 0.1) 20px),
@@ -78,11 +84,153 @@ body.gallery-theme-high-contrast {
   background-size: 20px 20px;
 }
 
+.editor-detail,
+.editor-detail-empty {
+  width: min(920px, 100%);
+  color: var(--gallery-text);
+}
+
+.editor-detail-empty {
+  display: grid;
+  align-content: center;
+  min-height: 70vh;
+}
+
+.editor-detail-empty span,
+.detail-key {
+  color: var(--gallery-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.editor-detail-empty strong {
+  margin-top: 8px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.editor-detail-empty p {
+  max-width: 520px;
+  margin: 10px 0 0;
+  color: var(--gallery-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.editor-detail {
+  display: grid;
+  gap: 22px;
+}
+
+.editor-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--gallery-border);
+}
+
+.editor-detail-header h1 {
+  margin: 6px 0 0;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.detail-status {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid var(--gallery-border);
+  border-radius: 999px;
+  color: var(--gallery-muted);
+  font-size: 12px;
+}
+
+.detail-section {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detail-section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.detail-section-heading span {
+  color: var(--gallery-muted);
+  font-size: 12px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.detail-link {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--gallery-border);
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--gallery-side) 88%, transparent);
+  color: var(--gallery-text);
+  text-decoration: none;
+}
+
+.detail-link:hover {
+  border-color: color-mix(in oklab, var(--gallery-accent) 60%, var(--gallery-border));
+}
+
+.detail-link-primary {
+  border-color: color-mix(in oklab, var(--gallery-accent) 45%, var(--gallery-border));
+}
+
+.detail-link strong,
+.detail-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-link strong {
+  color: var(--gallery-accent);
+  font-size: 13px;
+}
+
+.detail-link span,
+.detail-muted {
+  color: var(--gallery-muted);
+  font-size: 12px;
+}
+
+.detail-muted {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--gallery-border);
+  border-radius: 6px;
+}
+
 .floating-nav {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
+  position: relative;
   z-index: 3;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 10px;
+  border-top: 1px solid var(--gallery-border);
 }
 
 .controls-toggle,
@@ -100,6 +248,9 @@ body.gallery-theme-high-contrast {
 }
 
 .floating-controls-panel {
+  position: absolute;
+  right: 10px;
+  bottom: 40px;
   margin-top: 8px;
   padding: 8px;
   border: 1px solid var(--gallery-border);
@@ -119,5 +270,11 @@ body.gallery-theme-high-contrast {
 
   .editor-surface {
     display: none;
+  }
+}
+
+@media (max-width: 920px) {
+  .editor-surface {
+    padding: 20px;
   }
 }

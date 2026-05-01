@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { parseRemoteLinksResponse } from './remoteLinks';
+import { extractGitLabMergeRequests, parseRemoteLinksResponse } from './remoteLinks';
 
 describe('parseRemoteLinksResponse', () => {
   test('maps valid Jira remote links to display rows', () => {
@@ -105,5 +105,68 @@ describe('parseRemoteLinksResponse', () => {
     expect(() => parseRemoteLinksResponse({ links: [] })).toThrow(
       'Jira remote link response was not an array.'
     );
+  });
+});
+
+describe('extractGitLabMergeRequests', () => {
+  test('derives GitLab merge requests from remote web links', () => {
+    const result = extractGitLabMergeRequests([
+      {
+        id: 'gitlab-com-mr',
+        relationship: 'Merge request',
+        title: 'Handle delayed payment settlements',
+        url: 'https://gitlab.com/group/subgroup/payments/-/merge_requests/482',
+        host: 'gitlab.com',
+      },
+      {
+        id: 'self-hosted-mr',
+        relationship: 'Merge request',
+        title: 'Tighten alert thresholds',
+        url: 'https://gitlab.example.com/platform/observability/-/merge_requests/483?diff_id=10',
+        host: 'gitlab.example.com',
+      },
+    ]);
+
+    expect(result).toEqual([
+      {
+        id: 'gitlab-com-mr',
+        sourceLinkId: 'gitlab-com-mr',
+        title: 'Handle delayed payment settlements',
+        url: 'https://gitlab.com/group/subgroup/payments/-/merge_requests/482',
+        host: 'gitlab.com',
+        projectPath: 'group/subgroup/payments',
+        iid: '482',
+      },
+      {
+        id: 'self-hosted-mr',
+        sourceLinkId: 'self-hosted-mr',
+        title: 'Tighten alert thresholds',
+        url: 'https://gitlab.example.com/platform/observability/-/merge_requests/483?diff_id=10',
+        host: 'gitlab.example.com',
+        projectPath: 'platform/observability',
+        iid: '483',
+      },
+    ]);
+  });
+
+  test('ignores remote web links that are not GitLab merge request URLs', () => {
+    const result = extractGitLabMergeRequests([
+      {
+        id: 'gitlab-issue',
+        relationship: 'Issue',
+        title: 'GitLab issue',
+        url: 'https://gitlab.example.com/platform/payments/-/issues/42',
+        host: 'gitlab.example.com',
+      },
+      {
+        id: 'runbook',
+        relationship: 'Runbook',
+        title: 'Service Runbook',
+        url: 'https://docs.example.com/runbooks/payment-service',
+        host: 'docs.example.com',
+      },
+    ]);
+
+    expect(result).toEqual([]);
   });
 });

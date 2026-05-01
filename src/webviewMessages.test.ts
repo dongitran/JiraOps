@@ -3,15 +3,17 @@ import { describe, expect, test } from 'vitest';
 import {
   CONNECT_JIRA_MESSAGE_TYPE,
   DISCONNECT_JIRA_MESSAGE_TYPE,
-  FETCH_LINKS_MESSAGE_TYPE,
+  OPEN_ISSUE_DETAIL_MESSAGE_TYPE,
   OPEN_SETTINGS_MESSAGE_TYPE,
   OPEN_EXTERNAL_LINK_MESSAGE_TYPE,
+  REFRESH_DASHBOARD_MESSAGE_TYPE,
   WEBVIEW_READY_MESSAGE_TYPE,
   isConnectJiraMessage,
   isDisconnectJiraMessage,
-  isFetchLinksMessage,
+  isOpenIssueDetailMessage,
   isOpenExternalLinkMessage,
   isOpenSettingsMessage,
+  isRefreshDashboardMessage,
   isWebviewReadyMessage,
 } from './webviewMessages';
 
@@ -46,25 +48,34 @@ describe('webview message guards', () => {
     expect(isConnectJiraMessage(null)).toBe(false);
     expect(isDisconnectJiraMessage(null)).toBe(false);
     expect(isOpenSettingsMessage(null)).toBe(false);
-    expect(isWebviewReadyMessage({ type: FETCH_LINKS_MESSAGE_TYPE })).toBe(false);
+    expect(isWebviewReadyMessage({ type: REFRESH_DASHBOARD_MESSAGE_TYPE })).toBe(false);
   });
 
-  test('accepts a fetch links message with issue input', () => {
+  test('accepts dashboard refresh and issue detail messages', () => {
     expect(
-      isFetchLinksMessage({
-        type: FETCH_LINKS_MESSAGE_TYPE,
-        issueInput: 'OPS-123',
+      isRefreshDashboardMessage({
+        type: REFRESH_DASHBOARD_MESSAGE_TYPE,
+      })
+    ).toBe(true);
+    expect(
+      isOpenIssueDetailMessage({
+        type: OPEN_ISSUE_DETAIL_MESSAGE_TYPE,
+        issueKey: 'OPS-123',
       })
     ).toBe(true);
   });
 
-  test('rejects malformed fetch links messages', () => {
-    expect(isFetchLinksMessage(null)).toBe(false);
-    expect(isFetchLinksMessage({ type: FETCH_LINKS_MESSAGE_TYPE })).toBe(false);
+  test('rejects malformed issue detail messages', () => {
+    expect(isOpenIssueDetailMessage(null)).toBe(false);
     expect(
-      isFetchLinksMessage({
-        type: FETCH_LINKS_MESSAGE_TYPE,
-        issueInput: 123,
+      isOpenIssueDetailMessage({
+        type: OPEN_ISSUE_DETAIL_MESSAGE_TYPE,
+      })
+    ).toBe(false);
+    expect(
+      isOpenIssueDetailMessage({
+        type: OPEN_ISSUE_DETAIL_MESSAGE_TYPE,
+        issueKey: 123,
       })
     ).toBe(false);
   });

@@ -8,6 +8,16 @@ export interface RemoteWebLink {
   readonly host: string;
 }
 
+export interface MergeRequestLink {
+  readonly id: string;
+  readonly sourceLinkId: string;
+  readonly title: string;
+  readonly url: string;
+  readonly host: string;
+  readonly projectPath: string;
+  readonly iid: string;
+}
+
 const RemoteLinkObjectSchema = z.object({
   title: z.string().optional(),
   url: z.string().optional(),
@@ -32,6 +42,14 @@ export function parseRemoteLinksResponse(responseBody: unknown): RemoteWebLink[]
     .filter((entry): entry is RemoteWebLink => entry !== null);
 }
 
+export function extractGitLabMergeRequests(
+  links: readonly RemoteWebLink[]
+): MergeRequestLink[] {
+  return links
+    .map((link) => mapMergeRequestLink(link))
+    .filter((link): link is MergeRequestLink => link !== null);
+}
+
 function mapRemoteLink(
   entry: z.infer<typeof RemoteLinkSchema>,
   index: number
@@ -54,6 +72,57 @@ function mapRemoteLink(
     relationship: normalizeRelationship(entry.relationship),
     host: parsedUrl.host,
   };
+}
+
+function mapMergeRequestLink(link: RemoteWebLink): MergeRequestLink | null {
+  const parsedUrl = parseWebUrl(link.url);
+  if (parsedUrl === null) {
+    return null;
+  }
+
+  const match = parseMergeRequestPath(parsedUrl.pathname);
+  if (match === null) {
+    return null;
+  }
+
+  return {
+    id: link.id,
+    sourceLinkId: link.id,
+    title: link.title,
+    url: parsedUrl.toString(),
+    host: parsedUrl.host,
+    projectPath: match.projectPath,
+    iid: match.iid,
+  };
+}
+
+function parseMergeRequestPath(
+  pathname: string
+): { readonly projectPath: string; readonly iid: string } | null {
+  const parts = pathname.split('/').filter((part) => part.length > 0);
+  const separatorIndex = parts.indexOf('-');
+  const mergeRequestLabel = parts[separatorIndex + 1];
+  const iid = parts[separatorIndex + 2];
+  if (separatorIndex < 1 || mergeRequestLabel !== 'merge_requests') {
+    return null;
+  }
+
+  if (iid === undefined || !/^\d+$/.test(iid)) {
+    return null;
+  }
+
+  return {
+    projectPath: parts.slice(0, separatorIndex).map(decodePathSegment).join('/'),
+    iid,
+  };
+}
+
+function decodePathSegment(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function parseWebUrl(rawUrl: string): URL | null {

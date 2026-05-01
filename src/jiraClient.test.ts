@@ -1,7 +1,10 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import {
+  buildAssignedIssuesSearchBody,
+  buildAssignedIssuesSearchUrl,
   buildJiraRemoteLinksUrl,
+  fetchAssignedJiraIssues,
   fetchJiraRemoteLinks,
   isTokenUsable,
   OAuthJiraTokenProvider,
@@ -28,6 +31,17 @@ describe('jiraClient', () => {
     expect(buildJiraRemoteLinksUrl('cloud-123', 'OPS-123')).toBe(
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123/remotelink'
     );
+  });
+
+  test('builds the assigned issues enhanced search request safely', () => {
+    expect(buildAssignedIssuesSearchUrl('cloud-123')).toBe(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/search/jql'
+    );
+    expect(buildAssignedIssuesSearchBody()).toEqual({
+      jql: 'assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC',
+      fields: ['summary', 'status', 'priority', 'assignee', 'updated'],
+      maxResults: 25,
+    });
   });
 
   test('detects usable stored tokens with a refresh safety window', () => {
@@ -90,6 +104,83 @@ describe('jiraClient', () => {
         fetchImpl: fetchMock,
       })
     ).rejects.toThrow('Jira remote links could not be loaded.');
+  });
+
+  test('fetches and parses assigned Jira issues from enhanced search', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            issues: [
+              {
+                key: 'OPS-123',
+                fields: {
+                  summary: 'Stabilize payment reconciliation alerts',
+                  status: {
+                    name: 'In Progress',
+                    statusCategory: {
+                      name: 'In Progress',
+                    },
+                  },
+                  priority: {
+                    name: 'High',
+                  },
+                  assignee: {
+                    displayName: 'Current User',
+                  },
+                  updated: '2026-05-01T08:20:00.000+0000',
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    const result = await fetchAssignedJiraIssues({
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result).toEqual([
+      {
+        key: 'OPS-123',
+        summary: 'Stabilize payment reconciliation alerts',
+        status: 'In Progress',
+        statusCategory: 'In Progress',
+        priority: 'High',
+        assigneeDisplayName: 'Current User',
+        updated: '2026-05-01T08:20:00.000+0000',
+      },
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/search/jql',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer sample-access-value',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildAssignedIssuesSearchBody()),
+      }
+    );
+  });
+
+  test('throws a neutral error when assigned issue search fails', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(new Response('denied', { status: 403 }));
+    });
+
+    await expect(
+      fetchAssignedJiraIssues({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        fetchImpl: fetchMock,
+      })
+    ).rejects.toThrow('Assigned Jira issues could not be loaded.');
   });
 
   test('returns usable stored tokens without authentication', async () => {

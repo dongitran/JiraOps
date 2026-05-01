@@ -1,30 +1,73 @@
 import { describe, expect, test } from 'vitest';
 
-import { isJiraOpsTestMode, resolveTestRemoteLinks } from './testModeData';
+import {
+  isJiraOpsTestMode,
+  resolveTestAssignedIssues,
+  resolveTestRemoteLinks,
+} from './testModeData';
 
 describe('testModeData', () => {
+  test('returns deterministic assigned Jira issues', () => {
+    expect(resolveTestAssignedIssues()).toEqual([
+      {
+        key: 'OPS-123',
+        summary: 'Stabilize payment reconciliation alerts',
+        status: 'In Progress',
+        statusCategory: 'In Progress',
+        priority: 'High',
+        assigneeDisplayName: 'Current User',
+        updated: '2026-05-01T08:20:00.000+0000',
+      },
+      {
+        key: 'OPS-456',
+        summary: 'Review checkout service release readiness',
+        status: 'Code Review',
+        statusCategory: 'In Progress',
+        priority: 'Medium',
+        assigneeDisplayName: 'Current User',
+        updated: '2026-05-01T06:05:00.000+0000',
+      },
+      {
+        key: 'OPS-789',
+        summary: 'Confirm warehouse webhook retry policy',
+        status: 'Waiting for Input',
+        statusCategory: 'To Do',
+        priority: 'Low',
+        assigneeDisplayName: 'Current User',
+        updated: '2026-04-30T17:45:00.000+0000',
+      },
+    ]);
+  });
+
   test('returns deterministic remote web links for an issue key', () => {
     expect(resolveTestRemoteLinks('OPS-123')).toEqual([
       {
-        id: 'OPS-123-design-review',
-        title: 'Design Review',
-        url: 'https://example.atlassian.net/wiki/spaces/OPS/pages/1453/design-review',
-        relationship: 'Confluence',
-        host: 'example.atlassian.net',
+        id: 'OPS-123-mr-482',
+        title: 'Handle delayed payment settlements',
+        url: 'https://gitlab.example.com/platform/payments/-/merge_requests/482',
+        relationship: 'Merge request',
+        host: 'gitlab.example.com',
       },
       {
-        id: 'OPS-123-service-runbook',
-        title: 'Service Runbook',
-        url: 'https://docs.example.com/runbooks/payment-service',
+        id: 'OPS-123-mr-483',
+        title: 'Tighten reconciliation alert thresholds',
+        url: 'https://gitlab.example.com/platform/observability/-/merge_requests/483',
+        relationship: 'Merge request',
+        host: 'gitlab.example.com',
+      },
+      {
+        id: 'OPS-123-runbook',
+        title: 'Payment incident runbook',
+        url: 'https://docs.example.com/runbooks/payments/reconciliation',
         relationship: 'Runbook',
         host: 'docs.example.com',
       },
       {
-        id: 'OPS-123-release-note',
-        title: 'Release Note',
-        url: 'https://github.com/example/platform/releases/tag/2026.04.29',
-        relationship: 'Release',
-        host: 'github.com',
+        id: 'OPS-123-design',
+        title: 'Alert tuning design note',
+        url: 'https://example.atlassian.net/wiki/spaces/OPS/pages/1453/alert-tuning',
+        relationship: 'Confluence',
+        host: 'example.atlassian.net',
       },
     ]);
   });

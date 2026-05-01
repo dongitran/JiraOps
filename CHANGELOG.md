@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5
+
+- Replace manual web-link lookup with an assigned Jira ticket dashboard.
+- Surface GitLab merge requests on Home while keeping generic Jira web links in issue details.
+- Add a wide VS Code editor detail tab for each assigned issue.
+- Add Jira enhanced JQL search, GitLab MR URL extraction, dashboard unit tests, and MR-focused E2E coverage.
+
 ## 0.1.4
 
 - Rename the JiraOps view to Jira Ops and add a Settings gear action.

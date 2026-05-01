@@ -1,8 +1,8 @@
 {
   "name": "jira-ops",
   "displayName": "Jira Ops",
-  "description": "Jira issue operations for VS Code, starting with remote web link discovery.",
-  "version": "0.1.4",
+  "description": "Assigned Jira tickets and GitLab merge request context in VS Code.",
+  "version": "0.1.5",
   "publisher": "dongtran",
   "license": "MIT",
   "repository": {
@@ -26,7 +26,7 @@
     "commands": [
       {
         "command": "jiraOps.openLinksView",
-        "title": "Open Links View",
+        "title": "Open Dashboard",
         "category": "Jira Ops"
       },
       {

@@ -2,6 +2,8 @@ import { rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { z } from 'zod';
+
 import { parseRemoteLinksResponse, type RemoteWebLink } from './remoteLinks';
 
 export interface JiraTokens {
@@ -20,6 +22,29 @@ export interface FetchJiraRemoteLinksOptions {
   readonly cloudId: string;
   readonly issueKey: string;
   readonly fetchImpl?: typeof fetch;
+}
+
+export interface FetchAssignedJiraIssuesOptions {
+  readonly accessToken: string;
+  readonly cloudId: string;
+  readonly maxResults?: number;
+  readonly fetchImpl?: typeof fetch;
+}
+
+export interface AssignedIssuesSearchBody {
+  readonly jql: string;
+  readonly fields: readonly string[];
+  readonly maxResults: number;
+}
+
+export interface JiraAssignedIssue {
+  readonly key: string;
+  readonly summary: string;
+  readonly status: string;
+  readonly statusCategory: string;
+  readonly priority: string | null;
+  readonly assigneeDisplayName: string | null;
+  readonly updated: string;
 }
 
 export interface JiraTokenProvider {
@@ -47,6 +72,46 @@ export type JiraOAuthClientFactory = () => JiraOAuthClientLike | Promise<JiraOAu
 const ATLASSIAN_API_ROOT = 'https://api.atlassian.com/ex/jira';
 const TOKEN_REFRESH_SAFETY_WINDOW_MS = 60_000;
 const DEFAULT_TOKEN_STORE_PATH = join(homedir(), '.jira-oauth', 'tokens.json');
+const ASSIGNED_ISSUES_JQL =
+  'assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC';
+const ASSIGNED_ISSUE_FIELDS = [
+  'summary',
+  'status',
+  'priority',
+  'assignee',
+  'updated',
+] as const;
+const DEFAULT_ASSIGNED_ISSUE_LIMIT = 25;
+
+const JiraAssignedIssueSchema = z.object({
+  key: z.string().min(1),
+  fields: z.object({
+    summary: z.string().min(1),
+    status: z.object({
+      name: z.string().min(1),
+      statusCategory: z.object({
+        name: z.string().min(1),
+      }),
+    }),
+    priority: z
+      .object({
+        name: z.string().min(1),
+      })
+      .nullable()
+      .optional(),
+    assignee: z
+      .object({
+        displayName: z.string().min(1),
+      })
+      .nullable()
+      .optional(),
+    updated: z.string().min(1),
+  }),
+});
+
+const JiraAssignedIssuesResponseSchema = z.object({
+  issues: z.array(JiraAssignedIssueSchema),
+});
 
 export class OAuthJiraTokenProvider implements JiraTokenProvider {
   private resolvedClient: JiraOAuthClientLike | null = null;
@@ -148,6 +213,21 @@ export function buildJiraRemoteLinksUrl(cloudId: string, issueKey: string): stri
   return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/issue/${encodedIssueKey}/remotelink`;
 }
 
+export function buildAssignedIssuesSearchUrl(cloudId: string): string {
+  const encodedCloudId = encodeURIComponent(cloudId);
+  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/search/jql`;
+}
+
+export function buildAssignedIssuesSearchBody(
+  maxResults = DEFAULT_ASSIGNED_ISSUE_LIMIT
+): AssignedIssuesSearchBody {
+  return {
+    jql: ASSIGNED_ISSUES_JQL,
+    fields: [...ASSIGNED_ISSUE_FIELDS],
+    maxResults,
+  };
+}
+
 export async function fetchJiraRemoteLinks(
   options: FetchJiraRemoteLinksOptions
 ): Promise<RemoteWebLink[]> {
@@ -168,6 +248,48 @@ export async function fetchJiraRemoteLinks(
 
   const responseBody: unknown = await response.json();
   return parseRemoteLinksResponse(responseBody);
+}
+
+export async function fetchAssignedJiraIssues(
+  options: FetchAssignedJiraIssuesOptions
+): Promise<JiraAssignedIssue[]> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const body = buildAssignedIssuesSearchBody(options.maxResults);
+  const response = await fetchImpl(buildAssignedIssuesSearchUrl(options.cloudId), {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${options.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error('Assigned Jira issues could not be loaded.');
+  }
+
+  const responseBody: unknown = await response.json();
+  return parseAssignedIssuesResponse(responseBody);
+}
+
+function parseAssignedIssuesResponse(responseBody: unknown): JiraAssignedIssue[] {
+  const parseResult = JiraAssignedIssuesResponseSchema.safeParse(responseBody);
+  if (!parseResult.success) {
+    throw new Error('Assigned Jira issue response was not valid.');
+  }
+
+  return parseResult.data.issues.map((issue) => {
+    return {
+      key: issue.key,
+      summary: issue.fields.summary,
+      status: issue.fields.status.name,
+      statusCategory: issue.fields.status.statusCategory.name,
+      priority: issue.fields.priority?.name ?? null,
+      assigneeDisplayName: issue.fields.assignee?.displayName ?? null,
+      updated: issue.fields.updated,
+    };
+  });
 }
 
 async function createDefaultJiraOAuthClient(): Promise<JiraOAuthClientLike> {

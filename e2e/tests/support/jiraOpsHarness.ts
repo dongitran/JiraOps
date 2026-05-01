@@ -133,10 +133,51 @@ export async function findJiraOpsFrame(window: Page): Promise<Frame | undefined>
 
   for (const frame of [...candidateFrames].reverse()) {
     const title = frame.getByRole('heading', { name: 'Jira Ops' });
-    const input = frame.getByLabel('Jira issue URL or key');
+    const assignedIssues = frame.getByLabel('Assigned Jira tickets');
     const titleVisible = await title.isVisible().catch(() => false);
-    const inputVisible = await input.isVisible().catch(() => false);
-    if (titleVisible && inputVisible) {
+    const assignedIssuesVisible = await assignedIssues.isVisible().catch(() => false);
+    if (titleVisible && assignedIssuesVisible) {
+      return frame;
+    }
+  }
+
+  return undefined;
+}
+
+export async function resolveIssueDetailFrame(
+  window: Page,
+  issueKey: string
+): Promise<Frame> {
+  await expect
+    .poll(
+      async () => {
+        const frame = await findIssueDetailFrame(window, issueKey);
+        return frame?.url() ?? '';
+      },
+      { timeout: 20_000 }
+    )
+    .toContain('vscode-webview://');
+
+  const frame = await findIssueDetailFrame(window, issueKey);
+  if (frame === undefined) {
+    throw new Error(`JiraOps detail frame was not found for ${issueKey}.`);
+  }
+
+  return frame;
+}
+
+async function findIssueDetailFrame(
+  window: Page,
+  issueKey: string
+): Promise<Frame | undefined> {
+  const candidateFrames = window
+    .frames()
+    .filter((frame) => frame.url().includes('vscode-webview://'));
+
+  for (const frame of [...candidateFrames].reverse()) {
+    const detailRegion = frame.getByLabel(`${issueKey} details`);
+    const detailVisible = await detailRegion.isVisible().catch(() => false);
+    if (detailVisible) {
       return frame;
     }
   }

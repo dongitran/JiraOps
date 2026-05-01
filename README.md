@@ -1,24 +1,26 @@
 # Jira Ops
 
-[![Version](https://img.shields.io/badge/version-0.1.4-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.5-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](./tsconfig.json)
 
-Jira Ops is a VS Code extension for Jira operations. The current MVP finds
-supported remote web links attached to a Jira issue and displays them inside a
-focused Activity Bar webview.
+Jira Ops is a VS Code extension for daily Jira operations. It shows Jira issues
+assigned to you, surfaces GitLab merge requests from Jira remote links, and opens
+issue details in a wider VS Code editor tab.
 
 ## ✨ Features
 
-- **One-input Jira lookup:** paste an issue key or browse URL and fetch linked operational resources.
+- **Assigned-ticket dashboard:** load issues assigned to the connected Jira user with a bounded JQL search.
+- **GitLab MR focus:** show merge requests on Home and keep generic web links in the detail view.
+- **Wide issue details:** open a selected issue in an editor tab with merge requests first and all Jira web links below.
 - **Explicit Jira connection control:** connect from Home, then manage disconnect from Settings.
-- **Focused VS Code experience:** review remote links in a clean Activity Bar webview and open them externally.
 - **Safe, testable foundation:** validate webview messages, parse Jira responses with Zod, and run deterministic E2E tests without real Jira credentials.
 
-> Current scope: remote web-link discovery only. Issue creation, comments,
-> transitions, JQL search, and sprint workflows are not implemented yet.
+> Current scope: assigned-issue discovery and Jira remote-link display. Jira
+> writes such as issue creation, comments, transitions, and sprint workflows are
+> not implemented yet.
 
 ## 🚀 Quick Start
 
@@ -43,8 +45,8 @@ Launch an extension development host:
 code --extensionDevelopmentPath="$(pwd)"
 ```
 
-Then open **Jira Ops** in the Activity Bar, select **Connect Jira**, enter an
-issue key or browse URL, and select **Fetch**.
+Then open **Jira Ops** in the Activity Bar, select **Connect Jira**, review the
+assigned-ticket dashboard, and select **Details** for a wider issue view.
 
 ## 🔐 Jira Authentication
 
@@ -67,8 +69,8 @@ Your Atlassian OAuth app must allow:
 http://localhost:30129/callback
 ```
 
-Use **Connect Jira** to start the browser OAuth flow. **Fetch** requires an
-existing connection and refreshes expired tokens when a refresh token is
+Use **Connect Jira** to start the browser OAuth flow. Dashboard refresh requires
+an existing connection and refreshes expired tokens when a refresh token is
 available. Use **Jira Ops: Clear Saved Jira OAuth Credentials** from the Command
 Palette to remove saved OAuth app credentials.
 
@@ -99,22 +101,23 @@ Open `http://127.0.0.1:4174/index.html`.
 ```text
 VS Code Activity Bar
   -> jiraOps.linksView webview
-  -> jira-ops.js posts jiraOps.openSettings, jiraOps.connectJira, jiraOps.disconnectJira, or jiraOps.fetchLinks
+  -> jira-ops.js posts dashboard, detail, settings, connection, and external-link messages
   -> JiraOpsPanelProvider validates the message
-  -> parseIssueInput normalizes the issue key
   -> OAuthJiraTokenProvider connects, disconnects, resolves, or refreshes Jira tokens
-  -> fetchJiraRemoteLinks calls Atlassian REST API
-  -> parseRemoteLinksResponse maps safe display rows
-  -> webview renders loading, success, empty, or error state
+  -> fetchAssignedJiraIssues calls Atlassian enhanced JQL search
+  -> fetchJiraRemoteLinks loads links for each assigned issue
+  -> extractGitLabMergeRequests derives MR rows from remote links
+  -> sidebar renders assigned tickets and WebviewPanel renders issue details
 ```
 
 | File | Responsibility |
 | --- | --- |
 | [`src/extension.ts`](./src/extension.ts) | VS Code activation and view registration |
-| [`src/jiraOpsPanel.ts`](./src/jiraOpsPanel.ts) | Webview HTML, CSP, messages, fetch orchestration |
+| [`src/jiraOpsPanel.ts`](./src/jiraOpsPanel.ts) | Sidebar webview, CSP, messages, dashboard orchestration |
+| [`src/issueDetailPanel.ts`](./src/issueDetailPanel.ts) | Wide issue detail editor webview |
 | [`src/jiraClient.ts`](./src/jiraClient.ts) | OAuth token lifecycle and Jira REST calls |
-| [`src/issueInput.ts`](./src/issueInput.ts) | Issue key and browse URL parsing |
-| [`src/remoteLinks.ts`](./src/remoteLinks.ts) | Zod validation and link mapping |
+| [`src/dashboardItems.ts`](./src/dashboardItems.ts) | Assigned issue and web-link dashboard mapping |
+| [`src/remoteLinks.ts`](./src/remoteLinks.ts) | Zod validation, link mapping, and GitLab MR extraction |
 | [`src/webviewMessages.ts`](./src/webviewMessages.ts) | Webview message contracts and guards |
 | [`e2e/tests`](./e2e/tests) | Playwright E2E tests |
 
@@ -123,16 +126,18 @@ VS Code Activity Bar
 | Symptom | Check |
 | --- | --- |
 | `Jira connection could not be completed.` | Re-run **Connect Jira** and verify OAuth app credentials, callback URL, and scopes |
-| `Jira remote links could not be loaded.` | Issue access, token freshness, Jira remote-link permissions |
+| `Assigned tickets could not be loaded.` | Jira issue access, token freshness, JQL search permissions |
+| Detail has no GitLab merge requests | The issue may only have generic Jira remote links, which remain visible in Details |
 | Browser login never completes | Port `30129` is free and callback URL matches the OAuth app |
 | E2E cannot find VS Code | Set `VSCODE_EXECUTABLE_PATH` |
-| E2E returns mock links | Expected. E2E uses `JIRA_OPS_TEST_MODE=1` |
+| E2E returns mock assigned issues | Expected. E2E uses `JIRA_OPS_TEST_MODE=1` |
 
 ## 🗺 Roadmap
 
-- Better authentication error states.
+- Better authentication and partial Jira API error states.
 - Jira site selection for accounts with multiple cloud sites.
-- More Jira issue operations after remote-link discovery is stable.
+- Optional GitLab API enrichment for MR state, pipeline, reviewers, and approval signals.
+- More Jira issue operations after read-only dashboard workflows are stable.
 - Marketplace polish with PNG icon and screenshots.
 
 ## 👨‍💻 Author
