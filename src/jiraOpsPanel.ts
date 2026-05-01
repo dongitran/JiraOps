@@ -18,13 +18,21 @@ import {
 import {
   countIssueMergeRequests,
   createDashboardIssue,
+  type CloneWebLinks,
   type DashboardIssue,
 } from './dashboardItems';
 import { showIssueDetailPanel } from './issueDetailPanel';
+import {
+  fetchJiraIssueDetail,
+  hydrateIssueAttachmentImages,
+  type JiraIssueDetail,
+  type JiraLinkedCloneIssue,
+} from './jiraIssueDetails';
 import type { RemoteWebLink } from './remoteLinks';
 import {
   isJiraOpsTestMode,
   resolveTestAssignedIssues,
+  resolveTestIssueDetail,
   resolveTestRemoteLinks,
 } from './testModeData';
 import {
@@ -54,6 +62,7 @@ export class JiraOpsPanelProvider
   private webviewView: vscode.WebviewView | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private readonly dashboardIssues: DashboardIssue[] = [];
+  private readonly issueDetails = new Map<string, JiraIssueDetail>();
   private testModeConnected = false;
 
   public constructor(
@@ -64,7 +73,7 @@ export class JiraOpsPanelProvider
 
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.webviewView = webviewView;
-    webviewView.title = 'Jira Ops';
+    webviewView.title = 'JiraOps';
     const assetsRoot = vscode.Uri.joinPath(this.extensionUri, ...WEBVIEW_ASSET_PATH);
 
     webviewView.webview.options = {
@@ -129,7 +138,7 @@ export class JiraOpsPanelProvider
     }
 
     if (isOpenIssueDetailMessage(message)) {
-      this.handleOpenIssueDetail(message.issueKey);
+      await this.handleOpenIssueDetail(message.issueKey);
       return;
     }
 
@@ -154,7 +163,7 @@ export class JiraOpsPanelProvider
     try {
       const status = await this.connectJira();
       this.outputChannel.appendLine('Jira connection is ready.');
-      this.postConnectionChanged(status, connectionSuccessMessage(status));
+      this.postConnectionChanged(status, '');
       await this.handleRefreshDashboard();
     } catch (error) {
       this.postMessage({
@@ -170,6 +179,7 @@ export class JiraOpsPanelProvider
     try {
       const status = await this.disconnectJira();
       this.dashboardIssues.splice(0);
+      this.issueDetails.clear();
       this.outputChannel.appendLine('Jira connection was cleared.');
       this.postConnectionChanged(status, 'Jira disconnected.');
     } catch {
@@ -186,6 +196,7 @@ export class JiraOpsPanelProvider
     this.postMessage({ type: DASHBOARD_LOADING_MESSAGE_TYPE });
 
     try {
+      this.issueDetails.clear();
       const issues = await this.loadDashboardIssues();
       this.dashboardIssues.splice(0, this.dashboardIssues.length, ...issues);
       this.outputChannel.appendLine(dashboardLoadedLogMessage(issues));
@@ -202,7 +213,7 @@ export class JiraOpsPanelProvider
     }
   }
 
-  private handleOpenIssueDetail(issueKey: string): void {
+  private async handleOpenIssueDetail(issueKey: string): Promise<void> {
     const issue = this.dashboardIssues.find((item) => item.key === issueKey);
     if (issue === undefined) {
       this.outputChannel.appendLine(`Issue detail was requested before ${issueKey} was loaded.`);
@@ -214,11 +225,21 @@ export class JiraOpsPanelProvider
     }
 
     this.outputChannel.appendLine(`Opening Jira issue detail for ${issue.key}.`);
-    showIssueDetailPanel({
-      extensionUri: this.extensionUri,
-      outputChannel: this.outputChannel,
-      issue,
-    });
+    try {
+      const detail = await this.loadIssueDetailForDisplay(issue.key);
+      showIssueDetailPanel({
+        extensionUri: this.extensionUri,
+        outputChannel: this.outputChannel,
+        issue,
+        detail,
+      });
+    } catch {
+      this.outputChannel.appendLine(`Jira issue detail could not be loaded for ${issue.key}.`);
+      this.postMessage({
+        type: DASHBOARD_ERROR_MESSAGE_TYPE,
+        message: 'Issue details could not be loaded.',
+      });
+    }
   }
 
   private handleOpenSettings(): void {
@@ -237,7 +258,11 @@ export class JiraOpsPanelProvider
         throw new JiraConnectionRequiredError();
       }
 
-      return this.createDashboardIssues(resolveTestAssignedIssues(), testRemoteLinksLoader);
+      return this.createDashboardIssues(
+        resolveTestAssignedIssues(),
+        testRemoteLinksLoader,
+        testIssueDetailLoader
+      );
     }
 
     const tokens = await this.tokenProvider.getStoredOrRefreshTokens();
@@ -251,19 +276,62 @@ export class JiraOpsPanelProvider
     });
     return this.createDashboardIssues(issues, (issueKey) => {
       return this.loadRemoteLinksWithTokens(tokens, issueKey);
+    }, (issueKey) => {
+      return this.loadIssueDetailWithTokens(tokens, issueKey, false);
     });
   }
 
   private async createDashboardIssues(
     issues: readonly JiraAssignedIssue[],
-    loadLinks: (issueKey: string) => Promise<RemoteWebLink[]>
+    loadLinks: (issueKey: string) => Promise<RemoteWebLink[]>,
+    loadDetail: (issueKey: string) => Promise<JiraIssueDetail>
   ): Promise<DashboardIssue[]> {
     const dashboardIssues: DashboardIssue[] = [];
     for (const issue of issues) {
       const links = await this.loadIssueRemoteLinks(issue.key, loadLinks);
-      dashboardIssues.push(createDashboardIssue(issue, links));
+      const detail = await this.loadIssueDetailForCloneLinks(issue.key, loadDetail);
+      const cloneWebLinks = await this.loadCloneWebLinks(detail.linkedCloneIssues, loadLinks);
+      dashboardIssues.push(
+        createDashboardIssue(issue, links, {
+          cloneWebLinks,
+          linkedCloneIssues: detail.linkedCloneIssues,
+        })
+      );
     }
     return dashboardIssues;
+  }
+
+  private async loadIssueDetailForCloneLinks(
+    issueKey: string,
+    loadDetail: (issueKey: string) => Promise<JiraIssueDetail>
+  ): Promise<JiraIssueDetail> {
+    try {
+      const detail = await loadDetail(issueKey);
+      this.issueDetails.set(issueKey, detail);
+      this.outputChannel.appendLine(
+        `Loaded ${String(detail.linkedCloneIssues.length)} clone links for ${issueKey}.`
+      );
+      return detail;
+    } catch {
+      this.outputChannel.appendLine(`Clone links could not be loaded for ${issueKey}.`);
+      return emptyIssueDetail(issueKey);
+    }
+  }
+
+  private async loadCloneWebLinks(
+    cloneIssues: readonly JiraLinkedCloneIssue[],
+    loadLinks: (issueKey: string) => Promise<RemoteWebLink[]>
+  ): Promise<CloneWebLinks[]> {
+    const cloneWebLinks: CloneWebLinks[] = [];
+    for (const cloneIssue of cloneIssues.slice(0, 5)) {
+      const webLinks = await this.loadIssueRemoteLinks(cloneIssue.key, loadLinks);
+      cloneWebLinks.push({
+        issueKey: cloneIssue.key,
+        relationship: cloneIssue.relationship,
+        webLinks,
+      });
+    }
+    return cloneWebLinks;
   }
 
   private async loadIssueRemoteLinks(
@@ -290,6 +358,40 @@ export class JiraOpsPanelProvider
       accessToken: tokens.accessToken,
       cloudId: tokens.cloudId,
       issueKey,
+    });
+  }
+
+  private async loadIssueDetailForDisplay(issueKey: string): Promise<JiraIssueDetail> {
+    if (isJiraOpsTestMode()) {
+      return resolveTestIssueDetail(issueKey);
+    }
+
+    const tokens = await this.tokenProvider.getStoredOrRefreshTokens();
+    if (tokens === null) {
+      throw new JiraConnectionRequiredError();
+    }
+
+    return this.loadIssueDetailWithTokens(tokens, issueKey, true);
+  }
+
+  private async loadIssueDetailWithTokens(
+    tokens: JiraTokens,
+    issueKey: string,
+    includeImages: boolean
+  ): Promise<JiraIssueDetail> {
+    const detail = await fetchJiraIssueDetail({
+      accessToken: tokens.accessToken,
+      cloudId: tokens.cloudId,
+      issueKey,
+    });
+
+    if (!includeImages) {
+      return detail;
+    }
+
+    return hydrateIssueAttachmentImages(detail, {
+      accessToken: tokens.accessToken,
+      cloudId: tokens.cloudId,
     });
   }
 
@@ -369,7 +471,7 @@ export class JiraOpsPanelProvider
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Content-Security-Policy" content="${csp}" />
-    <title>Jira Ops</title>
+    <title>JiraOps</title>
     <link rel="stylesheet" href="${cssSrc}" />
   </head>
   <body class="jira-ops-page jira-ops-extension">
@@ -382,6 +484,25 @@ export class JiraOpsPanelProvider
 
 function testRemoteLinksLoader(issueKey: string): Promise<RemoteWebLink[]> {
   return Promise.resolve(resolveTestRemoteLinks(issueKey));
+}
+
+function testIssueDetailLoader(issueKey: string): Promise<JiraIssueDetail> {
+  return Promise.resolve(resolveTestIssueDetail(issueKey));
+}
+
+function emptyIssueDetail(issueKey: string): JiraIssueDetail {
+  return {
+    key: issueKey,
+    summary: issueKey,
+    status: '',
+    statusCategory: '',
+    priority: null,
+    updated: '',
+    descriptionText: '',
+    comments: [],
+    attachments: [],
+    linkedCloneIssues: [],
+  };
 }
 
 function buildCsp(webview: vscode.Webview, nonce: string): string {
@@ -411,13 +532,7 @@ function testConnectionStatus(connected: boolean): JiraConnectionStatus {
 }
 
 function initialConnectionMessage(status: JiraConnectionStatus): string {
-  return status.connected
-    ? connectionSuccessMessage(status)
-    : 'Connect Jira to load assigned tickets.';
-}
-
-function connectionSuccessMessage(status: JiraConnectionStatus): string {
-  return `Connected to ${status.cloudName ?? 'Jira Cloud'}.`;
+  return status.connected ? '' : 'Connect Jira to load assigned tickets.';
 }
 
 function connectionErrorMessage(error: unknown): string {

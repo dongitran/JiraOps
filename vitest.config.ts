@@ -9,7 +9,8 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: [
-        'src/issueInput.ts',
+        'src/dashboardItems.ts',
+        'src/jiraIssueDetails.ts',
         'src/jiraCredentials.ts',
         'src/jiraClient.ts',
         'src/remoteLinks.ts',

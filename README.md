@@ -1,20 +1,20 @@
-# Jira Ops
+# JiraOps
 
-[![Version](https://img.shields.io/badge/version-0.1.5-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.6-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](./tsconfig.json)
 
-Jira Ops is a VS Code extension for daily Jira operations. It shows Jira issues
+JiraOps is a VS Code extension for daily Jira operations. It shows Jira issues
 assigned to you, surfaces GitLab merge requests from Jira remote links, and opens
 issue details in a wider VS Code editor tab.
 
 ## ✨ Features
 
 - **Assigned-ticket dashboard:** load issues assigned to the connected Jira user with a bounded JQL search.
-- **GitLab MR focus:** show merge requests on Home and keep generic web links in the detail view.
-- **Wide issue details:** open a selected issue in an editor tab with merge requests first and all Jira web links below.
+- **GitLab MR focus:** show direct and clone-linked merge requests on Home, while keeping generic web links in Details.
+- **Wide issue details:** open a selected issue in an editor tab with description, comments, image attachments, merge requests, and Jira web links.
 - **Explicit Jira connection control:** connect from Home, then manage disconnect from Settings.
 - **Safe, testable foundation:** validate webview messages, parse Jira responses with Zod, and run deterministic E2E tests without real Jira credentials.
 
@@ -45,7 +45,7 @@ Launch an extension development host:
 code --extensionDevelopmentPath="$(pwd)"
 ```
 
-Then open **Jira Ops** in the Activity Bar, select **Connect Jira**, review the
+Then open **JiraOps** in the Activity Bar, select **Connect Jira**, review the
 assigned-ticket dashboard, and select **Details** for a wider issue view.
 
 ## 🔐 Jira Authentication
@@ -71,7 +71,7 @@ http://localhost:30129/callback
 
 Use **Connect Jira** to start the browser OAuth flow. Dashboard refresh requires
 an existing connection and refreshes expired tokens when a refresh token is
-available. Use **Jira Ops: Clear Saved Jira OAuth Credentials** from the Command
+available. Use **JiraOps: Clear Saved Jira OAuth Credentials** from the Command
 Palette to remove saved OAuth app credentials.
 
 Never log, commit, or share OAuth secrets, access tokens, refresh tokens,
@@ -106,6 +106,7 @@ VS Code Activity Bar
   -> OAuthJiraTokenProvider connects, disconnects, resolves, or refreshes Jira tokens
   -> fetchAssignedJiraIssues calls Atlassian enhanced JQL search
   -> fetchJiraRemoteLinks loads links for each assigned issue
+  -> fetchJiraIssueDetail loads description, comments, attachments, and clone links
   -> extractGitLabMergeRequests derives MR rows from remote links
   -> sidebar renders assigned tickets and WebviewPanel renders issue details
 ```
@@ -116,6 +117,7 @@ VS Code Activity Bar
 | [`src/jiraOpsPanel.ts`](./src/jiraOpsPanel.ts) | Sidebar webview, CSP, messages, dashboard orchestration |
 | [`src/issueDetailPanel.ts`](./src/issueDetailPanel.ts) | Wide issue detail editor webview |
 | [`src/jiraClient.ts`](./src/jiraClient.ts) | OAuth token lifecycle and Jira REST calls |
+| [`src/jiraIssueDetails.ts`](./src/jiraIssueDetails.ts) | Jira issue description, comments, attachments, and clone-link parsing |
 | [`src/dashboardItems.ts`](./src/dashboardItems.ts) | Assigned issue and web-link dashboard mapping |
 | [`src/remoteLinks.ts`](./src/remoteLinks.ts) | Zod validation, link mapping, and GitLab MR extraction |
 | [`src/webviewMessages.ts`](./src/webviewMessages.ts) | Webview message contracts and guards |
@@ -127,7 +129,7 @@ VS Code Activity Bar
 | --- | --- |
 | `Jira connection could not be completed.` | Re-run **Connect Jira** and verify OAuth app credentials, callback URL, and scopes |
 | `Assigned tickets could not be loaded.` | Jira issue access, token freshness, JQL search permissions |
-| Detail has no GitLab merge requests | The issue may only have generic Jira remote links, which remain visible in Details |
+| Detail has no GitLab merge requests | The issue may only have generic Jira remote links, or its clone-linked tickets may have no MR links |
 | Browser login never completes | Port `30129` is free and callback URL matches the OAuth app |
 | E2E cannot find VS Code | Set `VSCODE_EXECUTABLE_PATH` |
 | E2E returns mock assigned issues | Expected. E2E uses `JIRA_OPS_TEST_MODE=1` |

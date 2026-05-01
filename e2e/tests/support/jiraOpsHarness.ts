@@ -17,7 +17,7 @@ import {
   resolveVscodeExecutablePath,
 } from '../../src/launchVscode';
 
-export const ACTIVITY_BAR_TITLE = 'Jira Ops';
+export const ACTIVITY_BAR_TITLE = 'JiraOps';
 export const DEFAULT_THEME_NAME = 'Default Dark Modern';
 
 export interface ExtensionHostSession {
@@ -132,11 +132,11 @@ export async function findJiraOpsFrame(window: Page): Promise<Frame | undefined>
     .filter((frame) => frame.url().includes('vscode-webview://'));
 
   for (const frame of [...candidateFrames].reverse()) {
-    const title = frame.getByRole('heading', { name: 'Jira Ops' });
+    const workspace = frame.getByLabel('JiraOps workspace');
     const assignedIssues = frame.getByLabel('Assigned Jira tickets');
-    const titleVisible = await title.isVisible().catch(() => false);
+    const workspaceVisible = await workspace.isVisible().catch(() => false);
     const assignedIssuesVisible = await assignedIssues.isVisible().catch(() => false);
-    if (titleVisible && assignedIssuesVisible) {
+    if (workspaceVisible && assignedIssuesVisible) {
       return frame;
     }
   }
@@ -211,4 +211,10 @@ export async function clickWithFallback(locator: Locator): Promise<void> {
     }
     throw error;
   }
+}
+
+export async function openSettingsFromViewTitle(window: Page): Promise<void> {
+  const settingsButton = window.getByRole('button', { name: 'Open Settings' }).first();
+  await expect(settingsButton).toBeVisible({ timeout: 10_000 });
+  await clickWithFallback(settingsButton);
 }

@@ -120,7 +120,7 @@ body.gallery-theme-high-contrast {
 
 .editor-detail {
   display: grid;
-  gap: 22px;
+  gap: 18px;
 }
 
 .editor-detail-header {
@@ -133,20 +133,30 @@ body.gallery-theme-high-contrast {
 }
 
 .editor-detail-header h1 {
+  display: -webkit-box;
   margin: 6px 0 0;
+  max-width: 100%;
+  overflow: hidden;
   font-size: clamp(24px, 3vw, 34px);
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
-.detail-status {
+.detail-status-line {
   flex: 0 0 auto;
-  padding: 5px 10px;
-  border: 1px solid var(--gallery-border);
-  border-radius: 999px;
+  max-width: 180px;
+  overflow: hidden;
   color: var(--gallery-muted);
   font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detail-section {
@@ -222,6 +232,65 @@ body.gallery-theme-high-contrast {
   padding: 12px;
   border: 1px dashed var(--gallery-border);
   border-radius: 6px;
+}
+
+.detail-content,
+.detail-comment-list,
+.attachment-grid {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detail-content p,
+.detail-comment p {
+  margin: 0;
+  color: var(--gallery-text);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.detail-comment,
+.attachment-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--gallery-border);
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--gallery-side) 88%, transparent);
+}
+
+.detail-comment-meta,
+.attachment-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--gallery-muted);
+  font-size: 12px;
+}
+
+.detail-comment-meta strong,
+.attachment-meta strong {
+  overflow: hidden;
+  color: var(--gallery-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.attachment-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--gallery-editor);
 }
 
 .floating-nav {

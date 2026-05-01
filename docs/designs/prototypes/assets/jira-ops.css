@@ -76,13 +76,13 @@ a:focus-visible {
 
 .jira-shell {
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
   min-height: 100vh;
   background: var(--page-bg);
 }
 
 .jira-header {
-  padding: 14px 14px 10px;
+  padding: 4px;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -90,7 +90,8 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .title-copy {
@@ -122,18 +123,22 @@ a:focus-visible {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-  gap: 8px;
+  gap: 4px;
 }
 
 .connection-state {
   flex: 0 0 auto;
-  min-width: 96px;
-  padding: 3px 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 2px 6px;
   border: 1px solid color-mix(in oklab, var(--accent-color) 55%, var(--border-color));
-  border-radius: 999px;
+  border-radius: 4px;
   color: var(--accent-color);
   font-size: 12px;
   text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .connection-state[data-state='connected'] {
@@ -223,19 +228,24 @@ a:focus-visible {
 .connection-button,
 .refresh-button,
 .detail-button {
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 28px;
+  padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: var(--accent-color);
   color: var(--accent-text);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .connection-button {
   align-self: center;
   flex: 0 0 auto;
-  min-width: 104px;
+  min-width: 92px;
+}
+
+.compact-connect {
+  min-width: 96px;
 }
 
 .connection-button[data-variant='secondary'],
@@ -266,8 +276,8 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 4px;
+  padding: 4px;
   border-bottom: 1px solid var(--border-color);
   background: var(--surface-bg);
 }
@@ -301,9 +311,9 @@ a:focus-visible {
 }
 
 .status-line {
-  min-height: 32px;
+  min-height: 28px;
   margin: 0;
-  padding: 8px 14px;
+  padding: 6px 4px;
   border-bottom: 1px solid var(--border-color);
   color: var(--muted-color);
   font-size: 12px;
@@ -320,21 +330,22 @@ a:focus-visible {
 .issues-region {
   min-height: 0;
   overflow: auto;
-  padding: 10px 10px 14px;
+  padding: 4px;
 }
 
 .issue-list {
   display: grid;
-  gap: 9px;
+  gap: 4px;
 }
 
 .issue-card {
+  container-type: inline-size;
   display: grid;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  padding: 10px;
+  padding: 4px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--surface-bg);
 }
 
@@ -342,7 +353,7 @@ a:focus-visible {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -362,33 +373,43 @@ a:focus-visible {
 }
 
 .issue-heading h2 {
+  display: -webkit-box;
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--text-color);
   font-size: 13px;
   font-weight: 650;
   letter-spacing: 0;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .detail-button {
   flex: 0 0 auto;
-  min-width: 72px;
+  min-width: 68px;
 }
 
 .issue-meta-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted-color);
   font-size: 11px;
 }
 
 .issue-meta-row span {
+  min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  padding: 2px 6px;
+  padding: 2px 5px;
   border: 1px solid var(--border-color);
-  border-radius: 999px;
+  border-radius: 4px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -403,7 +424,7 @@ a:focus-visible {
 
 .mr-section {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -423,16 +444,16 @@ a:focus-visible {
 
 .mr-list {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .mr-row {
   display: grid;
   gap: 3px;
   min-width: 0;
-  padding: 8px;
+  padding: 6px;
   border: 1px solid color-mix(in oklab, var(--accent-color) 35%, var(--border-color));
-  border-radius: 5px;
+  border-radius: 4px;
   color: var(--text-color);
   text-decoration: none;
 }
@@ -463,9 +484,9 @@ a:focus-visible {
   display: grid;
   gap: 3px;
   min-width: 0;
-  padding: 9px;
+  padding: 6px;
   border: 1px dashed var(--border-color);
-  border-radius: 5px;
+  border-radius: 4px;
   color: var(--muted-color);
   font-size: 12px;
 }
@@ -480,9 +501,9 @@ a:focus-visible {
   display: grid;
   align-content: center;
   min-height: 180px;
-  padding: 18px;
+  padding: 12px;
   border: 1px dashed var(--border-color);
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--muted-color);
   text-align: center;
 }
@@ -511,9 +532,9 @@ a:focus-visible {
 .settings-heading {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 4px;
   border-bottom: 1px solid var(--border-color);
   background: var(--surface-bg);
 }
@@ -544,14 +565,39 @@ a:focus-visible {
   white-space: nowrap;
 }
 
+.settings-connection {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-bg);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-row strong {
+  overflow: hidden;
+  color: var(--text-color);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .jira-detail-page {
   min-height: 100vh;
-  padding: 28px;
+  padding: 24px;
 }
 
 .detail-shell {
   display: grid;
-  gap: 22px;
+  gap: 18px;
   width: min(920px, 100%);
 }
 
@@ -571,12 +617,31 @@ a:focus-visible {
 }
 
 .detail-page-title h1 {
+  display: -webkit-box;
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--text-color);
   font-size: clamp(24px, 3vw, 34px);
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.detail-status-line {
+  flex: 0 0 auto;
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--muted-color);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detail-section {
@@ -654,6 +719,77 @@ a:focus-visible {
   padding: 12px;
   border: 1px dashed var(--border-color);
   border-radius: 6px;
+}
+
+.detail-content,
+.detail-comment-list,
+.attachment-grid {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.detail-content p,
+.detail-comment p {
+  margin: 0;
+  color: var(--text-color);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.detail-comment,
+.attachment-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--surface-bg);
+}
+
+.detail-comment-meta,
+.attachment-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted-color);
+  font-size: 12px;
+}
+
+.detail-comment-meta strong,
+.attachment-meta strong {
+  overflow: hidden;
+  color: var(--text-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.attachment-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+@container (max-width: 280px) {
+  .issue-meta-updated {
+    display: none;
+  }
+}
+
+@container (max-width: 260px) {
+  .issue-meta-priority {
+    display: none;
+  }
 }
 
 @keyframes skeleton-sweep {

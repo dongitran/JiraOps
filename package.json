@@ -1,8 +1,8 @@
 {
   "name": "jira-ops",
-  "displayName": "Jira Ops",
+  "displayName": "JiraOps",
   "description": "Assigned Jira tickets and GitLab merge request context in VS Code.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "dongtran",
   "license": "MIT",
   "repository": {
@@ -27,35 +27,35 @@
       {
         "command": "jiraOps.openLinksView",
         "title": "Open Dashboard",
-        "category": "Jira Ops"
+        "category": "JiraOps"
       },
       {
         "command": "jiraOps.connectJira",
         "title": "Connect Jira",
-        "category": "Jira Ops"
+        "category": "JiraOps"
       },
       {
         "command": "jiraOps.disconnectJira",
         "title": "Disconnect Jira",
-        "category": "Jira Ops"
+        "category": "JiraOps"
       },
       {
         "command": "jiraOps.openSettings",
         "title": "Open Settings",
-        "category": "Jira Ops",
+        "category": "JiraOps",
         "icon": "$(gear)"
       },
       {
         "command": "jiraOps.clearJiraCredentials",
         "title": "Clear Saved Jira OAuth Credentials",
-        "category": "Jira Ops"
+        "category": "JiraOps"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "jiraOps",
-          "title": "Jira Ops",
+          "title": "JiraOps",
           "icon": "resources/jira-ops.svg"
         }
       ]
@@ -64,7 +64,7 @@
       "jiraOps": [
         {
           "id": "jiraOps.linksView",
-          "name": "Jira Ops",
+          "name": "JiraOps",
           "type": "webview"
         }
       ]

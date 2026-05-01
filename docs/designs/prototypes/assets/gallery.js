@@ -119,16 +119,29 @@ function renderIssueDetail(issue) {
       <header class="editor-detail-header">
         <div>
           <span class="detail-key">${escapeHtml(issue.key)}</span>
-          <h1>${escapeHtml(issue.summary)}</h1>
+          <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
         </div>
-        <span class="detail-status">${escapeHtml(issue.status)}</span>
+        <span class="detail-status-line">${escapeHtml(issue.status)}</span>
       </header>
+      <section class="detail-section" aria-label="Issue content">
+        <div class="detail-section-heading">
+          <h2>Issue content</h2>
+        </div>
+        ${renderIssueContent(issue)}
+      </section>
       <section class="detail-section" aria-label="GitLab merge requests">
         <div class="detail-section-heading">
           <h2>GitLab merge requests</h2>
           <span>${String(issue.mergeRequests.length)}</span>
         </div>
         ${renderMergeRequests(issue.mergeRequests)}
+      </section>
+      <section class="detail-section" aria-label="Clone merge requests">
+        <div class="detail-section-heading">
+          <h2>Clone merge requests</h2>
+          <span>${String(issue.cloneMergeRequests.length)}</span>
+        </div>
+        ${renderCloneMergeRequests(issue.cloneMergeRequests)}
       </section>
       <section class="detail-section" aria-label="All Jira web links">
         <div class="detail-section-heading">
@@ -137,7 +150,52 @@ function renderIssueDetail(issue) {
         </div>
         ${renderWebLinks(issue.webLinks)}
       </section>
+      <section class="detail-section" aria-label="Attachments">
+        <div class="detail-section-heading">
+          <h2>Attachments</h2>
+          <span>${String(issue.attachments.length)}</span>
+        </div>
+        ${renderAttachments(issue.attachments)}
+      </section>
     </article>
+  `;
+}
+
+function renderIssueContent(issue) {
+  const description =
+    typeof issue.description === 'string' && issue.description.length > 0
+      ? issue.description
+      : 'No description was found for this issue.';
+
+  return `
+    <div class="detail-content">
+      <p>${escapeHtml(description)}</p>
+      ${renderComments(issue.comments)}
+    </div>
+  `;
+}
+
+function renderComments(comments) {
+  if (!Array.isArray(comments) || comments.length === 0) {
+    return '<p class="detail-muted">No comments were found for this issue.</p>';
+  }
+
+  return `
+    <div class="detail-comment-list">
+      ${comments
+        .map((comment) => {
+          return `
+            <article class="detail-comment">
+              <div class="detail-comment-meta">
+                <strong>${escapeHtml(comment.author)}</strong>
+                <span>${escapeHtml(formatUpdated(comment.created))}</span>
+              </div>
+              <p>${escapeHtml(comment.body)}</p>
+            </article>
+          `;
+        })
+        .join('')}
+    </div>
   `;
 }
 
@@ -154,6 +212,27 @@ function renderMergeRequests(mergeRequests) {
             <a class="detail-link detail-link-primary" href="${escapeAttribute(mergeRequest.url)}" target="_blank" rel="noreferrer">
               <strong>${escapeHtml(mergeRequest.title)}</strong>
               <span>${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}</span>
+            </a>
+          `;
+        })
+        .join('')}
+    </div>
+  `;
+}
+
+function renderCloneMergeRequests(mergeRequests) {
+  if (mergeRequests.length === 0) {
+    return '<p class="detail-muted">No GitLab merge requests were found on cloned Jira work items.</p>';
+  }
+
+  return `
+    <div class="detail-grid">
+      ${mergeRequests
+        .map((mergeRequest) => {
+          return `
+            <a class="detail-link detail-link-primary" href="${escapeAttribute(mergeRequest.url)}" target="_blank" rel="noreferrer">
+              <strong>${escapeHtml(mergeRequest.title)}</strong>
+              <span>${escapeHtml(mergeRequest.issueKey)} · ${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}</span>
             </a>
           `;
         })
@@ -183,14 +262,49 @@ function renderWebLinks(webLinks) {
   `;
 }
 
+function renderAttachments(attachments) {
+  if (!Array.isArray(attachments) || attachments.length === 0) {
+    return '<p class="detail-muted">No attachments were found for this issue.</p>';
+  }
+
+  return `
+    <div class="attachment-grid">
+      ${attachments
+        .map((attachment) => {
+          const image =
+            typeof attachment.imageDataUri === 'string' && attachment.imageDataUri.length > 0
+              ? `<img src="${escapeAttribute(attachment.imageDataUri)}" alt="${escapeAttribute(attachment.filename)}" />`
+              : '';
+          return `
+            <article class="attachment-card">
+              ${image}
+              <div class="attachment-meta">
+                <strong>${escapeHtml(attachment.filename)}</strong>
+                <span>${escapeHtml(attachment.mimeType)}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join('')}
+    </div>
+  `;
+}
+
 function isIssueDetail(value) {
   return (
     isRecord(value) &&
     typeof value.key === 'string' &&
     typeof value.summary === 'string' &&
     typeof value.status === 'string' &&
+    typeof value.description === 'string' &&
+    Array.isArray(value.comments) &&
+    value.comments.every(isIssueComment) &&
+    Array.isArray(value.attachments) &&
+    value.attachments.every(isIssueAttachment) &&
     Array.isArray(value.mergeRequests) &&
     value.mergeRequests.every(isMergeRequestLink) &&
+    Array.isArray(value.cloneMergeRequests) &&
+    value.cloneMergeRequests.every(isCloneMergeRequestLink) &&
     Array.isArray(value.webLinks) &&
     value.webLinks.every(isRemoteWebLink)
   );
@@ -203,6 +317,33 @@ function isMergeRequestLink(value) {
     typeof value.url === 'string' &&
     typeof value.projectPath === 'string' &&
     typeof value.iid === 'string'
+  );
+}
+
+function isCloneMergeRequestLink(value) {
+  return (
+    isMergeRequestLink(value) &&
+    typeof value.issueKey === 'string' &&
+    typeof value.relationship === 'string'
+  );
+}
+
+function isIssueComment(value) {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.author === 'string' &&
+    typeof value.body === 'string' &&
+    typeof value.created === 'string'
+  );
+}
+
+function isIssueAttachment(value) {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.filename === 'string' &&
+    typeof value.mimeType === 'string'
   );
 }
 
@@ -226,4 +367,18 @@ function escapeHtml(value) {
 
 function escapeAttribute(value) {
   return escapeHtml(value).replaceAll('"', '&quot;');
+}
+
+function formatUpdated(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }

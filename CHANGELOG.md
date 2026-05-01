@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.6
+
+- Compact the JiraOps sidebar header and remove duplicate in-webview Settings controls.
+- Prevent long single-token issue titles from overflowing compact ticket cards.
+- Hide updated time first and priority second as ticket metadata runs out of width.
+- Add issue description, comments, image attachments, and clone-linked GitLab merge requests to the wide Details view.
+- Keep raw link URLs out of detail cards while preserving safe external link opening.
+
 ## 0.1.5
 
 - Replace manual web-link lookup with an assigned Jira ticket dashboard.
