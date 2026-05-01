@@ -4,7 +4,13 @@ import { rm } from 'node:fs/promises';
 const watchMode = process.argv.includes('--watch');
 
 const buildOptions = {
+  banner: {
+    js: "const __jiraOpsImportMetaUrl=require('node:url').pathToFileURL(__filename).href;",
+  },
   bundle: true,
+  define: {
+    'import.meta.url': '__jiraOpsImportMetaUrl',
+  },
   entryPoints: ['src/extension.ts'],
   external: ['vscode'],
   format: 'cjs',
