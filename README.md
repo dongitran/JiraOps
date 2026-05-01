@@ -1,6 +1,6 @@
 # JiraOps
 
-[![Version](https://img.shields.io/badge/version-0.1.9-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.10-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
@@ -87,7 +87,7 @@ Authorization headers, or raw credential payloads.
 | `npm --prefix e2e run validate` | Typecheck, lint, and spellcheck E2E code |
 | `npm --prefix e2e test` | Run Playwright against a VS Code extension host |
 | `npm run validate` | Run root validation and E2E validation |
-| `npm run package -- --pre-release` | Build a local pre-release VSIX package |
+| `npm run package` | Build a local stable VSIX package |
 
 Prototype review:
 

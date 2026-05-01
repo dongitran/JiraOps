@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10
+
+- Promote JiraOps to a stable VS Code Marketplace release.
+- Publish CI-built VSIX packages and GitHub releases as stable instead of pre-release.
+
 ## 0.1.9
 
 - Keep assigned-ticket cards focused on Jira issue metadata and move merge request rows into Details.
