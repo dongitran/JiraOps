@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8
+
+- Reset webview body padding so the JiraOps sidebar fills the full activity bar width.
+- Cover the regression with a sidebar geometry assertion and harden the metadata-hides E2E check.
+
 ## 0.1.7
 
 - Move the connected state into the native JiraOps view header.

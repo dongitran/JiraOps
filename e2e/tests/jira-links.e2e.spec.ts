@@ -250,26 +250,37 @@ async function expectNoIssueOverflow(issue: Locator): Promise<void> {
 }
 
 async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
-  const displayState = await issue.evaluate((node) => {
-    const parent = node.parentElement;
-    parent?.setAttribute('style', 'grid-template-columns: 180px; justify-content: start');
-    node.setAttribute('style', 'width: 180px; max-width: 180px; justify-self: start');
+  const displayState = await issue.evaluate(async (node) => {
+    const previousBodyStyle = document.body.getAttribute('style') ?? '';
+    document.body.style.width = '200px';
+    document.body.style.maxWidth = '200px';
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)));
+    });
+    const cardWidth = node.getBoundingClientRect().width;
     const updatedAt180 = window.getComputedStyle(
       node.querySelector('.issue-meta-updated') ?? node
     ).display;
     const priorityAt180 = window.getComputedStyle(
       node.querySelector('.issue-meta-priority') ?? node
     ).display;
-    node.removeAttribute('style');
-    parent?.removeAttribute('style');
+    if (previousBodyStyle.length === 0) {
+      document.body.removeAttribute('style');
+    } else {
+      document.body.setAttribute('style', previousBodyStyle);
+    }
 
     return {
       priorityAt180,
       updatedAt180,
+      cardWidth,
     };
   });
-
-  expect(displayState).toEqual({
+  expect(displayState.cardWidth).toBeLessThanOrEqual(260);
+  expect({
+    priorityAt180: displayState.priorityAt180,
+    updatedAt180: displayState.updatedAt180,
+  }).toEqual({
     priorityAt180: 'none',
     updatedAt180: 'none',
   });
@@ -295,6 +306,18 @@ async function expectCompactDashboardGeometry(frame: Frame): Promise<void> {
   expect(issuesBox.x - workspaceBox.x).toBeLessThanOrEqual(0);
   expect(firstIssueBox.x - workspaceBox.x).toBeLessThanOrEqual(4);
   expect(workspaceBox.x + workspaceBox.width - (firstIssueBox.x + firstIssueBox.width)).toBeLessThanOrEqual(4);
+
+  const bodyHorizontalPadding = await frame.evaluate(() => {
+    const styles = window.getComputedStyle(document.body);
+    return {
+      paddingLeft: styles.paddingLeft,
+      paddingRight: styles.paddingRight,
+    };
+  });
+  expect(bodyHorizontalPadding).toEqual({
+    paddingLeft: '0px',
+    paddingRight: '0px',
+  });
 }
 
 async function resolveBoundingBox(locator: Locator): Promise<NonNullable<Awaited<ReturnType<Locator['boundingBox']>>>> {
