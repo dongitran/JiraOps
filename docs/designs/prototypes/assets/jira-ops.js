@@ -298,7 +298,6 @@ window.addEventListener('message', (event) => {
 function render() {
   appElement.innerHTML = `
     <section class="jira-shell" aria-label="JiraOps workspace">
-      ${renderHeader()}
       ${state.screen === 'settings' ? renderSettingsScreen() : renderHomeScreen()}
     </section>
   `;
@@ -307,26 +306,7 @@ function render() {
   bindNavigationButtons();
   bindDashboardButtons();
   bindExternalLinks();
-}
-
-function renderHeader() {
-  const connecting = state.connection === 'connecting';
-  const disconnected = state.connection === 'disconnected';
-  const showHeaderConnect = state.screen === 'home';
-  const connectButton = disconnected && showHeaderConnect
-    ? '<button class="connection-button compact-connect" data-variant="primary" data-connection-action="connect" type="button">Connect Jira</button>'
-    : connecting && showHeaderConnect
-      ? '<button class="connection-button compact-connect" data-variant="primary" type="button" disabled>Connecting...</button>'
-      : '';
-
-  return `
-    <header class="jira-header">
-      <div class="title-row">
-        <span class="connection-state" data-state="${escapeAttribute(state.connection)}">${escapeHtml(renderConnectionPillText())}</span>
-        ${connectButton}
-      </div>
-    </header>
-  `;
+  postPrototypeConnectionState();
 }
 
 function renderHomeScreen() {
@@ -425,11 +405,16 @@ function renderEmptyDashboard() {
     state.connection === 'connected'
       ? 'Assigned issues that are not Done will appear here.'
       : 'The dashboard loads assigned tickets after Jira is connected.';
+  const action =
+    state.connection === 'disconnected'
+      ? '<button class="connection-button empty-action" data-variant="primary" data-connection-action="connect" type="button">Connect Jira</button>'
+      : '';
 
   return `
     <div class="empty-state">
       <strong>${escapeHtml(title)}</strong>
       <span>${escapeHtml(detail)}</span>
+      ${action}
     </div>
   `;
 }
@@ -707,6 +692,17 @@ function applyConnectionState(connected, cloudName, status) {
     state.issues = [];
   }
   render();
+}
+
+function postPrototypeConnectionState() {
+  window.parent.postMessage(
+    {
+      type: 'jiraOps.prototypeConnectionState',
+      connected: state.connection === 'connected',
+      connecting: state.connection === 'connecting',
+    },
+    '*',
+  );
 }
 
 function getAllMergeRequests(issue) {

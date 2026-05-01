@@ -1,4 +1,11 @@
-import { test, expect, type Frame, type Locator, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  type Frame,
+  type Locator,
+  type Page,
+  type TestInfo,
+} from '@playwright/test';
 
 import {
   cleanupExtensionHost,
@@ -47,6 +54,22 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(issue.getByText(/^demo[A-Z]+\.\.\.$/u)).toBeVisible();
       await expectNoIssueOverflow(issue);
       await expectMetadataHidesAsCardNarrows(issue);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User can use the assigned ticket dashboard without an internal connection banner', async () => {
+    const session = await launchExtensionHost();
+    const testInfo = test.info();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+
+      await captureDashboardScreenshot(session.window, testInfo, 'dashboard-density.png');
+      await expect(session.window.getByText(/JiraOps:\s*Connected/i).first()).toBeVisible();
+      await expect(frame.getByText('Connected', { exact: true })).toHaveCount(0);
+      await expectCompactDashboardGeometry(frame);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -195,7 +218,6 @@ async function expectHomeShell(frame: Frame): Promise<void> {
 }
 
 async function expectLoadedDashboard(frame: Frame): Promise<void> {
-  await expect(frame.getByText('Connected', { exact: true })).toBeVisible();
   await expect(frame.getByText('5 tickets', { exact: true })).toBeVisible();
   await expect(frame.getByText('5 GitLab merge requests', { exact: true })).toBeVisible();
   await expect(frame.getByLabel('OPS-123 assigned ticket')).toBeVisible();
@@ -251,4 +273,35 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
     priorityAt180: 'none',
     updatedAt180: 'none',
   });
+}
+
+async function captureDashboardScreenshot(
+  window: Page,
+  testInfo: TestInfo,
+  name: string
+): Promise<void> {
+  const screenshotPath = testInfo.outputPath(name);
+  await window.screenshot({ path: screenshotPath, fullPage: true });
+  await testInfo.attach(name, { path: screenshotPath, contentType: 'image/png' });
+}
+
+async function expectCompactDashboardGeometry(frame: Frame): Promise<void> {
+  const workspaceBox = await resolveBoundingBox(frame.getByLabel('JiraOps workspace'));
+  const toolbarBox = await resolveBoundingBox(frame.getByLabel('Assigned ticket actions'));
+  const issuesBox = await resolveBoundingBox(frame.getByLabel('Assigned Jira tickets'));
+  const firstIssueBox = await resolveBoundingBox(frame.getByLabel('OPS-123 assigned ticket'));
+
+  expect(toolbarBox.y - workspaceBox.y).toBeLessThanOrEqual(4);
+  expect(issuesBox.x - workspaceBox.x).toBeLessThanOrEqual(0);
+  expect(firstIssueBox.x - workspaceBox.x).toBeLessThanOrEqual(4);
+  expect(workspaceBox.x + workspaceBox.width - (firstIssueBox.x + firstIssueBox.width)).toBeLessThanOrEqual(4);
+}
+
+async function resolveBoundingBox(locator: Locator): Promise<NonNullable<Awaited<ReturnType<Locator['boundingBox']>>>> {
+  await expect(locator).toBeVisible();
+  const box = await locator.boundingBox();
+  if (box === null) {
+    throw new Error('Expected visible element to have a bounding box.');
+  }
+  return box;
 }

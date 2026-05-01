@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7
+
+- Move the connected state into the native JiraOps view header.
+- Remove the internal webview connection banner so assigned tickets start higher.
+- Add E2E screenshot and geometry coverage for sidebar density.
+
 ## 0.1.6
 
 - Compact the JiraOps sidebar header and remove duplicate in-webview Settings controls.

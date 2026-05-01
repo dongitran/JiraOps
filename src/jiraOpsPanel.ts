@@ -74,6 +74,7 @@ export class JiraOpsPanelProvider
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.webviewView = webviewView;
     webviewView.title = 'JiraOps';
+    this.updateViewConnectionHeader(false);
     const assetsRoot = vscode.Uri.joinPath(this.extensionUri, ...WEBVIEW_ASSET_PATH);
 
     webviewView.webview.options = {
@@ -158,6 +159,7 @@ export class JiraOpsPanelProvider
 
   private async handleConnectJira(): Promise<void> {
     this.outputChannel.appendLine('Starting Jira connection.');
+    this.updateViewConnectionHeader(false, 'Connecting');
     this.postMessage({ type: CONNECTION_LOADING_MESSAGE_TYPE });
 
     try {
@@ -170,6 +172,7 @@ export class JiraOpsPanelProvider
         type: DASHBOARD_ERROR_MESSAGE_TYPE,
         message: connectionErrorMessage(error),
       });
+      this.updateViewConnectionHeader(false);
       this.outputChannel.appendLine('Jira connection failed.');
     }
   }
@@ -440,6 +443,7 @@ export class JiraOpsPanelProvider
     status: JiraConnectionStatus,
     message: string
   ): void {
+    this.updateViewConnectionHeader(status.connected);
     this.postMessage({
       type: CONNECTION_CHANGED_MESSAGE_TYPE,
       connected: status.connected,
@@ -450,6 +454,21 @@ export class JiraOpsPanelProvider
 
   private postMessage(message: Record<string, unknown>): void {
     void this.webviewView?.webview.postMessage(message);
+  }
+
+  private updateViewConnectionHeader(
+    connected: boolean,
+    label = connected ? 'Connected' : 'Not connected'
+  ): void {
+    if (this.webviewView === undefined) {
+      return;
+    }
+
+    this.webviewView.title = label === 'Connected' ? 'Connected' : 'JiraOps';
+    this.webviewView.description = label;
+    this.outputChannel.appendLine(
+      `Updated JiraOps view header connection state to ${label.toLowerCase()}.`
+    );
   }
 
   private buildHtml(

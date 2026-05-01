@@ -5,16 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Jira Ops Prototype</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./assets/gallery.css?v=dashboard-mr2" />
+    <link rel="stylesheet" href="./assets/gallery.css?v=dashboard-density1" />
   </head>
   <body class="gallery-page gallery-theme-dark">
     <main class="workspace-shell">
       <aside class="sidebar-host">
+        <header class="prototype-view-header" aria-label="JiraOps view header">
+          <div class="prototype-view-title">
+            <strong>JiraOps:</strong>
+            <span id="prototype-connection-state">Not connected</span>
+          </div>
+          <button class="prototype-settings-button" type="button" aria-label="Open Settings" title="Open Settings">
+            ⚙
+          </button>
+        </header>
         <iframe
           id="prototype-frame"
           title="Jira Ops Prototype"
           loading="eager"
-          src="./variants/dashboard.html?v=dashboard-mr2"
+          src="./variants/dashboard.html?v=dashboard-density1"
         ></iframe>
         <nav class="floating-nav" aria-label="Prototype controls">
           <button
@@ -34,6 +43,6 @@
       </aside>
       <section class="editor-surface" aria-label="Jira Ops issue detail preview"></section>
     </main>
-    <script type="module" src="./assets/gallery.js?v=dashboard-mr2"></script>
+    <script type="module" src="./assets/gallery.js?v=dashboard-density1"></script>
   </body>
 </html>

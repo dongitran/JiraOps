@@ -3,7 +3,9 @@ const themeButton = document.getElementById('theme-cycle');
 const controlsToggle = document.getElementById('controls-toggle');
 const controlsPanel = document.getElementById('floating-controls-panel');
 const editorSurface = document.querySelector('.editor-surface');
+const connectionStateElement = document.getElementById('prototype-connection-state');
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
+const PROTOTYPE_CONNECTION_STATE_MESSAGE_TYPE = 'jiraOps.prototypeConnectionState';
 
 const THEMES = [
   {
@@ -31,7 +33,8 @@ if (
   !(themeButton instanceof HTMLButtonElement) ||
   !(controlsToggle instanceof HTMLButtonElement) ||
   !(controlsPanel instanceof HTMLDivElement) ||
-  !(editorSurface instanceof HTMLElement)
+  !(editorSurface instanceof HTMLElement) ||
+  !(connectionStateElement instanceof HTMLElement)
 ) {
   throw new Error('Prototype gallery is missing required DOM nodes.');
 }
@@ -61,6 +64,9 @@ window.addEventListener('keydown', (event) => {
 
 window.addEventListener('message', (event) => {
   if (!isRecord(event.data) || event.data.type !== PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE) {
+    if (isRecord(event.data) && event.data.type === PROTOTYPE_CONNECTION_STATE_MESSAGE_TYPE) {
+      updateConnectionState(event.data);
+    }
     return;
   }
 
@@ -72,6 +78,7 @@ window.addEventListener('message', (event) => {
 applyThemeToGallery();
 setControlsOpen(false);
 renderEmptyDetail();
+updateConnectionState({ connected: false });
 
 function applyThemeToGallery() {
   const theme = THEMES[currentThemeIndex];
@@ -111,6 +118,16 @@ function renderEmptyDetail() {
       <p>Issue details open in a wide editor tab with merge requests first and supporting web links after that.</p>
     </div>
   `;
+}
+
+function updateConnectionState(message) {
+  const connected = message.connected === true;
+  const connecting = message.connecting === true;
+  connectionStateElement.textContent = connecting
+    ? 'Connecting'
+    : connected
+      ? 'Connected'
+      : 'Not connected';
 }
 
 function renderIssueDetail(issue) {
