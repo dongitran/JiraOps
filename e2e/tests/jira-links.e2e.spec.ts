@@ -14,6 +14,7 @@ import {
   openJiraOpsView,
   openSettingsFromViewTitle,
   resolveIssueDetailFrame,
+  resolveLoadedIssueDetailFrame,
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
@@ -35,10 +36,8 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(frame.getByText(/assigned tickets loaded/u)).toHaveCount(0);
       await expect(frame.getByText('Payment incident runbook')).toHaveCount(0);
 
-      const cloneIssue = frame.getByLabel('OPS-321 assigned ticket');
-      await expect(
-        cloneIssue.getByRole('link', { name: /Clean stale inventory reservations/u })
-      ).toBeVisible();
+      await expect(frame.getByText('GitLab merge requests')).toHaveCount(0);
+      await expect(frame.getByText('Clean stale inventory reservations')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -87,10 +86,22 @@ test.describe('Jira Ops assigned ticket workflow', () => {
         })
       );
 
-      const detailFrame = await resolveIssueDetailFrame(session.window, 'OPS-123');
-      await expect(detailFrame.getByLabel('Issue content')).toContainText(
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      const issueContent = detailFrame.getByLabel('Issue content');
+      await expect(issueContent).toContainText(
         'Reconciliation alerts fire too late'
       );
+      await expect(
+        issueContent.getByRole('heading', { name: 'Alert behavior' })
+      ).toBeVisible();
+      await expect(
+        issueContent.getByRole('listitem').filter({
+          hasText: 'Tighten the delayed settlement threshold.',
+        })
+      ).toBeVisible();
+      await expect(
+        issueContent.getByRole('link', { name: 'payment incident runbook' })
+      ).toBeVisible();
       await expect(detailFrame.getByText('Current User')).toBeVisible();
       await expect(
         detailFrame.getByRole('img', { name: 'reconciliation-alert-preview.png' })
@@ -112,6 +123,32 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
+  test('User can see issue details open with a centered loading state', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+
+      await clickWithFallback(
+        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
+          name: 'Details',
+        })
+      );
+
+      const detailFrame = await resolveIssueDetailFrame(session.window, 'OPS-123');
+      const loadingStatus = detailFrame.getByRole('status');
+      await expect(loadingStatus).toContainText('OPS-123');
+      await expectLoadingCentered(loadingStatus);
+      await expect(detailFrame.getByLabel('Issue content')).toHaveCount(0);
+      const loadedFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      await expect(loadedFrame.getByLabel('Issue content')).toContainText(
+        'Reconciliation alerts fire too late'
+      );
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
   test('User can review an assigned issue that has clone-only merge requests', async () => {
     const session = await launchExtensionHost();
 
@@ -119,12 +156,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       const frame = await openLoadedDashboard(session.window);
       const issue = frame.getByLabel('OPS-321 assigned ticket');
 
-      await expect(
-        issue.getByRole('link', { name: /Clean stale inventory reservations/u })
-      ).toBeVisible();
+      await expect(issue.getByText('GitLab merge requests')).toHaveCount(0);
+      await expect(issue.getByText('Clean stale inventory reservations')).toHaveCount(0);
       await clickWithFallback(issue.getByRole('button', { name: 'Details' }));
 
-      const detailFrame = await resolveIssueDetailFrame(session.window, 'OPS-321');
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-321');
       await expect(detailFrame.getByLabel('GitLab merge requests')).toContainText(
         'No GitLab merge requests were found for this issue.'
       );
@@ -133,6 +169,14 @@ test.describe('Jira Ops assigned ticket workflow', () => {
           name: /Clean stale inventory reservations/u,
         })
       ).toBeVisible();
+      await expect(
+        detailFrame.getByLabel('Clone merge requests').getByRole('link', {
+          name: /Add reservation cleanup observability/u,
+        })
+      ).toBeVisible();
+      await expect(
+        detailFrame.getByLabel('Clone merge requests').getByRole('link')
+      ).toHaveCount(2);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -219,7 +263,7 @@ async function expectHomeShell(frame: Frame): Promise<void> {
 
 async function expectLoadedDashboard(frame: Frame): Promise<void> {
   await expect(frame.getByText('5 tickets', { exact: true })).toBeVisible();
-  await expect(frame.getByText('5 GitLab merge requests', { exact: true })).toBeVisible();
+  await expect(frame.getByText('GitLab merge requests')).toHaveCount(0);
   await expect(frame.getByLabel('OPS-123 assigned ticket')).toBeVisible();
   await expect(frame.getByLabel('OPS-900 assigned ticket')).toBeVisible();
 }
@@ -284,6 +328,19 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
     priorityAt180: 'none',
     updatedAt180: 'none',
   });
+}
+
+async function expectLoadingCentered(status: Locator): Promise<void> {
+  const centered = await status.evaluate((node) => {
+    const bodyBox = document.body.getBoundingClientRect();
+    const statusBox = node.getBoundingClientRect();
+    return {
+      x: Math.abs(statusBox.left + statusBox.width / 2 - bodyBox.width / 2) < 8,
+      y: Math.abs(statusBox.top + statusBox.height / 2 - bodyBox.height / 2) < 24,
+    };
+  });
+
+  expect(centered).toEqual({ x: true, y: true });
 }
 
 async function captureDashboardScreenshot(

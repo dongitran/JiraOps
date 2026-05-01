@@ -111,6 +111,13 @@ describe('testModeData', () => {
         relationship: 'Merge request',
         host: 'gitlab.example.com',
       },
+      {
+        id: 'OPS-222-mr-92',
+        title: 'Add reservation cleanup observability',
+        url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
+        relationship: 'Merge request',
+        host: 'gitlab.example.com',
+      },
     ]);
     expect(resolveTestRemoteLinks('OPS-789')).toHaveLength(1);
     expect(resolveTestRemoteLinks('OPS-000')).toEqual([]);
@@ -121,6 +128,10 @@ describe('testModeData', () => {
 
     expect(detail.descriptionText).toContain(
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.'
+    );
+    expect(detail.descriptionHtml).toContain('<p>Reconciliation alerts fire too late');
+    expect(detail.comments[0]?.bodyHtml).toContain(
+      '<p>Validated against the delayed settlement sample.'
     );
     expect(detail).toMatchObject({
       key: 'OPS-123',

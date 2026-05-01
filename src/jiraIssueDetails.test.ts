@@ -127,11 +127,13 @@ describe('jira issue details', () => {
       priority: 'High',
       updated: '2026-05-01T08:20:00.000+0000',
       descriptionText: 'Main ticket content.',
+      descriptionHtml: '<p>Main ticket content.</p>',
       comments: [
         {
           id: 'comment-1',
           authorDisplayName: 'Current User',
           bodyText: 'Latest review note.',
+          bodyHtml: '<p>Latest review note.</p>',
           created: '2026-05-01T08:30:00.000+0000',
         },
       ],
@@ -283,11 +285,13 @@ describe('jira issue details', () => {
     expect(result).toMatchObject({
       priority: null,
       descriptionText: '',
+      descriptionHtml: '',
       comments: [
         {
           id: '2',
           authorDisplayName: 'Unknown author',
           bodyText: '',
+          bodyHtml: '',
           created: '',
         },
       ],
@@ -318,6 +322,7 @@ describe('jira issue details', () => {
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
       descriptionText: '',
+      descriptionHtml: '',
       comments: [],
       attachments: [
         {

@@ -58,6 +58,7 @@ export async function launchExtensionHost(): Promise<ExtensionHostSession> {
   const env = toLaunchEnv(process.env);
   env['JIRA_OPS_E2E'] = '1';
   env['JIRA_OPS_TEST_MODE'] = '1';
+  env['JIRA_OPS_DETAIL_TEST_DELAY_MS'] = '1200';
 
   const electronApp = await electron.launch({
     executablePath: resolveVscodeExecutablePath(),
@@ -166,6 +167,28 @@ export async function resolveIssueDetailFrame(
   return frame;
 }
 
+export async function resolveLoadedIssueDetailFrame(
+  window: Page,
+  issueKey: string
+): Promise<Frame> {
+  await expect
+    .poll(
+      async () => {
+        const frame = await findLoadedIssueDetailFrame(window, issueKey);
+        return frame?.url() ?? '';
+      },
+      { timeout: 20_000 }
+    )
+    .toContain('vscode-webview://');
+
+  const frame = await findLoadedIssueDetailFrame(window, issueKey);
+  if (frame === undefined) {
+    throw new Error(`Loaded JiraOps detail frame was not found for ${issueKey}.`);
+  }
+
+  return frame;
+}
+
 async function findIssueDetailFrame(
   window: Page,
   issueKey: string
@@ -183,6 +206,18 @@ async function findIssueDetailFrame(
   }
 
   return undefined;
+}
+
+async function findLoadedIssueDetailFrame(
+  window: Page,
+  issueKey: string
+): Promise<Frame | undefined> {
+  const frame = await findIssueDetailFrame(window, issueKey);
+  const issueContentVisible = await frame
+    ?.getByLabel('Issue content')
+    .isVisible()
+    .catch(() => false);
+  return issueContentVisible === true ? frame : undefined;
 }
 
 export async function dismissAiSignInModalIfNeeded(window: Page): Promise<void> {

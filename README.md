@@ -1,6 +1,6 @@
 # JiraOps
 
-[![Version](https://img.shields.io/badge/version-0.1.7-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.9-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
@@ -14,8 +14,8 @@ issue details in a wider VS Code editor tab.
 
 - **Assigned-ticket dashboard:** load issues assigned to the connected Jira user with a bounded JQL search.
 - **Compact native header:** show connection state in the JiraOps view title bar instead of an internal webview banner.
-- **GitLab MR focus:** show direct and clone-linked merge requests on Home, while keeping generic web links in Details.
-- **Wide issue details:** open a selected issue in an editor tab with description, comments, image attachments, merge requests, and Jira web links.
+- **GitLab MR focus:** keep assigned-ticket cards compact and show direct plus clone-linked merge requests in Details.
+- **Wide issue details:** open a selected issue immediately with a loading state, then show formatted Jira content, comments, image attachments, merge requests, and Jira web links.
 - **Explicit Jira connection control:** connect from Home, then manage disconnect from Settings.
 - **Safe, testable foundation:** validate webview messages, parse Jira responses with Zod, and run deterministic E2E tests without real Jira credentials.
 
@@ -106,8 +106,9 @@ VS Code Activity Bar
   -> JiraOpsPanelProvider validates the message
   -> OAuthJiraTokenProvider connects, disconnects, resolves, or refreshes Jira tokens
   -> fetchAssignedJiraIssues calls Atlassian enhanced JQL search
-  -> fetchJiraRemoteLinks loads links for each assigned issue
-  -> fetchJiraIssueDetail loads description, comments, attachments, and clone links
+  -> Details opens immediately with a loading webview
+  -> fetchJiraIssueDetail loads formatted description, comments, attachments, and clone links
+  -> fetchJiraRemoteLinks loads direct and clone issue links with TTL cache
   -> extractGitLabMergeRequests derives MR rows from remote links
   -> sidebar renders assigned tickets and WebviewPanel renders issue details
 ```

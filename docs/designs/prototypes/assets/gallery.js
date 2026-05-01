@@ -5,6 +5,7 @@ const controlsPanel = document.getElementById('floating-controls-panel');
 const editorSurface = document.querySelector('.editor-surface');
 const connectionStateElement = document.getElementById('prototype-connection-state');
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
+const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
 const PROTOTYPE_CONNECTION_STATE_MESSAGE_TYPE = 'jiraOps.prototypeConnectionState';
 
 const THEMES = [
@@ -63,14 +64,21 @@ window.addEventListener('keydown', (event) => {
 });
 
 window.addEventListener('message', (event) => {
-  if (!isRecord(event.data) || event.data.type !== PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE) {
-    if (isRecord(event.data) && event.data.type === PROTOTYPE_CONNECTION_STATE_MESSAGE_TYPE) {
-      updateConnectionState(event.data);
-    }
+  if (!isRecord(event.data)) {
     return;
   }
 
-  if (isIssueDetail(event.data.issue)) {
+  if (event.data.type === PROTOTYPE_CONNECTION_STATE_MESSAGE_TYPE) {
+    updateConnectionState(event.data);
+    return;
+  }
+
+  if (event.data.type === PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE) {
+    renderIssueDetailLoading(event.data);
+    return;
+  }
+
+  if (event.data.type === PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE && isIssueDetail(event.data.issue)) {
     renderIssueDetail(event.data.issue);
   }
 });
@@ -130,6 +138,21 @@ function updateConnectionState(message) {
       : 'Not connected';
 }
 
+function renderIssueDetailLoading(message) {
+  const issueKey = typeof message.issueKey === 'string' ? message.issueKey : 'Issue';
+  const summary = typeof message.summary === 'string' ? message.summary : 'Loading issue details';
+
+  editorSurface.innerHTML = `
+    <article class="editor-detail-loading" aria-label="${escapeAttribute(issueKey)} details">
+      <div class="detail-loading-indicator" role="status">
+        <span class="detail-loading-spinner" aria-hidden="true"></span>
+        <strong>${escapeHtml(issueKey)}</strong>
+        <p>${escapeHtml(summary)}</p>
+      </div>
+    </article>
+  `;
+}
+
 function renderIssueDetail(issue) {
   editorSurface.innerHTML = `
     <article class="editor-detail" aria-label="${escapeAttribute(issue.key)} details">
@@ -180,16 +203,22 @@ function renderIssueDetail(issue) {
 
 function renderIssueContent(issue) {
   const description =
-    typeof issue.description === 'string' && issue.description.length > 0
-      ? issue.description
-      : 'No description was found for this issue.';
+    typeof issue.descriptionHtml === 'string' && issue.descriptionHtml.length > 0
+      ? issue.descriptionHtml
+      : `<p>${escapeHtml(resolvePlainDescription(issue))}</p>`;
 
   return `
-    <div class="detail-content">
-      <p>${escapeHtml(description)}</p>
+    <div class="detail-content jira-adf-content">
+      ${description}
       ${renderComments(issue.comments)}
     </div>
   `;
+}
+
+function resolvePlainDescription(issue) {
+  return typeof issue.description === 'string' && issue.description.length > 0
+    ? issue.description
+    : 'No description was found for this issue.';
 }
 
 function renderComments(comments) {
@@ -207,13 +236,21 @@ function renderComments(comments) {
                 <strong>${escapeHtml(comment.author)}</strong>
                 <span>${escapeHtml(formatUpdated(comment.created))}</span>
               </div>
-              <p>${escapeHtml(comment.body)}</p>
+              <div class="jira-adf-content">${renderCommentBody(comment)}</div>
             </article>
           `;
         })
         .join('')}
     </div>
   `;
+}
+
+function renderCommentBody(comment) {
+  if (typeof comment.bodyHtml === 'string' && comment.bodyHtml.length > 0) {
+    return comment.bodyHtml;
+  }
+
+  return `<p>${escapeHtml(comment.body)}</p>`;
 }
 
 function renderMergeRequests(mergeRequests) {

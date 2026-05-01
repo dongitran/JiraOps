@@ -179,6 +179,42 @@ body.gallery-theme-high-contrast {
   gap: 18px;
 }
 
+.editor-detail-loading {
+  display: grid;
+  place-items: center;
+  min-height: calc(100vh - 56px);
+  color: var(--gallery-text);
+}
+
+.detail-loading-indicator {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  max-width: 360px;
+  text-align: center;
+}
+
+.detail-loading-indicator strong {
+  color: var(--gallery-text);
+  font-size: 16px;
+}
+
+.detail-loading-indicator p {
+  margin: 0;
+  color: var(--gallery-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.detail-loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 2px solid color-mix(in oklab, var(--gallery-muted) 35%, transparent);
+  border-top-color: var(--gallery-accent);
+  border-radius: 999px;
+  animation: detail-spin 0.8s linear infinite;
+}
+
 .editor-detail-header {
   display: flex;
   align-items: flex-start;
@@ -307,6 +343,62 @@ body.gallery-theme-high-contrast {
   overflow-wrap: anywhere;
 }
 
+.jira-adf-content {
+  display: grid;
+  gap: 8px;
+}
+
+.jira-adf-content h3,
+.jira-adf-content h4,
+.jira-adf-content p,
+.jira-adf-content ul,
+.jira-adf-content ol,
+.jira-adf-content blockquote,
+.jira-adf-content pre {
+  margin: 0;
+}
+
+.jira-adf-content h3,
+.jira-adf-content h4 {
+  color: var(--gallery-text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.jira-adf-content ul,
+.jira-adf-content ol {
+  padding-left: 20px;
+  color: var(--gallery-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.jira-adf-content a {
+  color: var(--gallery-accent);
+}
+
+.jira-adf-content code,
+.jira-adf-content pre {
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--gallery-side) 90%, #000000);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.jira-adf-content code {
+  padding: 1px 4px;
+}
+
+.jira-adf-content pre {
+  overflow: auto;
+  padding: 10px;
+}
+
+.jira-adf-content blockquote {
+  padding-left: 10px;
+  border-left: 3px solid var(--gallery-accent);
+  color: var(--gallery-muted);
+}
+
 .detail-comment,
 .attachment-card {
   display: grid;
@@ -347,6 +439,12 @@ body.gallery-theme-high-contrast {
   border-radius: 4px;
   object-fit: cover;
   background: var(--gallery-editor);
+}
+
+@keyframes detail-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .floating-nav {

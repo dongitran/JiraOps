@@ -2,6 +2,10 @@ import { Buffer } from 'node:buffer';
 
 import { z } from 'zod';
 
+import { extractTextFromAdf, renderAdfHtml } from './jiraAdfRenderer';
+
+export { extractTextFromAdf } from './jiraAdfRenderer';
+
 export interface FetchJiraIssueDetailOptions {
   readonly accessToken: string;
   readonly cloudId: string;
@@ -29,6 +33,7 @@ export interface JiraIssueComment {
   readonly id: string;
   readonly authorDisplayName: string;
   readonly bodyText: string;
+  readonly bodyHtml: string;
   readonly created: string;
 }
 
@@ -54,6 +59,7 @@ export interface JiraIssueDetail {
   readonly priority: string | null;
   readonly updated: string;
   readonly descriptionText: string;
+  readonly descriptionHtml: string;
   readonly comments: readonly JiraIssueComment[];
   readonly attachments: readonly JiraIssueAttachment[];
   readonly linkedCloneIssues: readonly JiraLinkedCloneIssue[];
@@ -178,12 +184,6 @@ export async function fetchJiraIssueDetail(
   return parseJiraIssueDetail(responseBody);
 }
 
-export function extractTextFromAdf(value: unknown): string {
-  const parts: string[] = [];
-  collectAdfText(value, parts);
-  return normalizeExtractedText(parts.join(''));
-}
-
 export async function fetchJiraAttachmentImageDataUri(
   options: FetchJiraAttachmentImageDataUriOptions
 ): Promise<string | null> {
@@ -237,6 +237,7 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
     priority: fields.priority?.name ?? null,
     updated: fields.updated,
     descriptionText: extractTextFromAdf(fields.description),
+    descriptionHtml: renderAdfHtml(fields.description),
     comments: mapComments(fields.comment),
     attachments: mapAttachments(fields.attachment ?? []),
     linkedCloneIssues: mapCloneIssueLinks(fields.issuelinks ?? []),
@@ -250,6 +251,7 @@ function mapComments(commentField: z.infer<typeof JiraIssueDetailResponseSchema>
       id: normalizeId(comment.id, index, 'comment'),
       authorDisplayName: comment.author?.displayName ?? 'Unknown author',
       bodyText: extractTextFromAdf(comment.body),
+      bodyHtml: renderAdfHtml(comment.body),
       created: comment.created ?? '',
     };
   });
@@ -319,47 +321,6 @@ function isCloneLinkType(
   });
 }
 
-function collectAdfText(value: unknown, parts: string[]): void {
-  if (!isRecord(value)) {
-    return;
-  }
-
-  const type = typeof value['type'] === 'string' ? value['type'] : '';
-  if (type === 'text' && typeof value['text'] === 'string') {
-    parts.push(value['text']);
-  }
-  if (type === 'hardBreak') {
-    parts.push('\n');
-  }
-
-  collectAdfChildren(value['content'], parts);
-  if (isAdfBlockNode(type)) {
-    parts.push('\n');
-  }
-}
-
-function collectAdfChildren(value: unknown, parts: string[]): void {
-  if (!Array.isArray(value)) {
-    return;
-  }
-
-  for (const child of value) {
-    collectAdfText(child, parts);
-  }
-}
-
-function isAdfBlockNode(type: string): boolean {
-  return ['blockquote', 'codeBlock', 'heading', 'listItem', 'mediaSingle', 'paragraph'].includes(type);
-}
-
-function normalizeExtractedText(value: string): string {
-  return value
-    .replace(/[ \t]+\n/gu, '\n')
-    .replace(/\n[ \t]+/gu, '\n')
-    .replace(/\n{2,}/gu, '\n')
-    .trim();
-}
-
 async function responseToImageDataUri(
   response: Response,
   maxBytes = DEFAULT_ATTACHMENT_IMAGE_MAX_BYTES
@@ -409,8 +370,4 @@ function normalizeId(id: string | number | undefined, index: number, prefix: str
   }
 
   return `${prefix}-${String(index + 1)}`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }

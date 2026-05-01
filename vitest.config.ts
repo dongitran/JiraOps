@@ -10,11 +10,13 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: [
         'src/dashboardItems.ts',
+        'src/jiraAdfRenderer.ts',
         'src/jiraIssueDetails.ts',
         'src/jiraCredentials.ts',
         'src/jiraClient.ts',
         'src/remoteLinks.ts',
         'src/testModeData.ts',
+        'src/ttlCache.ts',
         'src/webviewMessages.ts',
       ],
       exclude: ['src/**/*.test.ts'],

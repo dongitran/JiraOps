@@ -74,7 +74,10 @@ export function resolveTestRemoteLinks(issueKey: string): RemoteWebLink[] {
   }
 
   if (issueKey === 'OPS-222') {
-    return [createMergeRequestLink(issueKey, '91', 'Clean stale inventory reservations')];
+    return [
+      createMergeRequestLink(issueKey, '91', 'Clean stale inventory reservations'),
+      createMergeRequestLink(issueKey, '92', 'Add reservation cleanup observability'),
+    ];
   }
 
   if (issueKey === 'OPS-789') {
@@ -194,12 +197,16 @@ function createOps123IssueDetail(): JiraIssueDetail {
     ...createDefaultIssueDetail('OPS-123', 'Stabilize payment reconciliation alerts'),
     descriptionText:
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window. Tighten thresholds and keep on-call context visible.',
+    descriptionHtml:
+      '<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><ul><li><p>Tighten the delayed settlement threshold.</p></li><li><p>Keep the on-call runbook visible for reviewers.</p></li></ul><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p>',
     comments: [
       {
         id: 'OPS-123-comment-1',
         authorDisplayName: 'Current User',
         bodyText:
           'Validated against the delayed settlement sample. The alert should page only after the retry budget is exhausted.',
+        bodyHtml:
+          '<p>Validated against the delayed settlement sample.</p><p><strong>Expected:</strong> page only after the retry budget is exhausted.</p>',
         created: '2026-05-01T07:55:00.000+0000',
       },
     ],
@@ -227,12 +234,16 @@ function createOps321IssueDetail(): JiraIssueDetail {
     ...createDefaultIssueDetail('OPS-321', 'Follow cloned inventory reservation cleanup'),
     descriptionText:
       'This ticket tracks the cloned inventory cleanup task. The active implementation MR is attached to the cloned work item.',
+    descriptionHtml:
+      '<p>This ticket tracks the cloned inventory cleanup task. The active implementation MR is attached to the cloned work item.</p>',
     comments: [
       {
         id: 'OPS-321-comment-1',
         authorDisplayName: 'Release Manager',
         bodyText:
           'Keep this ticket open until the cloned cleanup MR is merged and the reservation job is verified.',
+        bodyHtml:
+          '<p>Keep this ticket open until the cloned cleanup MR is merged and the reservation job is verified.</p>',
         created: '2026-05-01T05:40:00.000+0000',
       },
     ],
@@ -256,6 +267,7 @@ function createDefaultIssueDetail(issueKey: string, summary: string): JiraIssueD
     priority: assignedIssue?.priority ?? null,
     updated: assignedIssue?.updated ?? '2026-05-01T00:00:00.000+0000',
     descriptionText: 'No description was provided for this test issue.',
+    descriptionHtml: '<p>No description was provided for this test issue.</p>',
     comments: [],
     attachments: [],
     linkedCloneIssues: [],

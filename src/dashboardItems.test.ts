@@ -63,16 +63,23 @@ describe('dashboard issue mapping', () => {
             issueKey: 'OPS-222',
             relationship: 'is cloned by',
             webLinks: [
-              {
-                id: 'ops-222-mr-91',
-                title: 'Clean stale inventory reservations',
-                url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/91',
-                relationship: 'Merge request',
-                host: 'gitlab.example.com',
-              },
-            ],
-          },
-        ],
+            {
+              id: 'ops-222-mr-91',
+              title: 'Clean stale inventory reservations',
+              url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/91',
+              relationship: 'Merge request',
+              host: 'gitlab.example.com',
+            },
+            {
+              id: 'ops-222-mr-92',
+              title: 'Add reservation cleanup observability',
+              url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
+              relationship: 'Merge request',
+              host: 'gitlab.example.com',
+            },
+          ],
+        },
+      ],
       }
     );
 
@@ -95,7 +102,18 @@ describe('dashboard issue mapping', () => {
         projectPath: 'storefront/inventory',
         iid: '91',
       },
+      {
+        id: 'ops-222-mr-92',
+        sourceLinkId: 'ops-222-mr-92',
+        issueKey: 'OPS-222',
+        relationship: 'is cloned by',
+        title: 'Add reservation cleanup observability',
+        url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
+        host: 'gitlab.example.com',
+        projectPath: 'storefront/inventory',
+        iid: '92',
+      },
     ]);
-    expect(countIssueMergeRequests([issue])).toBe(1);
+    expect(countIssueMergeRequests([issue])).toBe(2);
   });
 });

@@ -12,6 +12,7 @@ const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
 const CONNECTION_LOADING_MESSAGE_TYPE = 'jiraOps.connectionLoading';
 const CONNECTION_CHANGED_MESSAGE_TYPE = 'jiraOps.connectionChanged';
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
+const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
 
 const SAMPLE_IMAGE_URI = `data:image/svg+xml;utf8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
@@ -33,11 +34,15 @@ const MOCK_ISSUES = [
     updated: '2026-05-01T08:20:00.000Z',
     description:
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window. Tighten thresholds and keep on-call context visible.',
+    descriptionHtml:
+      '<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><ul><li>Tighten the delayed settlement threshold.</li><li>Keep the on-call runbook visible for reviewers.</li></ul><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p>',
     comments: [
       {
         id: 'ops-123-comment-1',
         author: 'Current User',
         body: 'Validated against the delayed settlement sample. The alert should page only after the retry budget is exhausted.',
+        bodyHtml:
+          '<p>Validated against the delayed settlement sample.</p><p><strong>Expected:</strong> page only after the retry budget is exhausted.</p>',
         created: '2026-05-01T07:55:00.000Z',
       },
     ],
@@ -187,6 +192,16 @@ const MOCK_ISSUES = [
         host: 'gitlab.example.com',
         projectPath: 'storefront/inventory',
         iid: '91',
+      },
+      {
+        id: 'ops-222-mr-92',
+        issueKey: 'OPS-222',
+        relationship: 'is cloned by',
+        title: 'Add reservation cleanup observability',
+        url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
+        host: 'gitlab.example.com',
+        projectPath: 'storefront/inventory',
+        iid: '92',
       },
     ],
     webLinks: [
@@ -362,7 +377,6 @@ function renderStatusLine() {
 
 function renderDashboardToolbar() {
   const issueCount = state.issues.length;
-  const mrCount = state.issues.reduce((total, issue) => total + getAllMergeRequests(issue).length, 0);
   const disabled = state.loading || state.connection !== 'connected';
 
   return `
@@ -370,7 +384,6 @@ function renderDashboardToolbar() {
       <div class="dashboard-title">
         <span class="dashboard-eyebrow">Assigned to me</span>
         <strong>${String(issueCount)} tickets</strong>
-        <span>${String(mrCount)} GitLab merge requests</span>
       </div>
       <button class="refresh-button" data-dashboard-action="refresh" type="button"${disabled ? ' disabled' : ''}>${state.loading ? 'Refreshing...' : 'Refresh'}</button>
     </section>
@@ -434,40 +447,7 @@ function renderIssueCard(issue) {
         <span class="issue-meta-priority">${escapeHtml(issue.priority)}</span>
         <span class="issue-meta-updated">${escapeHtml(formatUpdated(issue.updated))}</span>
       </div>
-      ${renderMergeRequests(issue)}
     </article>
-  `;
-}
-
-function renderMergeRequests(issue) {
-  const mergeRequests = getAllMergeRequests(issue);
-  if (mergeRequests.length === 0) {
-    return `
-      <div class="mr-empty">
-        <strong>No merge requests</strong>
-        <span>Open details to review supporting Jira web links.</span>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="mr-section" aria-label="${escapeAttribute(issue.key)} merge requests">
-      <div class="mr-section-heading">
-        <strong>GitLab merge requests</strong>
-        <span>${String(mergeRequests.length)}</span>
-      </div>
-      <div class="mr-list">${mergeRequests.map((mergeRequest) => renderMergeRequestRow(mergeRequest)).join('')}</div>
-    </div>
-  `;
-}
-
-function renderMergeRequestRow(mergeRequest) {
-  const source = mergeRequest.issueKey === undefined ? '' : ` · ${mergeRequest.issueKey}`;
-  return `
-    <a class="mr-row" href="${escapeAttribute(mergeRequest.url)}" target="_blank" rel="noreferrer" data-url="${escapeAttribute(mergeRequest.url)}">
-      <span>${escapeHtml(mergeRequest.title)}</span>
-      <small>${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}${escapeHtml(source)}</small>
-    </a>
   `;
 }
 
@@ -624,14 +604,21 @@ function openIssueDetail(issueKey) {
 
   window.parent.postMessage(
     {
-      type: PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE,
-      issue,
+      type: PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE,
+      issueKey: issue.key,
+      summary: issue.summary,
     },
     '*',
   );
-  state.status = `${issue.key} details opened in the editor preview.`;
-  state.tone = 'success';
-  render();
+  window.setTimeout(() => {
+    window.parent.postMessage(
+      {
+        type: PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE,
+        issue,
+      },
+      '*',
+    );
+  }, 240);
 }
 
 function handleDashboardLoadingMessage() {
@@ -703,10 +690,6 @@ function postPrototypeConnectionState() {
     },
     '*',
   );
-}
-
-function getAllMergeRequests(issue) {
-  return [...issue.mergeRequests, ...issue.cloneMergeRequests];
 }
 
 function renderConnectionPillText() {

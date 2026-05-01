@@ -10,14 +10,58 @@ export interface ShowIssueDetailPanelOptions {
   readonly extensionUri: vscode.Uri;
   readonly outputChannel: vscode.OutputChannel;
   readonly issue: DashboardIssue;
-  readonly detail: JiraIssueDetail;
 }
 
-export function showIssueDetailPanel(options: ShowIssueDetailPanelOptions): void {
+export interface IssueDetailPanelHandle {
+  showLoaded(issue: DashboardIssue, detail: JiraIssueDetail): void;
+  showError(message: string): void;
+}
+
+interface IssueDetailPanelHandleOptions {
+  readonly panel: vscode.WebviewPanel;
+  readonly assetsRoot: vscode.Uri;
+  readonly nonce: string;
+  readonly issue: DashboardIssue;
+  readonly isDisposed: () => boolean;
+}
+
+export function showIssueDetailPanel(
+  options: ShowIssueDetailPanelOptions
+): IssueDetailPanelHandle {
   const assetsRoot = vscode.Uri.joinPath(options.extensionUri, ...WEBVIEW_ASSET_PATH);
-  const panel = vscode.window.createWebviewPanel(
+  const panel = createIssueDetailWebviewPanel(options.issue, assetsRoot);
+  const nonce = createNonce();
+  let disposed = false;
+  panel.webview.html = buildIssueDetailLoadingHtml(
+    panel.webview,
+    assetsRoot,
+    nonce,
+    options.issue
+  );
+  const subscription = panel.webview.onDidReceiveMessage((message: unknown) => {
+    void handleDetailMessage(message, options.outputChannel);
+  });
+  panel.onDidDispose(() => {
+    disposed = true;
+    subscription.dispose();
+  });
+
+  return createIssueDetailPanelHandle({
+    panel,
+    assetsRoot,
+    nonce,
+    issue: options.issue,
+    isDisposed: () => disposed,
+  });
+}
+
+function createIssueDetailWebviewPanel(
+  issue: DashboardIssue,
+  assetsRoot: vscode.Uri
+): vscode.WebviewPanel {
+  return vscode.window.createWebviewPanel(
     'jiraOps.issueDetail',
-    `${options.issue.key} Details`,
+    `${issue.key} Details`,
     vscode.ViewColumn.Active,
     {
       enableScripts: true,
@@ -25,20 +69,39 @@ export function showIssueDetailPanel(options: ShowIssueDetailPanelOptions): void
       retainContextWhenHidden: true,
     }
   );
-  const nonce = createNonce();
-  panel.webview.html = buildIssueDetailHtml(
-    panel.webview,
-    assetsRoot,
-    nonce,
-    options.issue,
-    options.detail
-  );
-  const subscription = panel.webview.onDidReceiveMessage((message: unknown) => {
-    void handleDetailMessage(message, options.outputChannel);
-  });
-  panel.onDidDispose(() => {
-    subscription.dispose();
-  });
+}
+
+function createIssueDetailPanelHandle(
+  options: IssueDetailPanelHandleOptions
+): IssueDetailPanelHandle {
+  return {
+    showLoaded(issue: DashboardIssue, detail: JiraIssueDetail): void {
+      if (options.isDisposed()) {
+        return;
+      }
+
+      options.panel.webview.html = buildIssueDetailHtml(
+        options.panel.webview,
+        options.assetsRoot,
+        options.nonce,
+        issue,
+        detail
+      );
+    },
+    showError(message: string): void {
+      if (options.isDisposed()) {
+        return;
+      }
+
+      options.panel.webview.html = buildIssueDetailErrorHtml(
+        options.panel.webview,
+        options.assetsRoot,
+        options.nonce,
+        options.issue,
+        message
+      );
+    },
+  };
 }
 
 async function handleDetailMessage(
@@ -78,7 +141,7 @@ function buildIssueDetailHtml(
     ${renderIssueDetail(issue, detail)}
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
-      for (const link of document.querySelectorAll('a[data-url]')) {
+      for (const link of document.querySelectorAll('a[href]')) {
         link.addEventListener('click', (event) => {
           event.preventDefault();
           vscode.postMessage({ type: 'jiraOps.openExternalLink', url: link.href });
@@ -87,6 +150,72 @@ function buildIssueDetailHtml(
     </script>
   </body>
 </html>`;
+}
+
+function buildIssueDetailLoadingHtml(
+  webview: vscode.Webview,
+  assetsRoot: vscode.Uri,
+  nonce: string,
+  issue: DashboardIssue
+): string {
+  const cssSrc = webview
+    .asWebviewUri(vscode.Uri.joinPath(assetsRoot, 'jira-ops.css'))
+    .toString();
+  const csp = buildCsp(webview, nonce);
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <title>${escapeHtml(issue.key)} Details</title>
+    <link rel="stylesheet" href="${cssSrc}" />
+  </head>
+  <body class="jira-ops-page jira-detail-loading-page">
+    ${renderIssueDetailLoading(issue)}
+  </body>
+</html>`;
+}
+
+function buildIssueDetailErrorHtml(
+  webview: vscode.Webview,
+  assetsRoot: vscode.Uri,
+  nonce: string,
+  issue: DashboardIssue,
+  message: string
+): string {
+  const cssSrc = webview
+    .asWebviewUri(vscode.Uri.joinPath(assetsRoot, 'jira-ops.css'))
+    .toString();
+  const csp = buildCsp(webview, nonce);
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <title>${escapeHtml(issue.key)} Details</title>
+    <link rel="stylesheet" href="${cssSrc}" />
+  </head>
+  <body class="jira-ops-page jira-detail-loading-page">
+    <main class="detail-loading-indicator" role="alert" aria-label="${escapeAttribute(issue.key)} details">
+      <strong>${escapeHtml(issue.key)}</strong>
+      <p>${escapeHtml(message)}</p>
+    </main>
+  </body>
+</html>`;
+}
+
+function renderIssueDetailLoading(issue: DashboardIssue): string {
+  return `
+    <main class="detail-loading-indicator" role="status" aria-label="${escapeAttribute(issue.key)} details">
+      <span class="detail-loading-spinner" aria-hidden="true"></span>
+      <strong>${escapeHtml(issue.key)}</strong>
+      <p>${escapeHtml(issue.summary)}</p>
+    </main>
+  `;
 }
 
 function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): string {
@@ -110,12 +239,12 @@ function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): stri
 
 function renderIssueContentSection(detail: JiraIssueDetail): string {
   const description =
-    detail.descriptionText.length > 0
-      ? escapeHtml(detail.descriptionText)
-      : 'No description was found for this issue.';
+    detail.descriptionHtml.length > 0
+      ? detail.descriptionHtml
+      : '<p>No description was found for this issue.</p>';
   const content = `
-    <div class="detail-content">
-      <p>${description}</p>
+    <div class="detail-content jira-adf-content">
+      ${description}
       ${renderComments(detail.comments)}
     </div>
   `;
@@ -137,9 +266,15 @@ function renderComment(comment: JiraIssueComment): string {
         <strong>${escapeHtml(comment.authorDisplayName)}</strong>
         <span>${escapeHtml(formatUpdated(comment.created))}</span>
       </div>
-      <p>${escapeHtml(comment.bodyText)}</p>
+      <div class="jira-adf-content">${renderCommentBody(comment)}</div>
     </article>
   `;
+}
+
+function renderCommentBody(comment: JiraIssueComment): string {
+  return comment.bodyHtml.length > 0
+    ? comment.bodyHtml
+    : `<p>${escapeHtml(comment.bodyText)}</p>`;
 }
 
 function renderMergeRequestSection(issue: DashboardIssue): string {
