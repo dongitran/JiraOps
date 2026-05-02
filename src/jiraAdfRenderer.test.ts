@@ -161,4 +161,31 @@ describe('jiraAdfRenderer', () => {
       technicalNotesHtml: '<p>Keep the idempotency guard.</p>',
     });
   });
+
+  test('splits singular technical note headings with punctuation', () => {
+    const sections = renderAdfHtmlSections({
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Main ticket content.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Technical note:' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Keep retry budget in place.' }],
+        },
+      ],
+    });
+
+    expect(sections).toEqual({
+      mainHtml: '<p>Main ticket content.</p>',
+      technicalNotesHtml: '<p>Keep retry budget in place.</p>',
+    });
+  });
 });

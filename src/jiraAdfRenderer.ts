@@ -216,7 +216,12 @@ function findSectionEnd(
 }
 
 function isTechnicalNotesHeading(value: unknown): boolean {
-  return isHeading(value) && normalizeHeadingText(extractTextFromAdf(value)) === 'technical notes';
+  if (!isHeading(value)) {
+    return false;
+  }
+
+  const heading = normalizeHeadingText(extractTextFromAdf(value));
+  return heading === 'technical note' || heading === 'technical notes';
 }
 
 function isHeading(value: unknown): value is AdfNode {
@@ -228,7 +233,11 @@ function headingLevel(value: unknown): number {
 }
 
 function normalizeHeadingText(value: string): string {
-  return value.trim().replace(/\s+/gu, ' ').toLowerCase();
+  return value
+    .trim()
+    .replace(/[:：]+$/u, '')
+    .replace(/\s+/gu, ' ')
+    .toLowerCase();
 }
 
 function applyMarks(initialHtml: string, marks: readonly AdfMark[]): string {

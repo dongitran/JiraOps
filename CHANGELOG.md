@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.17
+
+- Keep Activity Bar icon rendering theme-compatible by using a transparent single-color SVG glyph.
+- Move Jira sections headed `Technical note` or `Technical notes` into the bottom Technical notes section immediately above Attachments.
+
 ## 0.1.16
 
 - Replace the JiraOps Activity Bar logo with concept 42, Hub Panel.

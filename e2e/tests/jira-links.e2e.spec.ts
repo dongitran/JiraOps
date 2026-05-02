@@ -568,6 +568,7 @@ async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> 
     const notes = document.querySelector('[aria-label="Technical notes"]');
     const notesBody = document.querySelector('.detail-technical-notes');
     const attachments = document.querySelector('[aria-label="Attachments"]');
+    const previousSection = attachments?.previousElementSibling ?? null;
     return {
       afterWebLinks:
         webLinks !== null &&
@@ -577,6 +578,7 @@ async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> 
         notes !== null &&
         attachments !== null &&
         Boolean(notes.compareDocumentPosition(attachments) & Node.DOCUMENT_POSITION_FOLLOWING),
+      immediatelyAboveAttachments: previousSection === notes,
       maxHeight: notesBody === null ? '' : window.getComputedStyle(notesBody).maxHeight,
       scrollable:
         notesBody === null ? false : notesBody.scrollHeight > notesBody.clientHeight,
@@ -586,6 +588,7 @@ async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> 
   expect(detailState).toEqual({
     afterWebLinks: true,
     beforeAttachments: true,
+    immediatelyAboveAttachments: true,
     maxHeight: '220px',
     scrollable: true,
   });

@@ -249,7 +249,7 @@ function renderIssueDetail(issue) {
         ${renderWebLinks(issue.webLinks)}
       </section>
       ${renderTechnicalNotesSection(issue)}
-      <section class="detail-section" aria-label="Attachments">
+      <section class="detail-section" aria-label="Attachments" data-detail-section="attachments">
         <div class="detail-section-heading">
           <h2>Attachments</h2>
           <span>${String(issue.attachments.length)}</span>
@@ -326,7 +326,7 @@ function renderTechnicalNotesSection(issue) {
   }
 
   return `
-    <section class="detail-section" aria-label="Technical notes">
+    <section class="detail-section" aria-label="Technical notes" data-detail-section="technical-notes">
       <div class="detail-section-heading">
         <h2>Technical notes</h2>
       </div>

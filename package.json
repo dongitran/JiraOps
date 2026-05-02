@@ -2,7 +2,7 @@
   "name": "jira-ops",
   "displayName": "JiraOps",
   "description": "Assigned Jira tickets and GitLab merge request context in VS Code.",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "publisher": "dongtran",
   "license": "MIT",
   "icon": "resources/jira-ops.png",

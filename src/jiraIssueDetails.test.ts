@@ -363,6 +363,58 @@ describe('jira issue details', () => {
     });
   });
 
+  test('splits singular technical note headings from fetched Jira descriptions', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            key: 'OPS-123',
+            fields: {
+              summary: 'Stabilize payment reconciliation alerts',
+              status: {
+                name: 'In Progress',
+                statusCategory: { name: 'In Progress' },
+              },
+              updated: '2026-05-01T08:20:00.000+0000',
+              description: {
+                type: 'doc',
+                version: 1,
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Main ticket content.' }],
+                  },
+                  {
+                    type: 'heading',
+                    attrs: { level: 3 },
+                    content: [{ type: 'text', text: 'Technical note:' }],
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Keep retry budget in place.' }],
+                  },
+                ],
+              },
+            },
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchJiraIssueDetail({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toMatchObject({
+      descriptionHtml: '<p>Main ticket content.</p>',
+      technicalNotesHtml: '<p>Keep retry budget in place.</p>',
+    });
+  });
+
   test('keeps only Jira linked work items under the clones relationship', async () => {
     const fetchMock = vi.fn(() => {
       return Promise.resolve(
