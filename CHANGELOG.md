@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.16
+
+- Replace the JiraOps Activity Bar logo with concept 42, Hub Panel.
+- Add a packaged PNG Marketplace icon generated from the selected logo.
+
 ## 0.1.15
 
 - Remove the visible Status title from Details while keeping the status dropdown accessible and aligned with the issue key.
