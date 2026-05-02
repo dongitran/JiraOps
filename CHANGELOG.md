@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.13
+
+- Add bordered Jira table rendering in Details and keep Technical notes in a capped scrollable section above Attachments.
+- Remove the redundant visible Issue content heading while keeping the Details content accessible as Description and comments.
+- Add Details actions for Jira status transitions and Log Work with output-channel action logs that avoid note bodies and credentials.
+- Fetch historical notification state when opening Notifications and keep the Clear action compact.
+- Refine Settings into a single connection row, rename Save Polling to Save Settings, and tighten poll interval copy.
+- Keep sidebar metadata visible longer before hiding updated time or priority in narrow JiraOps sidebars.
+
 ## 0.1.12
 
 - Keep What Is New focused on the stable `0.1.10` release while this build remains in the pre-release lane.

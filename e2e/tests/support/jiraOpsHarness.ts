@@ -269,11 +269,11 @@ async function findLoadedIssueDetailFrame(
   issueKey: string
 ): Promise<Frame | undefined> {
   const frame = await findIssueDetailFrame(window, issueKey);
-  const issueContentVisible = await frame
-    ?.getByLabel('Issue content')
+  const detailContentVisible = await frame
+    ?.getByLabel('Description and comments')
     .isVisible()
     .catch(() => false);
-  return issueContentVisible === true ? frame : undefined;
+  return detailContentVisible === true ? frame : undefined;
 }
 
 export async function dismissAiSignInModalIfNeeded(window: Page): Promise<void> {

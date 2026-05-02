@@ -1,13 +1,18 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import {
+  addJiraIssueWorklog,
   buildAssignedIssuesSearchBody,
   buildAssignedIssuesSearchUrl,
+  buildJiraIssueTransitionsUrl,
+  buildJiraIssueWorklogUrl,
   buildJiraRemoteLinksUrl,
   fetchAssignedJiraIssues,
+  fetchJiraIssueTransitions,
   fetchJiraRemoteLinks,
   isTokenUsable,
   OAuthJiraTokenProvider,
+  transitionJiraIssue,
   type JiraOAuthClientLike,
   type JiraTokens,
 } from './jiraClient';
@@ -42,6 +47,15 @@ describe('jiraClient', () => {
       fields: ['summary', 'status', 'priority', 'assignee', 'updated'],
       maxResults: 25,
     });
+  });
+
+  test('builds Jira issue action URLs safely', () => {
+    expect(buildJiraIssueTransitionsUrl('cloud-123', 'OPS-123')).toBe(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123/transitions'
+    );
+    expect(buildJiraIssueWorklogUrl('cloud-123', 'OPS-123')).toBe(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123/worklog'
+    );
   });
 
   test('detects usable stored tokens with a refresh safety window', () => {
@@ -181,6 +195,103 @@ describe('jiraClient', () => {
         fetchImpl: fetchMock,
       })
     ).rejects.toThrow('Assigned Jira issues could not be loaded.');
+  });
+
+  test('fetches available Jira issue transitions', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            transitions: [
+              {
+                id: '31',
+                name: 'Send to Review',
+                to: { name: 'Code Review' },
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchJiraIssueTransitions({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toEqual([
+      {
+        id: '31',
+        name: 'Send to Review',
+        toStatus: 'Code Review',
+      },
+    ]);
+  });
+
+  test('transitions a Jira issue with a neutral request body', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    });
+
+    await expect(
+      transitionJiraIssue({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        transitionId: '31',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123/transitions',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer sample-access-value',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transition: { id: '31' } }),
+      }
+    );
+  });
+
+  test('adds a Jira issue work log without leaking note content to logs', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(new Response(JSON.stringify({ id: '10001' }), { status: 201 }));
+    });
+
+    await expect(
+      addJiraIssueWorklog({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        comment: 'Reviewed retry budget.',
+        issueKey: 'OPS-123',
+        minutes: 45,
+        started: '2026-05-01T08:20:00.000+0000',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toBeUndefined();
+    const request = (fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect(typeof request.body).toBe('string');
+    const body = typeof request.body === 'string' ? request.body : '{}';
+    expect(JSON.parse(body)).toEqual({
+      comment: {
+        content: [
+          {
+            content: [{ text: 'Reviewed retry budget.', type: 'text' }],
+            type: 'paragraph',
+          },
+        ],
+        type: 'doc',
+        version: 1,
+      },
+      started: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: 2700,
+    });
   });
 
   test('returns usable stored tokens without authentication', async () => {

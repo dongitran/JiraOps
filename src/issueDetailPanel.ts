@@ -1,12 +1,60 @@
 import * as vscode from 'vscode';
 
 import type { DashboardIssue } from './dashboardItems';
-import type { JiraIssueAttachment, JiraIssueComment, JiraIssueDetail } from './jiraIssueDetails';
-import { isOpenExternalLinkMessage } from './webviewMessages';
+import type { JiraIssueAttachment, JiraIssueComment, JiraIssueDetail, JiraIssueTransition } from './jiraIssueDetails';
+import { isLogWorkMessage, isOpenExternalLinkMessage, isTransitionIssueMessage } from './webviewMessages';
 
 const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
+const ISSUE_DETAIL_SCRIPT_BODY = `
+      const vscode = acquireVsCodeApi();
+      for (const link of document.querySelectorAll('a[href]')) {
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          vscode.postMessage({ type: 'jiraOps.openExternalLink', url: link.href });
+        });
+      }
+      for (const form of document.querySelectorAll('form[data-detail-action]')) {
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          if (form.dataset.detailAction === 'status') {
+            const transition = new FormData(form).get('transition');
+            vscode.postMessage({
+              type: 'jiraOps.transitionIssue',
+              issueKey: form.dataset.issueKey,
+              transitionId: typeof transition === 'string' ? transition : '',
+            });
+            return;
+          }
+          const formData = new FormData(form);
+          const minutes = Number.parseInt(String(formData.get('minutes') ?? ''), 10);
+          vscode.postMessage({
+            type: 'jiraOps.logWork',
+            issueKey: form.dataset.issueKey,
+            minutes,
+            comment: String(formData.get('comment') ?? ''),
+          });
+        });
+      }
+      window.addEventListener('message', (event) => {
+        if (!event.data || event.data.type !== 'jiraOps.detailActionResult') {
+          return;
+        }
+        const actionStatus = document.querySelector('.detail-action-status');
+        if (actionStatus instanceof HTMLElement) {
+          actionStatus.textContent = event.data.message;
+          actionStatus.dataset.tone = event.data.success === true ? 'success' : 'error';
+        }
+        if (event.data.success === true && typeof event.data.status === 'string' && event.data.status.length > 0) {
+          const statusLine = document.querySelector('.detail-status-line');
+          if (statusLine instanceof HTMLElement) {
+            statusLine.textContent = event.data.status;
+          }
+        }
+      });
+`;
 
 export interface ShowIssueDetailPanelOptions {
+  readonly actions?: IssueDetailActionHandlers;
   readonly extensionUri: vscode.Uri;
   readonly initialDetail?: JiraIssueDetail;
   readonly outputChannel: vscode.OutputChannel;
@@ -16,6 +64,23 @@ export interface ShowIssueDetailPanelOptions {
 export interface IssueDetailPanelHandle {
   showLoaded(issue: DashboardIssue, detail: JiraIssueDetail): void;
   showError(message: string): void;
+}
+
+export interface IssueDetailActionHandlers {
+  readonly logWork: (
+    issueKey: string,
+    minutes: number,
+    comment: string
+  ) => Promise<IssueDetailActionResult>;
+  readonly transitionIssue: (
+    issueKey: string,
+    transitionId: string
+  ) => Promise<IssueDetailActionResult>;
+}
+
+export interface IssueDetailActionResult {
+  readonly message: string;
+  readonly status?: string;
 }
 
 interface IssueDetailPanelHandleOptions {
@@ -44,7 +109,13 @@ export function showIssueDetailPanel(
           options.initialDetail
         );
   const subscription = panel.webview.onDidReceiveMessage((message: unknown) => {
-    void handleDetailMessage(message, options.outputChannel);
+    void handleDetailMessage(
+      message,
+      options.outputChannel,
+      panel.webview,
+      options.actions,
+      options.issue.key
+    );
   });
   panel.onDidDispose(() => {
     disposed = true;
@@ -111,14 +182,89 @@ function createIssueDetailPanelHandle(
 
 async function handleDetailMessage(
   message: unknown,
-  outputChannel: vscode.OutputChannel
+  outputChannel: vscode.OutputChannel,
+  webview: vscode.Webview,
+  actions: IssueDetailActionHandlers | undefined,
+  expectedIssueKey: string
 ): Promise<void> {
-  if (!isOpenExternalLinkMessage(message)) {
+  if (isOpenExternalLinkMessage(message)) {
+    outputChannel.appendLine(`Opening Jira issue detail link on ${webLinkHost(message.url)}.`);
+    await vscode.env.openExternal(vscode.Uri.parse(message.url));
     return;
   }
 
-  outputChannel.appendLine(`Opening Jira issue detail link on ${webLinkHost(message.url)}.`);
-  await vscode.env.openExternal(vscode.Uri.parse(message.url));
+  if (isTransitionIssueMessage(message)) {
+    if (!isExpectedDetailIssue(message.issueKey, expectedIssueKey, webview)) {
+      return;
+    }
+    await runDetailAction(webview, () => {
+      return actions?.transitionIssue(message.issueKey, message.transitionId);
+    });
+    return;
+  }
+
+  if (isLogWorkMessage(message)) {
+    if (!isExpectedDetailIssue(message.issueKey, expectedIssueKey, webview)) {
+      return;
+    }
+    await runDetailAction(webview, () => {
+      return actions?.logWork(message.issueKey, message.minutes, message.comment);
+    });
+  }
+}
+
+function isExpectedDetailIssue(
+  messageIssueKey: string,
+  expectedIssueKey: string,
+  webview: vscode.Webview
+): boolean {
+  if (messageIssueKey === expectedIssueKey) {
+    return true;
+  }
+
+  void postDetailActionResult(webview, {
+    message: 'Jira action did not match this issue detail panel.',
+    status: '',
+    success: false,
+  });
+  return false;
+}
+
+async function runDetailAction(
+  webview: vscode.Webview,
+  action: () => Promise<IssueDetailActionResult> | undefined
+): Promise<void> {
+  try {
+    const result = await action();
+    if (result === undefined) {
+      throw new Error('Jira action could not be completed.');
+    }
+    await postDetailActionResult(webview, {
+      message: result.message,
+      status: result.status ?? '',
+      success: true,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.length > 0
+        ? error.message
+        : 'Jira action could not be completed.';
+    await postDetailActionResult(webview, {
+      message,
+      status: '',
+      success: false,
+    });
+  }
+}
+
+async function postDetailActionResult(
+  webview: vscode.Webview,
+  result: { readonly message: string; readonly status: string; readonly success: boolean }
+): Promise<void> {
+  await webview.postMessage({
+    type: 'jiraOps.detailActionResult',
+    ...result,
+  });
 }
 
 function buildIssueDetailHtml(
@@ -144,15 +290,7 @@ function buildIssueDetailHtml(
   </head>
   <body class="jira-ops-page jira-detail-page">
     ${renderIssueDetail(issue, detail)}
-    <script nonce="${nonce}">
-      const vscode = acquireVsCodeApi();
-      for (const link of document.querySelectorAll('a[href]')) {
-        link.addEventListener('click', (event) => {
-          event.preventDefault();
-          vscode.postMessage({ type: 'jiraOps.openExternalLink', url: link.href });
-        });
-      }
-    </script>
+    <script nonce="${nonce}">${ISSUE_DETAIL_SCRIPT_BODY}</script>
   </body>
 </html>`;
 }
@@ -231,12 +369,14 @@ function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): stri
           <span class="issue-key">${escapeHtml(issue.key)}</span>
           <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
         </div>
-        <span class="detail-status-line">${escapeHtml(issue.status)}</span>
+        <span class="detail-status-line" aria-label="Issue status">${escapeHtml(issue.status)}</span>
       </header>
+      ${renderIssueActionsSection(issue, detail)}
       ${renderIssueContentSection(detail)}
       ${renderMergeRequestSection(issue)}
       ${renderCloneMergeRequestSection(issue)}
       ${renderWebLinksSection(issue)}
+      ${renderTechnicalNotesSection(detail)}
       ${renderAttachmentsSection(detail.attachments)}
     </main>
   `;
@@ -253,7 +393,72 @@ function renderIssueContentSection(detail: JiraIssueDetail): string {
       ${renderComments(detail.comments)}
     </div>
   `;
-  return renderDetailSection('Issue content', null, content);
+  return `
+    <section class="detail-section detail-content-section" aria-label="Description and comments">
+      ${content}
+    </section>
+  `;
+}
+
+function renderIssueActionsSection(issue: DashboardIssue, detail: JiraIssueDetail): string {
+  return `
+    <section class="detail-actions" aria-label="Issue actions">
+      <form class="detail-action-card" data-detail-action="status" data-issue-key="${escapeAttribute(issue.key)}">
+        <div class="detail-action-title">
+          <strong>Change Status</strong>
+          <span>${escapeHtml(detail.status)}</span>
+        </div>
+        <label>
+          <span>Next status</span>
+          <select name="transition" ${detail.transitions.length === 0 ? 'disabled' : ''}>
+            ${renderTransitionOptions(detail.transitions)}
+          </select>
+        </label>
+        <button type="submit" ${detail.transitions.length === 0 ? 'disabled' : ''}>Change Status</button>
+      </form>
+      <form class="detail-action-card" data-detail-action="work" data-issue-key="${escapeAttribute(issue.key)}">
+        <div class="detail-action-title">
+          <strong>Log Work</strong>
+          <span>Minutes spent</span>
+        </div>
+        <label>
+          <span>Minutes</span>
+          <input name="minutes" type="number" min="1" max="1440" inputmode="numeric" autocomplete="off" value="30" />
+        </label>
+        <label>
+          <span>Note</span>
+          <textarea name="comment" rows="2" autocomplete="off" placeholder="Add a short work note&hellip;"></textarea>
+        </label>
+        <button type="submit">Log Work</button>
+      </form>
+      <p class="detail-action-status" role="status" aria-live="polite"></p>
+    </section>
+  `;
+}
+
+function renderTransitionOptions(transitions: readonly JiraIssueTransition[]): string {
+  if (transitions.length === 0) {
+    return '<option value="">No available transitions</option>';
+  }
+
+  return transitions
+    .map((transition) => {
+      return `<option value="${escapeAttribute(transition.id)}">${escapeHtml(transition.name)} -> ${escapeHtml(transition.toStatus)}</option>`;
+    })
+    .join('');
+}
+
+function renderTechnicalNotesSection(detail: JiraIssueDetail): string {
+  if (detail.technicalNotesHtml.length === 0) {
+    return '';
+  }
+
+  const content = `
+    <div class="detail-technical-notes jira-adf-content">
+      ${detail.technicalNotesHtml}
+    </div>
+  `;
+  return renderDetailSection('Technical notes', null, content);
 }
 
 function renderComments(comments: readonly JiraIssueComment[]): string {

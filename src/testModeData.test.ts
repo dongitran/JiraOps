@@ -103,16 +103,16 @@ describe('testModeData', () => {
         host: 'gitlab.example.com',
       },
     ]);
-    expect(resolveTestRemoteLinks('OPS-222')).toEqual([
+    expect(resolveTestRemoteLinks('OPS-333')).toEqual([
       {
-        id: 'OPS-222-mr-91',
+        id: 'OPS-333-mr-91',
         title: 'Clean stale inventory reservations',
         url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/91',
         relationship: 'Merge request',
         host: 'gitlab.example.com',
       },
       {
-        id: 'OPS-222-mr-92',
+        id: 'OPS-333-mr-92',
         title: 'Add reservation cleanup observability',
         url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
         relationship: 'Merge request',
@@ -165,8 +165,8 @@ describe('testModeData', () => {
       key: 'OPS-321',
       linkedCloneIssues: [
         {
-          key: 'OPS-222',
-          relationship: 'is cloned by',
+          key: 'OPS-333',
+          relationship: 'clones',
           status: 'In Review',
         },
       ],

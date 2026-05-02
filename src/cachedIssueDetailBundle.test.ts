@@ -27,6 +27,7 @@ function issueDetail(): JiraIssueDetail {
     comments: [],
     descriptionHtml: '<p>Ready</p>',
     descriptionText: 'Ready',
+    technicalNotesHtml: '',
     key: 'OPS-123',
     linkedCloneIssues: [
       {
@@ -39,6 +40,7 @@ function issueDetail(): JiraIssueDetail {
     status: 'In Progress',
     statusCategory: 'In Progress',
     summary: 'Stabilize payment reconciliation alerts',
+    transitions: [],
     updated: '2026-05-01T08:20:00.000Z',
   };
 }

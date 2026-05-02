@@ -128,6 +128,7 @@ describe('jira issue details', () => {
       updated: '2026-05-01T08:20:00.000+0000',
       descriptionText: 'Main ticket content.',
       descriptionHtml: '<p>Main ticket content.</p>',
+      technicalNotesHtml: '',
       comments: [
         {
           id: 'comment-1',
@@ -153,6 +154,7 @@ describe('jira issue details', () => {
           status: 'Code Review',
         },
       ],
+      transitions: [],
     });
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary%2Cstatus%2Cpriority%2Cupdated%2Cdescription%2Ccomment%2Cattachment%2Cissuelinks',
@@ -223,7 +225,7 @@ describe('jira issue details', () => {
     ).resolves.toBeNull();
   });
 
-  test('parses sparse issue detail fields and inward clone links safely', async () => {
+  test('parses sparse issue detail fields and ignores inward clone links safely', async () => {
     const fetchMock = vi.fn(() => {
       return Promise.resolve(
         new Response(
@@ -286,6 +288,7 @@ describe('jira issue details', () => {
       priority: null,
       descriptionText: '',
       descriptionHtml: '',
+      technicalNotesHtml: '',
       comments: [
         {
           id: '2',
@@ -303,11 +306,125 @@ describe('jira issue details', () => {
           size: 0,
         },
       ],
+      linkedCloneIssues: [],
+      transitions: [],
+    });
+  });
+
+  test('splits technical notes out of the visible issue description', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            key: 'OPS-123',
+            fields: {
+              summary: 'Stabilize payment reconciliation alerts',
+              status: {
+                name: 'In Progress',
+                statusCategory: { name: 'In Progress' },
+              },
+              updated: '2026-05-01T08:20:00.000+0000',
+              description: {
+                type: 'doc',
+                version: 1,
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Main ticket content.' }],
+                  },
+                  {
+                    type: 'heading',
+                    attrs: { level: 3 },
+                    content: [{ type: 'text', text: 'Technical notes' }],
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Keep retry budget in place.' }],
+                  },
+                ],
+              },
+            },
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchJiraIssueDetail({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toMatchObject({
+      descriptionHtml: '<p>Main ticket content.</p>',
+      technicalNotesHtml: '<p>Keep retry budget in place.</p>',
+    });
+  });
+
+  test('keeps only Jira linked work items under the clones relationship', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            key: 'OPS-321',
+            fields: {
+              summary: 'Follow cloned inventory reservation cleanup',
+              status: {
+                name: 'In Review',
+                statusCategory: { name: 'In Progress' },
+              },
+              priority: null,
+              updated: '2026-05-01T05:15:00.000+0000',
+              issuelinks: [
+                {
+                  type: {
+                    name: 'Cloners',
+                    inward: 'is cloned by',
+                    outward: 'clones',
+                  },
+                  outwardIssue: {
+                    key: 'OPS-333',
+                    fields: {
+                      status: { name: 'In Review' },
+                    },
+                  },
+                },
+                {
+                  type: {
+                    name: 'Cloners',
+                    inward: 'is cloned by',
+                    outward: 'clones',
+                  },
+                  inwardIssue: {
+                    key: 'OPS-222',
+                    fields: {
+                      status: { name: 'Code Review' },
+                    },
+                  },
+                },
+              ],
+            },
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchJiraIssueDetail({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-321',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toMatchObject({
       linkedCloneIssues: [
         {
-          key: 'OPS-222',
-          relationship: 'is cloned by',
-          status: null,
+          key: 'OPS-333',
+          relationship: 'clones',
+          status: 'In Review',
         },
       ],
     });
@@ -341,6 +458,8 @@ describe('jira issue details', () => {
         },
       ],
       linkedCloneIssues: [],
+      technicalNotesHtml: '',
+      transitions: [],
     };
     const fetchMock = vi.fn(() => {
       return Promise.resolve(

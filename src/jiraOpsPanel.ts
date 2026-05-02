@@ -3,16 +3,13 @@ import * as vscode from 'vscode';
 import { applyJiraOAuthCredentialsToEnv, ensureJiraOAuthCredentials, getJiraOAuthCredentials } from './jiraCredentials';
 import {
   fetchAssignedJiraIssues,
-  fetchJiraRemoteLinks,
   OAuthJiraTokenProvider,
   type JiraAssignedIssue,
   type JiraConnectionStatus,
-  type JiraTokens,
 } from './jiraClient';
-import { createDashboardIssue, type CloneWebLinks, type DashboardIssue } from './dashboardItems';
-import { readCachedIssueDetailBundle, type CachedIssueDetailBundle } from './cachedIssueDetailBundle';
+import { createDashboardIssue, type DashboardIssue } from './dashboardItems';
 import { showIssueDetailPanel, type IssueDetailPanelHandle } from './issueDetailPanel';
-import { fetchJiraIssueDetail, hydrateIssueAttachmentImages, type JiraIssueDetail, type JiraLinkedCloneIssue } from './jiraIssueDetails';
+import { JiraOpsIssueDetailController } from './jiraOpsIssueDetailController';
 import {
   buildJiraOpsPanelHtml,
   connectionErrorMessage,
@@ -22,9 +19,6 @@ import {
   JiraConnectionRequiredError,
   resolveNotificationPollIntervalMs,
   testConnectionStatus,
-  testIssueDetailLoader,
-  testRemoteLinksLoader,
-  toAssignedIssue,
   waitForConfiguredDetailDelay,
   webLinkHost,
   type JiraCredentialInputOptions,
@@ -44,9 +38,7 @@ import {
 } from './jiraOpsPanelNotificationState';
 import { readJiraOpsSettings, writeJiraOpsSettings, type JiraOpsSettings } from './jiraOpsSettings';
 import { NotificationPoller } from './notificationPoller';
-import type { RemoteWebLink } from './remoteLinks';
 import { isJiraOpsTestMode, resolveTestAssignedIssues } from './testModeData';
-import { TtlCache, type TtlCacheResult } from './ttlCache';
 import {
   CONNECTION_CHANGED_MESSAGE_TYPE,
   CONNECTION_LOADING_MESSAGE_TYPE,
@@ -58,6 +50,7 @@ import {
   isDisconnectJiraMessage,
   isOpenExternalLinkMessage,
   isOpenIssueDetailMessage,
+  isOpenNotificationsMessage,
   isOpenSettingsMessage,
   isRefreshDashboardMessage,
   isUpdateSettingsMessage,
@@ -70,16 +63,12 @@ import {
 export const LINKS_VIEW_ID = 'jiraOps.linksView';
 
 const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
-const JIRA_DETAIL_CACHE_TTL_MS = 5 * 60_000;
-const JIRA_REMOTE_LINK_CACHE_TTL_MS = 5 * 60_000;
-const MAX_CLONE_ISSUES_TO_LOAD = 10;
 
 export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private webviewView: vscode.WebviewView | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private readonly dashboardIssues: DashboardIssue[] = [];
-  private readonly issueDetailCache = new TtlCache<JiraIssueDetail>(JIRA_DETAIL_CACHE_TTL_MS);
-  private readonly remoteLinksCache = new TtlCache<readonly RemoteWebLink[]>(JIRA_REMOTE_LINK_CACHE_TTL_MS);
+  private readonly issueDetails: JiraOpsIssueDetailController;
   private readonly notificationPoller: NotificationPoller;
   private notificationBaseline: IssueUpdateBaseline = {};
   private notifications: readonly JiraOpsNotification[] = [];
@@ -107,6 +96,14 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       },
       readSettings: () => Promise.resolve(readJiraOpsSettings(this.globalState)),
       resolveIntervalMs: (settings) => resolveNotificationPollIntervalMs(settings),
+    });
+    this.issueDetails = new JiraOpsIssueDetailController({
+      applyAssignedIssues: (issues, source) => {
+        this.applyAssignedIssues(issues, source);
+      },
+      loadAssignedIssues: () => this.loadAssignedIssues(),
+      outputChannel: this.outputChannel,
+      tokenProvider: this.tokenProvider,
     });
     const state = restorePanelNotificationState(
       this.globalState,
@@ -180,6 +177,11 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       return;
     }
 
+    if (isOpenNotificationsMessage(message)) {
+      await this.handleOpenNotifications();
+      return;
+    }
+
     if (isRefreshDashboardMessage(message)) {
       await this.handleRefreshDashboard();
       return;
@@ -246,7 +248,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       this.notificationBaseline = {};
       this.persistNotifications();
       this.postNotificationsChanged('Notification polling is paused.');
-      this.clearIssueCaches();
+      this.issueDetails.clearCaches();
       this.outputChannel.appendLine('Jira connection was cleared.');
       this.postConnectionChanged(status, 'Jira disconnected.');
     } catch {
@@ -332,15 +334,11 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       return;
     }
 
-    const cachedBundle = readCachedIssueDetailBundle({
-      detailCache: this.issueDetailCache,
-      issue,
-      maxCloneIssues: MAX_CLONE_ISSUES_TO_LOAD,
-      remoteLinksCache: this.remoteLinksCache,
-    });
+    const cachedBundle = this.issueDetails.readCachedBundle(issue);
     if (cachedBundle !== null) {
       this.outputChannel.appendLine(`Opening cached Jira issue detail panel for ${issue.key}.`);
       showIssueDetailPanel({
+        actions: this.issueDetails.createActions(),
         extensionUri: this.extensionUri,
         initialDetail: cachedBundle.detail,
         issue: cachedBundle.issue,
@@ -354,6 +352,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
 
     this.outputChannel.appendLine(`Opening Jira issue detail panel for ${issue.key}.`);
     const panel = showIssueDetailPanel({
+      actions: this.issueDetails.createActions(),
       extensionUri: this.extensionUri,
       outputChannel: this.outputChannel,
       issue,
@@ -367,7 +366,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
   private async populateIssueDetailPanel(panel: IssueDetailPanelHandle, issue: DashboardIssue): Promise<void> {
     try {
       await waitForConfiguredDetailDelay();
-      const bundle = await this.loadIssueDetailBundle(issue);
+      const bundle = await this.issueDetails.loadBundle(issue);
       panel.showLoaded(bundle.issue, bundle.detail);
       this.outputChannel.appendLine(`Jira issue detail loaded for ${issue.key}.`);
     } catch {
@@ -379,6 +378,17 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
   private handleOpenSettings(): void {
     this.outputChannel.appendLine('Opening Jira Ops settings.');
     this.postMessage({ type: OPEN_SETTINGS_MESSAGE_TYPE });
+  }
+
+  private async handleOpenNotifications(): Promise<void> {
+    this.outputChannel.appendLine('Opening JiraOps notifications.');
+    this.postNotificationsChanged('Notification history is loaded.');
+    const status = await this.loadConnectionStatus();
+    if (!status.connected) {
+      return;
+    }
+
+    await this.notificationPoller.pollNow('notifications view');
   }
 
   private async handleOpenExternalLink(url: string): Promise<void> {
@@ -427,136 +437,6 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     });
   }
 
-  private async loadCloneWebLinks(
-    cloneIssues: readonly JiraLinkedCloneIssue[],
-    loadLinks: (issueKey: string) => Promise<RemoteWebLink[]>
-  ): Promise<CloneWebLinks[]> {
-    const cloneWebLinks: CloneWebLinks[] = [];
-    for (const cloneIssue of cloneIssues.slice(0, MAX_CLONE_ISSUES_TO_LOAD)) {
-      const webLinks = await this.loadRemoteLinksFromCache(cloneIssue.key, loadLinks);
-      cloneWebLinks.push({
-        issueKey: cloneIssue.key,
-        relationship: cloneIssue.relationship,
-        webLinks,
-      });
-    }
-    return cloneWebLinks;
-  }
-
-  private async loadIssueDetailBundle(
-    issue: DashboardIssue
-  ): Promise<CachedIssueDetailBundle> {
-    if (isJiraOpsTestMode()) {
-      return this.loadIssueDetailBundleWithLoaders(
-        issue,
-        testIssueDetailLoader,
-        testRemoteLinksLoader
-      );
-    }
-
-    const tokens = await this.tokenProvider.getStoredOrRefreshTokens();
-    if (tokens === null) {
-      throw new JiraConnectionRequiredError();
-    }
-
-    return this.loadIssueDetailBundleWithLoaders(
-      issue,
-      (issueKey) => {
-        return this.loadIssueDetailWithTokens(tokens, issueKey);
-      },
-      (issueKey) => {
-        return this.loadRemoteLinksWithTokens(tokens, issueKey);
-      }
-    );
-  }
-
-  private async loadIssueDetailBundleWithLoaders(
-    issue: DashboardIssue,
-    loadDetail: (issueKey: string) => Promise<JiraIssueDetail>,
-    loadLinks: (issueKey: string) => Promise<RemoteWebLink[]>
-  ): Promise<CachedIssueDetailBundle> {
-    const detail = await this.loadIssueDetailFromCache(issue.key, loadDetail);
-    const webLinks = await this.loadRemoteLinksFromCache(issue.key, loadLinks);
-    const cloneWebLinks = await this.loadCloneWebLinks(detail.linkedCloneIssues, loadLinks);
-    return {
-      issue: createDashboardIssue(toAssignedIssue(issue), webLinks, {
-        cloneWebLinks,
-        linkedCloneIssues: detail.linkedCloneIssues,
-      }),
-      detail,
-    };
-  }
-
-  private async loadIssueDetailFromCache(
-    issueKey: string,
-    loadDetail: (issueKey: string) => Promise<JiraIssueDetail>
-  ): Promise<JiraIssueDetail> {
-    const cached = this.issueDetailCache.get(issueKey);
-    this.logCacheResult('Jira issue detail', issueKey, cached);
-    if (cached.status === 'hit') {
-      return cached.value;
-    }
-
-    this.outputChannel.appendLine(`Fetching Jira issue detail for ${issueKey}.`);
-    const detail = await loadDetail(issueKey);
-    this.issueDetailCache.set(issueKey, detail);
-    this.outputChannel.appendLine(
-      `Loaded Jira issue detail for ${issueKey} with ${String(detail.comments.length)} comments and ${String(detail.attachments.length)} attachments.`
-    );
-    return detail;
-  }
-
-  private async loadRemoteLinksFromCache(
-    issueKey: string,
-    loadLinks: (issueKey: string) => Promise<RemoteWebLink[]>
-  ): Promise<RemoteWebLink[]> {
-    const cached = this.remoteLinksCache.get(issueKey);
-    this.logCacheResult('Jira remote links', issueKey, cached);
-    if (cached.status === 'hit') {
-      return [...cached.value];
-    }
-
-    this.outputChannel.appendLine(`Fetching Jira remote links for ${issueKey}.`);
-    try {
-      const links = await loadLinks(issueKey);
-      this.remoteLinksCache.set(issueKey, links);
-      this.outputChannel.appendLine(
-        `Loaded ${String(links.length)} Jira remote links for ${issueKey}.`
-      );
-      return links;
-    } catch {
-      this.outputChannel.appendLine(`Jira remote links could not be loaded for ${issueKey}.`);
-      return [];
-    }
-  }
-
-  private async loadRemoteLinksWithTokens(
-    tokens: JiraTokens,
-    issueKey: string
-  ): Promise<RemoteWebLink[]> {
-    return fetchJiraRemoteLinks({
-      accessToken: tokens.accessToken,
-      cloudId: tokens.cloudId,
-      issueKey,
-    });
-  }
-
-  private async loadIssueDetailWithTokens(
-    tokens: JiraTokens,
-    issueKey: string
-  ): Promise<JiraIssueDetail> {
-    const detail = await fetchJiraIssueDetail({
-      accessToken: tokens.accessToken,
-      cloudId: tokens.cloudId,
-      issueKey,
-    });
-
-    return hydrateIssueAttachmentImages(detail, {
-      accessToken: tokens.accessToken,
-      cloudId: tokens.cloudId,
-    });
-  }
-
   private async loadConnectionStatus(): Promise<JiraConnectionStatus> {
     if (isJiraOpsTestMode()) {
       return testConnectionStatus(this.testModeConnected);
@@ -585,12 +465,6 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     return this.tokenProvider.disconnect();
   }
 
-  private clearIssueCaches(): void {
-    this.issueDetailCache.clear();
-    this.remoteLinksCache.clear();
-    this.outputChannel.appendLine('Cleared cached Jira issue details and remote links.');
-  }
-
   private recordBaseline(issues: readonly JiraAssignedIssue[]): void {
     this.notificationBaseline = recordPanelNotificationBaseline(this.globalState, this.notificationPoller, this.notifications, issues);
   }
@@ -601,10 +475,6 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
 
   private persistNotifications(): void {
     persistPanelNotificationState(this.globalState, this.notificationBaseline, this.notifications);
-  }
-
-  private logCacheResult<T>(label: string, issueKey: string, result: TtlCacheResult<T>): void {
-    this.outputChannel.appendLine(`${label} cache ${result.status} for ${issueKey}.`);
   }
 
   private async applyKnownJiraOAuthCredentials(): Promise<void> {

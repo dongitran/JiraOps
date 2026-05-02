@@ -4,9 +4,12 @@ export const OPEN_ISSUE_DETAIL_MESSAGE_TYPE = 'jiraOps.openIssueDetail';
 export const CONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.connectJira';
 export const DISCONNECT_JIRA_MESSAGE_TYPE = 'jiraOps.disconnectJira';
 export const OPEN_SETTINGS_MESSAGE_TYPE = 'jiraOps.openSettings';
+export const OPEN_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.openNotifications';
 export const OPEN_EXTERNAL_LINK_MESSAGE_TYPE = 'jiraOps.openExternalLink';
 export const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
 export const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
+export const TRANSITION_ISSUE_MESSAGE_TYPE = 'jiraOps.transitionIssue';
+export const LOG_WORK_MESSAGE_TYPE = 'jiraOps.logWork';
 export const DASHBOARD_LOADING_MESSAGE_TYPE = 'jiraOps.dashboardLoading';
 export const DASHBOARD_LOADED_MESSAGE_TYPE = 'jiraOps.dashboardLoaded';
 export const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
@@ -40,6 +43,10 @@ export interface OpenSettingsMessage {
   readonly type: typeof OPEN_SETTINGS_MESSAGE_TYPE;
 }
 
+export interface OpenNotificationsMessage {
+  readonly type: typeof OPEN_NOTIFICATIONS_MESSAGE_TYPE;
+}
+
 export interface OpenExternalLinkMessage {
   readonly type: typeof OPEN_EXTERNAL_LINK_MESSAGE_TYPE;
   readonly url: string;
@@ -55,6 +62,19 @@ export interface ClearNotificationsMessage {
   readonly type: typeof CLEAR_NOTIFICATIONS_MESSAGE_TYPE;
 }
 
+export interface TransitionIssueMessage {
+  readonly issueKey: string;
+  readonly transitionId: string;
+  readonly type: typeof TRANSITION_ISSUE_MESSAGE_TYPE;
+}
+
+export interface LogWorkMessage {
+  readonly comment: string;
+  readonly issueKey: string;
+  readonly minutes: number;
+  readonly type: typeof LOG_WORK_MESSAGE_TYPE;
+}
+
 export type WebviewInboundMessage =
   | WebviewReadyMessage
   | RefreshDashboardMessage
@@ -62,9 +82,12 @@ export type WebviewInboundMessage =
   | ConnectJiraMessage
   | DisconnectJiraMessage
   | OpenSettingsMessage
+  | OpenNotificationsMessage
   | OpenExternalLinkMessage
   | UpdateSettingsMessage
-  | ClearNotificationsMessage;
+  | ClearNotificationsMessage
+  | TransitionIssueMessage
+  | LogWorkMessage;
 
 export function isWebviewReadyMessage(
   message: unknown
@@ -109,6 +132,12 @@ export function isOpenSettingsMessage(
   return hasMessageType(message, OPEN_SETTINGS_MESSAGE_TYPE);
 }
 
+export function isOpenNotificationsMessage(
+  message: unknown
+): message is OpenNotificationsMessage {
+  return hasMessageType(message, OPEN_NOTIFICATIONS_MESSAGE_TYPE);
+}
+
 export function isOpenExternalLinkMessage(
   message: unknown
 ): message is OpenExternalLinkMessage {
@@ -144,12 +173,42 @@ export function isClearNotificationsMessage(
   return hasMessageType(message, CLEAR_NOTIFICATIONS_MESSAGE_TYPE);
 }
 
+export function isTransitionIssueMessage(
+  message: unknown
+): message is TransitionIssueMessage {
+  if (!isRecord(message) || message['type'] !== TRANSITION_ISSUE_MESSAGE_TYPE) {
+    return false;
+  }
+
+  return isNonEmptyString(message['issueKey']) && isNonEmptyString(message['transitionId']);
+}
+
+export function isLogWorkMessage(message: unknown): message is LogWorkMessage {
+  if (!isRecord(message) || message['type'] !== LOG_WORK_MESSAGE_TYPE) {
+    return false;
+  }
+
+  return (
+    isNonEmptyString(message['issueKey']) &&
+    typeof message['comment'] === 'string' &&
+    isSupportedWorkMinutes(message['minutes'])
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
 function hasMessageType(value: unknown, type: string): value is Record<string, unknown> {
   return isRecord(value) && value['type'] === type;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isSupportedWorkMinutes(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 1440;
 }
 
 function isWebUrl(value: string): boolean {

@@ -4,19 +4,25 @@ import {
   CONNECT_JIRA_MESSAGE_TYPE,
   DISCONNECT_JIRA_MESSAGE_TYPE,
   CLEAR_NOTIFICATIONS_MESSAGE_TYPE,
+  LOG_WORK_MESSAGE_TYPE,
   OPEN_ISSUE_DETAIL_MESSAGE_TYPE,
+  OPEN_NOTIFICATIONS_MESSAGE_TYPE,
   OPEN_SETTINGS_MESSAGE_TYPE,
   OPEN_EXTERNAL_LINK_MESSAGE_TYPE,
   REFRESH_DASHBOARD_MESSAGE_TYPE,
+  TRANSITION_ISSUE_MESSAGE_TYPE,
   UPDATE_SETTINGS_MESSAGE_TYPE,
   WEBVIEW_READY_MESSAGE_TYPE,
   isClearNotificationsMessage,
   isConnectJiraMessage,
   isDisconnectJiraMessage,
+  isLogWorkMessage,
   isOpenIssueDetailMessage,
+  isOpenNotificationsMessage,
   isOpenExternalLinkMessage,
   isOpenSettingsMessage,
   isRefreshDashboardMessage,
+  isTransitionIssueMessage,
   isUpdateSettingsMessage,
   isWebviewReadyMessage,
 } from './webviewMessages';
@@ -46,12 +52,18 @@ describe('webview message guards', () => {
         type: OPEN_SETTINGS_MESSAGE_TYPE,
       })
     ).toBe(true);
+    expect(
+      isOpenNotificationsMessage({
+        type: OPEN_NOTIFICATIONS_MESSAGE_TYPE,
+      })
+    ).toBe(true);
   });
 
   test('rejects malformed Jira connection action messages', () => {
     expect(isConnectJiraMessage(null)).toBe(false);
     expect(isDisconnectJiraMessage(null)).toBe(false);
     expect(isOpenSettingsMessage(null)).toBe(false);
+    expect(isOpenNotificationsMessage(null)).toBe(false);
     expect(isWebviewReadyMessage({ type: REFRESH_DASHBOARD_MESSAGE_TYPE })).toBe(false);
   });
 
@@ -138,6 +150,50 @@ describe('webview message guards', () => {
         notificationsEnabled: 'true',
         pollIntervalMinutes: 5,
         type: UPDATE_SETTINGS_MESSAGE_TYPE,
+      })
+    ).toBe(false);
+  });
+
+  test('accepts valid issue detail action messages', () => {
+    expect(
+      isTransitionIssueMessage({
+        issueKey: 'OPS-123',
+        transitionId: '31',
+        type: TRANSITION_ISSUE_MESSAGE_TYPE,
+      })
+    ).toBe(true);
+    expect(
+      isLogWorkMessage({
+        comment: 'Reviewed retry budget.',
+        issueKey: 'OPS-123',
+        minutes: 45,
+        type: LOG_WORK_MESSAGE_TYPE,
+      })
+    ).toBe(true);
+  });
+
+  test('rejects malformed issue detail action messages', () => {
+    expect(isTransitionIssueMessage(null)).toBe(false);
+    expect(
+      isTransitionIssueMessage({
+        issueKey: 'OPS-123',
+        transitionId: '',
+        type: TRANSITION_ISSUE_MESSAGE_TYPE,
+      })
+    ).toBe(false);
+    expect(
+      isLogWorkMessage({
+        comment: 'Too short',
+        issueKey: 'OPS-123',
+        minutes: 0,
+        type: LOG_WORK_MESSAGE_TYPE,
+      })
+    ).toBe(false);
+    expect(
+      isLogWorkMessage({
+        issueKey: 'OPS-123',
+        minutes: 1,
+        type: LOG_WORK_MESSAGE_TYPE,
       })
     ).toBe(false);
   });

@@ -1,6 +1,6 @@
 # JiraOps
 
-[![Version](https://img.shields.io/badge/version-0.1.12--pre--release-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.13--pre--release-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
@@ -16,15 +16,16 @@ issue details in a wider VS Code editor tab.
 - **Compact native header:** show connection state in the JiraOps view title bar instead of an internal webview banner.
 - **GitLab MR focus:** keep assigned-ticket cards compact and show direct plus clone-linked merge requests in Details.
 - **Wide issue details:** open a selected issue immediately with a loading state, then show formatted Jira content, comments, image attachments, merge requests, and Jira web links.
+- **Detail actions:** change available Jira statuses and log focused work time from the wide Details tab.
 - **Assigned issue update notifications:** poll Jira in the background, refresh assigned tickets from the same result, persist local unread history, and surface unread updates in the sidebar.
 - **Cached detail reopen:** reuse fresh issue detail and remote-link cache entries so recently opened Details can reopen without another loading state.
 - **Explicit Jira connection control:** connect from Home, then manage disconnect from Settings.
 - **What Is New tab:** show release notes once per installed JiraOps version.
 - **Safe, testable foundation:** validate webview messages, parse Jira responses with Zod, and run deterministic E2E tests without real Jira credentials.
 
-> Current scope: assigned-issue discovery and Jira remote-link display. Jira
-> writes such as issue creation, comments, transitions, and sprint workflows are
-> not implemented yet.
+> Current scope: assigned-issue discovery, Jira remote-link display, status
+> transitions, and work logs. Jira issue creation, comments, and sprint
+> workflows are not implemented yet.
 
 ## 🚀 Quick Start
 
@@ -78,6 +79,9 @@ an existing connection and refreshes expired tokens when a refresh token is
 available. Use **JiraOps: Clear Saved Jira OAuth Credentials** from the Command
 Palette to remove saved OAuth app credentials.
 
+For status transitions and work logs, the Atlassian OAuth app also needs the
+`write:jira-work` scope.
+
 Never log, commit, or share OAuth secrets, access tokens, refresh tokens,
 Authorization headers, or raw credential payloads.
 
@@ -112,6 +116,7 @@ VS Code Activity Bar
   -> fetchAssignedJiraIssues calls Atlassian enhanced JQL search
   -> Details opens immediately with a loading webview
   -> fetchJiraIssueDetail loads formatted description, comments, attachments, and clone links
+  -> JiraOpsIssueDetailController caches detail bundles and handles transition/worklog actions
   -> fetchJiraRemoteLinks loads direct and clone issue links with TTL cache
   -> NotificationPoller reuses assigned-issue search results for unread update notices
   -> globalState stores bounded JiraOps notification history and update baselines
@@ -123,6 +128,7 @@ VS Code Activity Bar
 | --- | --- |
 | [`src/extension.ts`](./src/extension.ts) | VS Code activation and view registration |
 | [`src/jiraOpsPanel.ts`](./src/jiraOpsPanel.ts) | Sidebar webview, CSP, messages, dashboard orchestration |
+| [`src/jiraOpsIssueDetailController.ts`](./src/jiraOpsIssueDetailController.ts) | Issue detail cache, Jira transition loading, and Details write actions |
 | [`src/issueDetailPanel.ts`](./src/issueDetailPanel.ts) | Wide issue detail editor webview |
 | [`src/notificationPoller.ts`](./src/notificationPoller.ts) | Background assigned issue update polling |
 | [`src/jiraNotifications.ts`](./src/jiraNotifications.ts) | Local unread notification state and issue update comparison |

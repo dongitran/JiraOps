@@ -31,6 +31,23 @@ export interface FetchAssignedJiraIssuesOptions {
   readonly fetchImpl?: typeof fetch;
 }
 
+export interface FetchJiraIssueTransitionsOptions {
+  readonly accessToken: string;
+  readonly cloudId: string;
+  readonly issueKey: string;
+  readonly fetchImpl?: typeof fetch;
+}
+
+export interface TransitionJiraIssueOptions extends FetchJiraIssueTransitionsOptions {
+  readonly transitionId: string;
+}
+
+export interface AddJiraIssueWorklogOptions extends FetchJiraIssueTransitionsOptions {
+  readonly comment?: string;
+  readonly minutes: number;
+  readonly started?: string;
+}
+
 export interface AssignedIssuesSearchBody {
   readonly jql: string;
   readonly fields: readonly string[];
@@ -45,6 +62,12 @@ export interface JiraAssignedIssue {
   readonly priority: string | null;
   readonly assigneeDisplayName: string | null;
   readonly updated: string;
+}
+
+export interface JiraIssueTransition {
+  readonly id: string;
+  readonly name: string;
+  readonly toStatus: string;
 }
 
 export interface JiraTokenProvider {
@@ -111,6 +134,20 @@ const JiraAssignedIssueSchema = z.object({
 
 const JiraAssignedIssuesResponseSchema = z.object({
   issues: z.array(JiraAssignedIssueSchema),
+});
+
+const JiraIssueTransitionsResponseSchema = z.object({
+  transitions: z.array(
+    z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      to: z
+        .object({
+          name: z.string().min(1),
+        })
+        .optional(),
+    })
+  ),
 });
 
 export class OAuthJiraTokenProvider implements JiraTokenProvider {
@@ -218,6 +255,17 @@ export function buildAssignedIssuesSearchUrl(cloudId: string): string {
   return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/search/jql`;
 }
 
+export function buildJiraIssueTransitionsUrl(
+  cloudId: string,
+  issueKey: string
+): string {
+  return `${buildJiraIssueUrl(cloudId, issueKey)}/transitions`;
+}
+
+export function buildJiraIssueWorklogUrl(cloudId: string, issueKey: string): string {
+  return `${buildJiraIssueUrl(cloudId, issueKey)}/worklog`;
+}
+
 export function buildAssignedIssuesSearchBody(
   maxResults = DEFAULT_ASSIGNED_ISSUE_LIMIT
 ): AssignedIssuesSearchBody {
@@ -273,6 +321,61 @@ export async function fetchAssignedJiraIssues(
   return parseAssignedIssuesResponse(responseBody);
 }
 
+export async function fetchJiraIssueTransitions(
+  options: FetchJiraIssueTransitionsOptions
+): Promise<JiraIssueTransition[]> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    buildJiraIssueTransitionsUrl(options.cloudId, options.issueKey),
+    {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${options.accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Jira issue transitions could not be loaded.');
+  }
+
+  const responseBody: unknown = await response.json();
+  return parseIssueTransitionsResponse(responseBody);
+}
+
+export async function transitionJiraIssue(
+  options: TransitionJiraIssueOptions
+): Promise<void> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(
+    buildJiraIssueTransitionsUrl(options.cloudId, options.issueKey),
+    {
+      method: 'POST',
+      headers: jsonJiraHeaders(options.accessToken),
+      body: JSON.stringify({ transition: { id: options.transitionId } }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Jira issue status could not be changed.');
+  }
+}
+
+export async function addJiraIssueWorklog(
+  options: AddJiraIssueWorklogOptions
+): Promise<void> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const response = await fetchImpl(buildJiraIssueWorklogUrl(options.cloudId, options.issueKey), {
+    method: 'POST',
+    headers: jsonJiraHeaders(options.accessToken),
+    body: JSON.stringify(buildWorklogRequestBody(options)),
+  });
+
+  if (!response.ok) {
+    throw new Error('Jira work log could not be added.');
+  }
+}
+
 function parseAssignedIssuesResponse(responseBody: unknown): JiraAssignedIssue[] {
   const parseResult = JiraAssignedIssuesResponseSchema.safeParse(responseBody);
   if (!parseResult.success) {
@@ -290,6 +393,61 @@ function parseAssignedIssuesResponse(responseBody: unknown): JiraAssignedIssue[]
       updated: issue.fields.updated,
     };
   });
+}
+
+function parseIssueTransitionsResponse(responseBody: unknown): JiraIssueTransition[] {
+  const parseResult = JiraIssueTransitionsResponseSchema.safeParse(responseBody);
+  if (!parseResult.success) {
+    throw new Error('Jira issue transitions response was not valid.');
+  }
+
+  return parseResult.data.transitions.map((transition) => {
+    return {
+      id: transition.id,
+      name: transition.name,
+      toStatus: transition.to?.name ?? transition.name,
+    };
+  });
+}
+
+function buildJiraIssueUrl(cloudId: string, issueKey: string): string {
+  const encodedCloudId = encodeURIComponent(cloudId);
+  const encodedIssueKey = encodeURIComponent(issueKey);
+  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/issue/${encodedIssueKey}`;
+}
+
+function jsonJiraHeaders(accessToken: string): Record<string, string> {
+  return {
+    Accept: 'application/json',
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+function buildWorklogRequestBody(
+  options: AddJiraIssueWorklogOptions
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    started: options.started ?? formatJiraDate(new Date()),
+    timeSpentSeconds: options.minutes * 60,
+  };
+  const comment = options.comment?.trim() ?? '';
+  if (comment.length > 0) {
+    body['comment'] = textToAdfDocument(comment);
+  }
+  return body;
+}
+
+function textToAdfDocument(text: string): Record<string, unknown> {
+  return {
+    content: [{ content: [{ text, type: 'text' }], type: 'paragraph' }],
+    type: 'doc',
+    version: 1,
+  };
+}
+
+function formatJiraDate(date: Date): string {
+  return date.toISOString().replace('Z', '+0000');
 }
 
 async function createDefaultJiraOAuthClient(): Promise<JiraOAuthClientLike> {

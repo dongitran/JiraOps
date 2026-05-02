@@ -65,7 +65,7 @@ export function countIssueMergeRequests(
 function extractCloneMergeRequests(
   cloneWebLinks: readonly CloneWebLinks[]
 ): CloneMergeRequestLink[] {
-  return cloneWebLinks.flatMap((cloneLinks) => {
+  return cloneWebLinks.filter(isCloneRelationship).flatMap((cloneLinks) => {
     return extractGitLabMergeRequests(cloneLinks.webLinks).map((mergeRequest) => {
       return {
         ...mergeRequest,
@@ -74,4 +74,8 @@ function extractCloneMergeRequests(
       };
     });
   });
+}
+
+function isCloneRelationship(cloneLinks: CloneWebLinks): boolean {
+  return cloneLinks.relationship.trim().toLowerCase() === 'clones';
 }

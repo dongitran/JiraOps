@@ -102,7 +102,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
-  test('User can read issue content and clone merge requests in details', async () => {
+  test('User can read Jira tables and details without redundant section titles', async () => {
     const session = await launchExtensionHost();
 
     try {
@@ -115,10 +115,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       );
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
-      const issueContent = detailFrame.getByLabel('Issue content');
+      const issueContent = detailFrame.getByLabel('Description and comments');
       await expect(issueContent).toContainText(
         'Reconciliation alerts fire too late'
       );
+      await expect(detailFrame.getByText('Issue content')).toHaveCount(0);
       await expect(
         issueContent.getByRole('heading', { name: 'Alert behavior' })
       ).toBeVisible();
@@ -130,6 +131,10 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         issueContent.getByRole('link', { name: 'payment incident runbook' })
       ).toBeVisible();
+      await expect(issueContent.getByRole('table')).toBeVisible();
+      await expect(issueContent.getByRole('columnheader', { name: 'Signal' })).toBeVisible();
+      await expect(issueContent.getByRole('cell', { name: '8 minutes' })).toBeVisible();
+      await expectTableBordersAreVisible(issueContent.getByRole('table'));
       await expect(detailFrame.getByText('Current User')).toBeVisible();
       await expect(
         detailFrame.getByRole('img', { name: 'reconciliation-alert-preview.png' })
@@ -146,7 +151,37 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       ).toBeVisible();
       await expect(detailFrame.getByText(/Clone ticket OPS-111/u)).toBeVisible();
       await expect(detailFrame.getByText('https://')).toHaveCount(0);
-      await expect(detailFrame.getByText('In Progress', { exact: true })).toBeVisible();
+      await expect(detailFrame.getByLabel('Issue status')).toHaveText('In Progress');
+      await expectTechnicalNotesBeforeAttachments(detailFrame);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User can change status and log work from issue details', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await clickWithFallback(
+        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
+          name: 'Details',
+        })
+      );
+
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      await expect(detailFrame.getByLabel('Issue actions')).toBeVisible();
+      await detailFrame.getByRole('combobox', { name: 'Next status' }).selectOption('31');
+      await clickWithFallback(detailFrame.getByRole('button', { name: 'Change Status' }));
+      await expect(detailFrame.getByRole('status')).toContainText(
+        'Status changed to Code Review.'
+      );
+      await expect(detailFrame.getByText('Code Review', { exact: true })).toBeVisible();
+
+      await detailFrame.getByRole('spinbutton', { name: 'Minutes' }).fill('45');
+      await detailFrame.getByRole('textbox', { name: 'Note' }).fill('Reviewed retry budget.');
+      await clickWithFallback(detailFrame.getByRole('button', { name: 'Log Work' }));
+      await expect(detailFrame.getByRole('status')).toContainText('Logged 45 minutes.');
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -168,9 +203,9 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       const loadingStatus = detailFrame.getByRole('status');
       await expect(loadingStatus).toContainText('OPS-123');
       await expectLoadingCentered(loadingStatus);
-      await expect(detailFrame.getByLabel('Issue content')).toHaveCount(0);
+      await expect(detailFrame.getByLabel('Description and comments')).toHaveCount(0);
       const loadedFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
-      await expect(loadedFrame.getByLabel('Issue content')).toContainText(
+      await expect(loadedFrame.getByLabel('Description and comments')).toContainText(
         'Reconciliation alerts fire too late'
       );
     } finally {
@@ -190,17 +225,19 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await clickWithFallback(detailsButton);
       await expect(
         (await resolveLoadedIssueDetailFrame(session.window, 'OPS-123')).getByLabel(
-          'Issue content'
+          'Description and comments'
         )
       ).toBeVisible();
       await closeActiveEditor(session.window, 'OPS-123');
 
       await clickWithFallback(detailsButton);
       const reopenedFrame = await resolveIssueDetailFrame(session.window, 'OPS-123');
-      await expect(reopenedFrame.getByLabel('Issue content')).toBeVisible({
+      await expect(reopenedFrame.getByLabel('Description and comments')).toBeVisible({
         timeout: 700,
       });
-      await expect(reopenedFrame.getByRole('status')).toHaveCount(0);
+      await expect(
+        reopenedFrame.getByRole('status', { name: 'OPS-123 details' })
+      ).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -227,8 +264,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
         })
       ).toBeVisible();
       await expect(
-        detailFrame.getByLabel('Clone merge requests').getByText(/Clone ticket OPS-222/u)
+        detailFrame.getByLabel('Clone merge requests').getByText(/Clone ticket OPS-333/u)
       ).toHaveCount(2);
+      await expect(
+        detailFrame.getByLabel('Clone merge requests').getByText(/Clone ticket OPS-222/u)
+      ).toHaveCount(0);
       await expect(
         detailFrame.getByLabel('Clone merge requests').getByRole('link', {
           name: /Add reservation cleanup observability/u,
@@ -258,7 +298,10 @@ test.describe('Jira Ops assigned ticket workflow', () => {
         '1'
       );
       await frame.getByRole('spinbutton', { name: 'Poll interval' }).fill('5');
-      await clickWithFallback(frame.getByRole('button', { name: 'Save Polling' }));
+      await expect(frame.getByText('Connection', { exact: true })).toBeVisible();
+      await expect(frame.getByText('Connected', { exact: true })).toBeVisible();
+      await expect(frame.getByText('Minutes, 1 to 60')).toBeVisible();
+      await clickWithFallback(frame.getByRole('button', { name: 'Save Settings' }));
       await expect(frame.getByRole('status')).toContainText(
         'Notification polling settings saved.'
       );
@@ -314,10 +357,10 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
-  test('User can see assigned issue updates in notifications', async () => {
+  test('User can load saved notifications when opening Notifications', async () => {
     const session = await launchExtensionHost({
       env: {
-        JIRA_OPS_NOTIFICATION_POLL_INTERVAL_MS: '500',
+        JIRA_OPS_NOTIFICATION_POLL_INTERVAL_MS: '60000',
         JIRA_OPS_TEST_MODE_NOTIFICATION_UPDATE: '1',
       },
     });
@@ -325,14 +368,14 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     try {
       const frame = await openLoadedDashboard(session.window);
       const notificationButton = frame.getByRole('button', {
-        name: /Open notifications, 1 unread/u,
+        name: 'Open notifications',
       });
-      await expect(notificationButton).toBeVisible({ timeout: 8_000 });
+      await expect(notificationButton).toBeVisible();
       await clickWithFallback(notificationButton);
 
       await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
       await expect(frame.getByText('Checked assigned issue updates just now.')).toHaveCount(0);
-      await expect(frame.getByText('OPS-123 was updated')).toBeVisible();
+      await expect(frame.getByText('OPS-123 was updated')).toBeVisible({ timeout: 8_000 });
       await expectClearButtonUsesCompactWidth(frame);
       await clickWithFallback(frame.getByRole('button', { name: 'Clear' }));
       await returnToDashboard(frame);
@@ -392,18 +435,26 @@ async function expectNoIssueOverflow(issue: Locator): Promise<void> {
 async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
   const displayState = await issue.evaluate(async (node) => {
     const previousBodyStyle = document.body.getAttribute('style') ?? '';
-    document.body.style.width = '200px';
-    document.body.style.maxWidth = '200px';
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)));
-    });
-    const cardWidth = node.getBoundingClientRect().width;
-    const updatedAt180 = window.getComputedStyle(
-      node.querySelector('.issue-meta-updated') ?? node
-    ).display;
-    const priorityAt180 = window.getComputedStyle(
-      node.querySelector('.issue-meta-priority') ?? node
-    ).display;
+    const readAtWidth = async (
+      width: number
+    ): Promise<{ cardWidth: number; priority: string; updated: string }> => {
+      document.body.style.width = `${String(width)}px`;
+      document.body.style.maxWidth = `${String(width)}px`;
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(null)));
+      });
+      return {
+        cardWidth: node.getBoundingClientRect().width,
+        priority: window.getComputedStyle(
+          node.querySelector('.issue-meta-priority') ?? node
+        ).display,
+        updated: window.getComputedStyle(
+          node.querySelector('.issue-meta-updated') ?? node
+        ).display,
+      };
+    };
+    const medium = await readAtWidth(240);
+    const narrow = await readAtWidth(200);
     if (previousBodyStyle.length === 0) {
       document.body.removeAttribute('style');
     } else {
@@ -411,18 +462,58 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
     }
 
     return {
-      priorityAt180,
-      updatedAt180,
-      cardWidth,
+      medium,
+      narrow,
     };
   });
-  expect(displayState.cardWidth).toBeLessThanOrEqual(260);
+  expect(displayState.medium.cardWidth).toBeLessThanOrEqual(260);
+  expect(displayState.medium.priority).not.toBe('none');
+  expect(displayState.medium.updated).not.toBe('none');
+  expect(displayState.narrow.cardWidth).toBeLessThanOrEqual(220);
   expect({
-    priorityAt180: displayState.priorityAt180,
-    updatedAt180: displayState.updatedAt180,
+    priority: displayState.narrow.priority,
+    updated: displayState.narrow.updated,
   }).toEqual({
-    priorityAt180: 'none',
-    updatedAt180: 'none',
+    priority: 'none',
+    updated: 'none',
+  });
+}
+
+async function expectTableBordersAreVisible(table: Locator): Promise<void> {
+  const borders = await table.evaluate((node) => {
+    const cell = node.querySelector('td, th');
+    return {
+      cellBorder: cell === null ? '0px' : window.getComputedStyle(cell).borderTopWidth,
+      tableBorder: window.getComputedStyle(node).borderTopWidth,
+    };
+  });
+
+  expect(borders).toEqual({
+    cellBorder: '1px',
+    tableBorder: '1px',
+  });
+}
+
+async function expectTechnicalNotesBeforeAttachments(frame: Frame): Promise<void> {
+  const detailState = await frame.evaluate(() => {
+    const notes = document.querySelector('[aria-label="Technical notes"]');
+    const notesBody = document.querySelector('.detail-technical-notes');
+    const attachments = document.querySelector('[aria-label="Attachments"]');
+    return {
+      beforeAttachments:
+        notes !== null &&
+        attachments !== null &&
+        Boolean(notes.compareDocumentPosition(attachments) & Node.DOCUMENT_POSITION_FOLLOWING),
+      maxHeight: notesBody === null ? '' : window.getComputedStyle(notesBody).maxHeight,
+      scrollable:
+        notesBody === null ? false : notesBody.scrollHeight > notesBody.clientHeight,
+    };
+  });
+
+  expect(detailState).toEqual({
+    beforeAttachments: true,
+    maxHeight: '220px',
+    scrollable: true,
   });
 }
 

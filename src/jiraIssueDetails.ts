@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { z } from 'zod';
 
-import { extractTextFromAdf, renderAdfHtml } from './jiraAdfRenderer';
+import { extractTextFromAdf, renderAdfHtml, renderAdfHtmlSections } from './jiraAdfRenderer';
 
 export { extractTextFromAdf } from './jiraAdfRenderer';
 
@@ -60,9 +60,17 @@ export interface JiraIssueDetail {
   readonly updated: string;
   readonly descriptionText: string;
   readonly descriptionHtml: string;
+  readonly technicalNotesHtml: string;
   readonly comments: readonly JiraIssueComment[];
   readonly attachments: readonly JiraIssueAttachment[];
   readonly linkedCloneIssues: readonly JiraLinkedCloneIssue[];
+  readonly transitions: readonly JiraIssueTransition[];
+}
+
+export interface JiraIssueTransition {
+  readonly id: string;
+  readonly name: string;
+  readonly toStatus: string;
 }
 
 const ATLASSIAN_API_ROOT = 'https://api.atlassian.com/ex/jira';
@@ -229,6 +237,7 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
   }
 
   const fields = parseResult.data.fields;
+  const descriptionSections = renderAdfHtmlSections(fields.description);
   return {
     key: parseResult.data.key,
     summary: fields.summary,
@@ -237,10 +246,12 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
     priority: fields.priority?.name ?? null,
     updated: fields.updated,
     descriptionText: extractTextFromAdf(fields.description),
-    descriptionHtml: renderAdfHtml(fields.description),
+    descriptionHtml: descriptionSections.mainHtml,
+    technicalNotesHtml: descriptionSections.technicalNotesHtml,
     comments: mapComments(fields.comment),
     attachments: mapAttachments(fields.attachment ?? []),
     linkedCloneIssues: mapCloneIssueLinks(fields.issuelinks ?? []),
+    transitions: [],
   };
 }
 
@@ -291,12 +302,18 @@ function mapCloneIssueLink(
     return null;
   }
 
+  const outwardRelationship = issueLink.type?.outward ?? 'clones';
   if (issueLink.outwardIssue !== undefined) {
-    return mapLinkedIssue(issueLink.outwardIssue, issueLink.type?.outward ?? 'clones');
+    return isClonesRelationship(outwardRelationship)
+      ? mapLinkedIssue(issueLink.outwardIssue, outwardRelationship)
+      : null;
   }
 
+  const inwardRelationship = issueLink.type?.inward ?? 'is cloned by';
   if (issueLink.inwardIssue !== undefined) {
-    return mapLinkedIssue(issueLink.inwardIssue, issueLink.type?.inward ?? 'is cloned by');
+    return isClonesRelationship(inwardRelationship)
+      ? mapLinkedIssue(issueLink.inwardIssue, inwardRelationship)
+      : null;
   }
 
   return null;
@@ -319,6 +336,10 @@ function isCloneLinkType(
   return [type?.name, type?.inward, type?.outward].some((label) => {
     return typeof label === 'string' && label.toLowerCase().includes('clone');
   });
+}
+
+function isClonesRelationship(relationship: string): boolean {
+  return relationship.trim().toLowerCase() === 'clones';
 }
 
 async function responseToImageDataUri(

@@ -223,12 +223,10 @@ function renderIssueDetail(issue) {
           <span class="detail-key">${escapeHtml(issue.key)}</span>
           <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
         </div>
-        <span class="detail-status-line">${escapeHtml(cacheText)}</span>
+        <span class="detail-status-line" aria-label="Issue status">${escapeHtml(cacheText)}</span>
       </header>
-      <section class="detail-section" aria-label="Issue content">
-        <div class="detail-section-heading">
-          <h2>Issue content</h2>
-        </div>
+      ${renderDetailActions(issue)}
+      <section class="detail-section detail-content-section" aria-label="Description and comments">
         ${renderIssueContent(issue)}
       </section>
       <section class="detail-section" aria-label="GitLab merge requests">
@@ -252,6 +250,7 @@ function renderIssueDetail(issue) {
         </div>
         ${renderWebLinks(issue.webLinks)}
       </section>
+      ${renderTechnicalNotesSection(issue)}
       <section class="detail-section" aria-label="Attachments">
         <div class="detail-section-heading">
           <h2>Attachments</h2>
@@ -260,6 +259,72 @@ function renderIssueDetail(issue) {
         ${renderAttachments(issue.attachments)}
       </section>
     </article>
+  `;
+  bindDetailActions(issue);
+}
+
+function renderDetailActions(issue) {
+  return `
+    <section class="detail-actions" aria-label="Issue actions">
+      <form class="detail-action-card" data-detail-action="status">
+        <div class="detail-action-title">
+          <strong>Change Status</strong>
+          <span>${escapeHtml(issue.status)}</span>
+        </div>
+        <label>
+          <span>Next status</span>
+          <select name="transition" ${issue.transitions.length === 0 ? 'disabled' : ''}>
+            ${renderTransitionOptions(issue.transitions)}
+          </select>
+        </label>
+        <button type="submit" ${issue.transitions.length === 0 ? 'disabled' : ''}>Change Status</button>
+      </form>
+      <form class="detail-action-card" data-detail-action="work">
+        <div class="detail-action-title">
+          <strong>Log Work</strong>
+          <span>Minutes spent</span>
+        </div>
+        <label>
+          <span>Minutes</span>
+          <input name="minutes" type="number" min="1" max="1440" inputmode="numeric" autocomplete="off" value="30" />
+        </label>
+        <label>
+          <span>Note</span>
+          <textarea name="note" rows="2" autocomplete="off" placeholder="Add a short work note…"></textarea>
+        </label>
+        <button type="submit">Log Work</button>
+      </form>
+      <p class="detail-action-status" role="status" aria-live="polite"></p>
+    </section>
+  `;
+}
+
+function renderTransitionOptions(transitions) {
+  if (transitions.length === 0) {
+    return '<option>No available transitions</option>';
+  }
+
+  return transitions
+    .map((transition) => {
+      return `<option value="${escapeAttribute(transition.id)}" data-status="${escapeAttribute(transition.toStatus)}">${escapeHtml(transition.name)} -> ${escapeHtml(transition.toStatus)}</option>`;
+    })
+    .join('');
+}
+
+function renderTechnicalNotesSection(issue) {
+  if (typeof issue.technicalNotesHtml !== 'string' || issue.technicalNotesHtml.length === 0) {
+    return '';
+  }
+
+  return `
+    <section class="detail-section" aria-label="Technical notes">
+      <div class="detail-section-heading">
+        <h2>Technical notes</h2>
+      </div>
+      <div class="detail-technical-notes jira-adf-content">
+        ${issue.technicalNotesHtml}
+      </div>
+    </section>
   `;
 }
 
@@ -406,6 +471,67 @@ function renderAttachments(attachments) {
   `;
 }
 
+function bindDetailActions(issue) {
+  const statusForm = editorSurface.querySelector('form[data-detail-action="status"]');
+  if (statusForm instanceof HTMLFormElement) {
+    statusForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      applyPrototypeStatusTransition(statusForm, issue);
+    });
+  }
+
+  const workForm = editorSurface.querySelector('form[data-detail-action="work"]');
+  if (workForm instanceof HTMLFormElement) {
+    workForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      applyPrototypeWorkLog(workForm);
+    });
+  }
+}
+
+function applyPrototypeStatusTransition(form, issue) {
+  const select = form.elements.namedItem('transition');
+  if (!(select instanceof HTMLSelectElement) || select.selectedOptions.length === 0) {
+    setDetailActionStatus('Choose an available status transition.');
+    return;
+  }
+
+  const nextStatus = select.selectedOptions[0]?.dataset.status ?? '';
+  issue.status = nextStatus.length > 0 ? nextStatus : issue.status;
+  const statusLine = editorSurface.querySelector('.detail-status-line');
+  if (statusLine instanceof HTMLElement) {
+    statusLine.textContent = issue.status;
+  }
+  setDetailActionStatus(`Status changed to ${issue.status}.`);
+}
+
+function applyPrototypeWorkLog(form) {
+  const minutesInput = form.elements.namedItem('minutes');
+  const noteInput = form.elements.namedItem('note');
+  if (!(minutesInput instanceof HTMLInputElement)) {
+    setDetailActionStatus('Enter minutes from 1 to 1440.');
+    return;
+  }
+
+  const minutes = Number.parseInt(minutesInput.value, 10);
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
+    setDetailActionStatus('Enter minutes from 1 to 1440.');
+    return;
+  }
+
+  if (noteInput instanceof HTMLTextAreaElement) {
+    noteInput.value = '';
+  }
+  setDetailActionStatus(`Logged ${String(minutes)} minute${minutes === 1 ? '' : 's'}.`);
+}
+
+function setDetailActionStatus(message) {
+  const status = editorSurface.querySelector('.detail-action-status');
+  if (status instanceof HTMLElement) {
+    status.textContent = message;
+  }
+}
+
 function isIssueDetail(value) {
   return (
     isRecord(value) &&
@@ -413,6 +539,9 @@ function isIssueDetail(value) {
     typeof value.summary === 'string' &&
     typeof value.status === 'string' &&
     typeof value.description === 'string' &&
+    typeof value.technicalNotesHtml === 'string' &&
+    Array.isArray(value.transitions) &&
+    value.transitions.every(isIssueTransition) &&
     Array.isArray(value.comments) &&
     value.comments.every(isIssueComment) &&
     Array.isArray(value.attachments) &&
@@ -423,6 +552,15 @@ function isIssueDetail(value) {
     value.cloneMergeRequests.every(isCloneMergeRequestLink) &&
     Array.isArray(value.webLinks) &&
     value.webLinks.every(isRemoteWebLink)
+  );
+}
+
+function isIssueTransition(value) {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.toStatus === 'string'
   );
 }
 

@@ -15,6 +15,7 @@ const NOTIFICATIONS_CHANGED_MESSAGE_TYPE = 'jiraOps.notificationsChanged';
 const SETTINGS_CHANGED_MESSAGE_TYPE = 'jiraOps.settingsChanged';
 const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
 const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
+const OPEN_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.openNotifications';
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
 const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
 
@@ -39,7 +40,21 @@ const MOCK_ISSUES = [
     description:
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window. Tighten thresholds and keep on-call context visible.',
     descriptionHtml:
-      '<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><ul><li>Tighten the delayed settlement threshold.</li><li>Keep the on-call runbook visible for reviewers.</li></ul><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p>',
+      '<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><ul><li>Tighten the delayed settlement threshold.</li><li>Keep the on-call runbook visible for reviewers.</li></ul><table><tr><th>Signal</th><th>Current</th><th>Target</th></tr><tr><td>Delayed settlements</td><td>15 minutes</td><td>8 minutes</td></tr><tr><td>Retry budget</td><td>4 attempts</td><td>3 attempts</td></tr></table><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p>',
+    technicalNotesHtml:
+      '<p>The payment processor can emit duplicate settlement callbacks after regional failover. Keep the idempotency guard before changing alert thresholds.</p><ul><li>Do not alert while the retry budget is still active.</li><li>Keep a manual override in the runbook for settlement holidays.</li><li>Coordinate the dashboard annotation with the observability owner.</li><li>Confirm that the batch monitor excludes sandbox merchants.</li><li>Backfill the previous 24 hours before enabling the tighter threshold.</li><li>Leave the legacy metric in place until the release train closes.</li><li>Notify support before cutting over the paging policy.</li><li>Capture before-and-after alert counts in the release note.</li><li>Keep the rollback threshold documented for the on-call engineer.</li><li>Verify downstream reporting jobs after the first live settlement batch.</li></ul>',
+    transitions: [
+      {
+        id: '31',
+        name: 'Send to Review',
+        toStatus: 'Code Review',
+      },
+      {
+        id: '41',
+        name: 'Resolve',
+        toStatus: 'Done',
+      },
+    ],
     comments: [
       {
         id: 'ops-123-comment-1',
@@ -129,6 +144,14 @@ const MOCK_ISSUES = [
     updated: '2026-05-01T06:05:00.000Z',
     description:
       'Confirm the checkout release has rollout toggles, rollback notes, and deployment observability before approving the release MR.',
+    technicalNotesHtml: '',
+    transitions: [
+      {
+        id: '31',
+        name: 'Approve',
+        toStatus: 'Done',
+      },
+    ],
     comments: [],
     attachments: [],
     linkedCloneIssues: [],
@@ -169,6 +192,14 @@ const MOCK_ISSUES = [
     updated: '2026-05-01T05:15:00.000Z',
     description:
       'This ticket tracks the cloned inventory cleanup task. The active implementation MR is attached to the cloned work item.',
+    technicalNotesHtml: '',
+    transitions: [
+      {
+        id: '21',
+        name: 'Start Progress',
+        toStatus: 'In Progress',
+      },
+    ],
     comments: [
       {
         id: 'ops-321-comment-1',
@@ -180,17 +211,17 @@ const MOCK_ISSUES = [
     attachments: [],
     linkedCloneIssues: [
       {
-        key: 'OPS-222',
-        relationship: 'is cloned by',
+        key: 'OPS-333',
+        relationship: 'clones',
         status: 'In Review',
       },
     ],
     mergeRequests: [],
     cloneMergeRequests: [
       {
-        id: 'ops-222-mr-91',
-        issueKey: 'OPS-222',
-        relationship: 'is cloned by',
+        id: 'ops-333-mr-91',
+        issueKey: 'OPS-333',
+        relationship: 'clones',
         title: 'Clean stale inventory reservations',
         url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/91',
         host: 'gitlab.example.com',
@@ -198,9 +229,9 @@ const MOCK_ISSUES = [
         iid: '91',
       },
       {
-        id: 'ops-222-mr-92',
-        issueKey: 'OPS-222',
-        relationship: 'is cloned by',
+        id: 'ops-333-mr-92',
+        issueKey: 'OPS-333',
+        relationship: 'clones',
         title: 'Add reservation cleanup observability',
         url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
         host: 'gitlab.example.com',
@@ -227,6 +258,8 @@ const MOCK_ISSUES = [
     updated: '2026-05-01T04:45:00.000Z',
     description:
       'A compact layout test ticket with a single long token in the summary. The title must stay inside the sidebar card.',
+    technicalNotesHtml: '',
+    transitions: [],
     comments: [],
     attachments: [],
     linkedCloneIssues: [],
@@ -243,6 +276,14 @@ const MOCK_ISSUES = [
     updated: '2026-04-30T17:45:00.000Z',
     description:
       'Verify the retry schedule, dead-letter routing, and alert escalation path for warehouse webhook failures.',
+    technicalNotesHtml: '',
+    transitions: [
+      {
+        id: '11',
+        name: 'Start Work',
+        toStatus: 'In Progress',
+      },
+    ],
     comments: [],
     attachments: [],
     linkedCloneIssues: [],
@@ -401,11 +442,16 @@ function renderSettingsScreen() {
         </div>
       </div>
       <section class="settings-connection" aria-label="Jira connection settings">
-        <div class="settings-row">
-          <strong>Connection</strong>
-          <span class="connection-state" data-state="${escapeAttribute(state.connection)}">${escapeHtml(renderConnectionPillText())}</span>
+        <div class="settings-connection-row">
+          <div class="settings-connection-copy">
+            <strong>Connection</strong>
+            <span>${escapeHtml(state.cloudName || 'Jira Cloud')}</span>
+          </div>
+          <div class="settings-connection-actions">
+            <span class="connection-state" data-state="${escapeAttribute(state.connection)}">${escapeHtml(renderConnectionPillText())}</span>
+            ${renderSettingsActionButton()}
+          </div>
         </div>
-        ${renderSettingsActionButton()}
       </section>
       ${renderNotificationSettings()}
       ${renderStatusLine()}
@@ -437,7 +483,10 @@ function renderNotificationSettings() {
         <span>Poll Jira for assigned issue updates</span>
       </label>
       <label class="settings-field" for="jiraops-notification-interval">
-        <span>Poll interval</span>
+        <span class="settings-field-heading">
+          <span>Poll interval</span>
+          <small>Minutes, 1 to 60</small>
+        </span>
         <input
           id="jiraops-notification-interval"
           data-setting-control="interval"
@@ -451,8 +500,8 @@ function renderNotificationSettings() {
         />
       </label>
       <div class="settings-row">
-        <span class="settings-hint">Minutes, from 1 to 60.</span>
-        <button class="settings-save-button" data-settings-action="save" type="button">Save Polling</button>
+        <span class="settings-hint">Applies to assigned issue update checks.</span>
+        <button class="settings-save-button" data-settings-action="save" type="button">Save Settings</button>
       </div>
     </section>
   `;
@@ -746,6 +795,12 @@ function openSettingsScreen() {
 
 function openNotificationsScreen() {
   state.screen = 'notifications';
+  if (state.connection === 'connected' && state.notificationSettings.enabled && state.notifications.length === 0) {
+    state.notifications = MOCK_NOTIFICATIONS;
+  }
+  if (vscodeApi !== null) {
+    vscodeApi.postMessage({ type: OPEN_NOTIFICATIONS_MESSAGE_TYPE });
+  }
   render();
 }
 

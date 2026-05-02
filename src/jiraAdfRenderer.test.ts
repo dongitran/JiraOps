@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { extractTextFromAdf, renderAdfHtml } from './jiraAdfRenderer';
+import { extractTextFromAdf, renderAdfHtml, renderAdfHtmlSections } from './jiraAdfRenderer';
 
 describe('jiraAdfRenderer', () => {
   test('renders common Jira document formatting as safe HTML', () => {
@@ -74,5 +74,91 @@ describe('jiraAdfRenderer', () => {
     expect(html).toBe('<p>&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</p>');
     expect(html).not.toContain('javascript:');
     expect(html).not.toContain('<script>');
+  });
+
+  test('renders Jira tables as semantic table HTML', () => {
+    const html = renderAdfHtml({
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'table',
+          content: [
+            {
+              type: 'tableRow',
+              content: [
+                {
+                  type: 'tableHeader',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Signal' }] }],
+                },
+                {
+                  type: 'tableHeader',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Target' }] }],
+                },
+              ],
+            },
+            {
+              type: 'tableRow',
+              content: [
+                {
+                  type: 'tableCell',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Delayed settlements' }] }],
+                },
+                {
+                  type: 'tableCell',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: '8 minutes' }] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(html).toBe(
+      '<table><tr><th><p>Signal</p></th><th><p>Target</p></th></tr><tr><td><p>Delayed settlements</p></td><td><p>8 minutes</p></td></tr></table>'
+    );
+  });
+
+  test('splits top-level technical notes from the main Jira description', () => {
+    const sections = renderAdfHtmlSections({
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Overview' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Main implementation notes.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Technical notes' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Keep the idempotency guard.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Rollout' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Ship behind the alert toggle.' }],
+        },
+      ],
+    });
+
+    expect(sections).toEqual({
+      mainHtml:
+        '<h3>Overview</h3><p>Main implementation notes.</p><h3>Rollout</h3><p>Ship behind the alert toggle.</p>',
+      technicalNotesHtml: '<p>Keep the idempotency guard.</p>',
+    });
   });
 });

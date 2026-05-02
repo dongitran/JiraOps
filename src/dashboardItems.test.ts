@@ -53,49 +53,62 @@ describe('dashboard issue mapping', () => {
       {
         linkedCloneIssues: [
           {
-            key: 'OPS-222',
-            relationship: 'is cloned by',
+            key: 'OPS-333',
+            relationship: 'clones',
             status: 'In Review',
           },
         ],
         cloneWebLinks: [
           {
+            issueKey: 'OPS-333',
+            relationship: 'clones',
+            webLinks: [
+              {
+                id: 'ops-333-mr-91',
+                title: 'Clean stale inventory reservations',
+                url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/91',
+                relationship: 'Merge request',
+                host: 'gitlab.example.com',
+              },
+              {
+                id: 'ops-333-mr-92',
+                title: 'Add reservation cleanup observability',
+                url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
+                relationship: 'Merge request',
+                host: 'gitlab.example.com',
+              },
+            ],
+          },
+          {
             issueKey: 'OPS-222',
             relationship: 'is cloned by',
             webLinks: [
-            {
-              id: 'ops-222-mr-91',
-              title: 'Clean stale inventory reservations',
-              url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/91',
-              relationship: 'Merge request',
-              host: 'gitlab.example.com',
-            },
-            {
-              id: 'ops-222-mr-92',
-              title: 'Add reservation cleanup observability',
-              url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
-              relationship: 'Merge request',
-              host: 'gitlab.example.com',
-            },
-          ],
-        },
-      ],
+              {
+                id: 'ops-222-mr-93',
+                title: 'Incoming clone work',
+                url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/93',
+                relationship: 'Merge request',
+                host: 'gitlab.example.com',
+              },
+            ],
+          },
+        ],
       }
     );
 
     expect(issue.linkedCloneIssues).toEqual([
       {
-        key: 'OPS-222',
-        relationship: 'is cloned by',
+        key: 'OPS-333',
+        relationship: 'clones',
         status: 'In Review',
       },
     ]);
     expect(issue.cloneMergeRequests).toEqual([
       {
-        id: 'ops-222-mr-91',
-        sourceLinkId: 'ops-222-mr-91',
-        issueKey: 'OPS-222',
-        relationship: 'is cloned by',
+        id: 'ops-333-mr-91',
+        sourceLinkId: 'ops-333-mr-91',
+        issueKey: 'OPS-333',
+        relationship: 'clones',
         title: 'Clean stale inventory reservations',
         url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/91',
         host: 'gitlab.example.com',
@@ -103,10 +116,10 @@ describe('dashboard issue mapping', () => {
         iid: '91',
       },
       {
-        id: 'ops-222-mr-92',
-        sourceLinkId: 'ops-222-mr-92',
-        issueKey: 'OPS-222',
-        relationship: 'is cloned by',
+        id: 'ops-333-mr-92',
+        sourceLinkId: 'ops-333-mr-92',
+        issueKey: 'OPS-333',
+        relationship: 'clones',
         title: 'Add reservation cleanup observability',
         url: 'https://gitlab.example.com/storefront/inventory/-/merge_requests/92',
         host: 'gitlab.example.com',

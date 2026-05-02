@@ -1,6 +1,11 @@
 type AdfNode = Record<string, unknown>;
 type NodeRenderer = (node: AdfNode) => string;
 
+export interface RenderedAdfHtmlSections {
+  readonly mainHtml: string;
+  readonly technicalNotesHtml: string;
+}
+
 interface AdfMark {
   readonly type: string;
   readonly attrs: AdfNode | null;
@@ -30,6 +35,35 @@ const NODE_RENDERERS: Record<string, NodeRenderer> = {
 
 export function renderAdfHtml(value: unknown): string {
   return renderNode(value);
+}
+
+export function renderAdfHtmlSections(value: unknown): RenderedAdfHtmlSections {
+  const content = getTopLevelContent(value);
+  if (content === null) {
+    return {
+      mainHtml: renderAdfHtml(value),
+      technicalNotesHtml: '',
+    };
+  }
+
+  const section = findTechnicalNotesSection(content);
+  if (section === null) {
+    return {
+      mainHtml: renderChildren({ content, type: 'doc' }),
+      technicalNotesHtml: '',
+    };
+  }
+
+  return {
+    mainHtml: renderChildren({
+      content: [...content.slice(0, section.start), ...content.slice(section.end)],
+      type: 'doc',
+    }),
+    technicalNotesHtml: renderChildren({
+      content: content.slice(section.start + 1, section.end),
+      type: 'doc',
+    }),
+  };
 }
 
 export function extractTextFromAdf(value: unknown): string {
@@ -139,6 +173,62 @@ function renderText(node: AdfNode): string {
 function renderWrappedChildren(tag: string, node: AdfNode): string {
   const content = renderChildren(node);
   return content.length === 0 ? '' : `<${tag}>${content}</${tag}>`;
+}
+
+function getTopLevelContent(value: unknown): readonly unknown[] | null {
+  if (!isRecord(value) || getString(value, 'type') !== 'doc') {
+    return null;
+  }
+
+  const content = value['content'];
+  return Array.isArray(content) ? content : null;
+}
+
+function findTechnicalNotesSection(
+  content: readonly unknown[]
+): { readonly end: number; readonly start: number } | null {
+  for (let index = 0; index < content.length; index += 1) {
+    const node = content[index];
+    if (!isTechnicalNotesHeading(node)) {
+      continue;
+    }
+
+    return {
+      start: index,
+      end: findSectionEnd(content, index, headingLevel(node)),
+    };
+  }
+  return null;
+}
+
+function findSectionEnd(
+  content: readonly unknown[],
+  startIndex: number,
+  startLevel: number
+): number {
+  for (let index = startIndex + 1; index < content.length; index += 1) {
+    const node = content[index];
+    if (isHeading(node) && headingLevel(node) <= startLevel) {
+      return index;
+    }
+  }
+  return content.length;
+}
+
+function isTechnicalNotesHeading(value: unknown): boolean {
+  return isHeading(value) && normalizeHeadingText(extractTextFromAdf(value)) === 'technical notes';
+}
+
+function isHeading(value: unknown): value is AdfNode {
+  return isRecord(value) && getString(value, 'type') === 'heading';
+}
+
+function headingLevel(value: unknown): number {
+  return isRecord(value) ? resolveHeadingLevel(value) : 3;
+}
+
+function normalizeHeadingText(value: string): string {
+  return value.trim().replace(/\s+/gu, ' ').toLowerCase();
 }
 
 function applyMarks(initialHtml: string, marks: readonly AdfMark[]): string {
