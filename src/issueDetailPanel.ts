@@ -364,7 +364,7 @@ function renderHeaderActions(issue: DashboardIssue, detail: JiraIssueDetail): st
   return `
     <div class="detail-header-actions" aria-label="Issue actions">
       <label class="detail-status-control">
-        <span>Status</span>
+        <span class="visually-hidden">Issue status</span>
         <select name="transition" aria-label="Issue status" data-detail-status-select data-issue-key="${escapeAttribute(issue.key)}" ${detail.transitions.length === 0 ? 'disabled' : ''}>
           ${renderTransitionOptions(issue.status, detail.transitions)}
         </select>

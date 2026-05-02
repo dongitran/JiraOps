@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 25 - Workflow Glyph</title>
+  <desc id="desc">A minimal three-stage workflow glyph for JiraOps.</desc>
+  <rect width="256" height="256" rx="54" fill="#0f141b"/>
+  <circle cx="70" cy="128" r="28" fill="#2aa198"/>
+  <circle cx="128" cy="128" r="28" fill="#7c9cff"/>
+  <circle cx="186" cy="128" r="28" fill="#ffcf5a"/>
+  <path d="M88 128h22M146 128h22" stroke="#0f141b" stroke-width="12" stroke-linecap="round"/>
+  <path d="M58 128l9 9 17-21M117 128l9 9 17-21M175 128l9 9 17-21" fill="none" stroke="#0f141b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M70 71h116M70 185h116" stroke="#243443" stroke-width="8" stroke-linecap="round"/>
+</svg>

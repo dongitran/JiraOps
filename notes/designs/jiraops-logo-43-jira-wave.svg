@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 43 - Jira Wave</title>
+  <desc id="desc">A Jira issue wave with a notification crest.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <path d="M46 139c30-45 58-45 88 0s58 45 88 0v52H46z" fill="#172832" stroke="#2aa198" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M70 112h64M84 145h40" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="184" cy="91" r="28" fill="#ff5d73"/>
+  <path d="M184 78v18" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="184" cy="107" r="5" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 31 - Layered Ops</title>
+  <desc id="desc">Layered operational panels for an enterprise extension feel.</desc>
+  <rect width="256" height="256" rx="52" fill="#0f151d"/>
+  <path d="M58 87l70-40 70 40-70 40z" fill="#203847" stroke="#2aa198" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M58 128l70-40 70 40-70 40z" fill="#172832" stroke="#456174" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M58 169l70-40 70 40-70 40z" fill="#203847" stroke="#7c9cff" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M103 128h50M113 87h30M113 169h30" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="198" cy="87" r="11" fill="#ffcf5a"/>
+</svg>

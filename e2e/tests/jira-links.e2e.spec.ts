@@ -155,7 +155,8 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         detailFrame.getByRole('combobox', { name: 'Issue status' }).getByRole('option').first()
       ).toHaveText('In Progress');
-      await expectTechnicalNotesBeforeAttachments(detailFrame);
+      await expectCompactDetailHeaderActions(detailFrame);
+      await expectTechnicalNotesNearAttachments(detailFrame);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -174,6 +175,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
       await expect(detailFrame.getByLabel('Issue actions')).toBeVisible();
+      await expectCompactDetailHeaderActions(detailFrame);
       await expect(detailFrame.getByRole('button', { name: 'Change Status' })).toHaveCount(0);
       await expect(detailFrame.getByRole('combobox', { name: 'Next status' })).toHaveCount(0);
       await detailFrame.getByRole('combobox', { name: 'Issue status' }).selectOption('31');
@@ -394,8 +396,16 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(frame.getByText('OPS-123 was updated')).toBeVisible({ timeout: 8_000 });
       await expectClearButtonUsesCompactWidth(frame);
       await clickWithFallback(frame.getByRole('button', { name: 'Clear' }));
+      await expect(frame.getByText('0 unread')).toBeVisible();
+      await expect(frame.getByText('OPS-123 was updated')).toBeVisible();
+      await expectNotificationReadState(frame, 'OPS-123 was updated', false);
       await returnToDashboard(frame);
       await expect(frame.getByRole('button', { name: 'Open notifications' })).toBeVisible();
+      await clickWithFallback(frame.getByRole('button', { name: 'Open notifications' }));
+      await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+      await expect(frame.getByText('0 unread')).toBeVisible();
+      await expect(frame.getByText('OPS-123 was updated')).toBeVisible();
+      await expectNotificationReadState(frame, 'OPS-123 was updated', false);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -510,12 +520,59 @@ async function expectTableBordersAreVisible(table: Locator): Promise<void> {
   });
 }
 
-async function expectTechnicalNotesBeforeAttachments(frame: Frame): Promise<void> {
+async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
+  await expect(frame.getByLabel('Issue actions').getByText('Status', { exact: true })).toHaveCount(0);
+  const layout = await frame.evaluate(() => {
+    const select = document.querySelector('[data-detail-status-select]');
+    const button = document.querySelector('[data-detail-action="open-worklog"]');
+    const issueKey = document.querySelector('.issue-key');
+    const hiddenLabel = document.querySelector('.detail-status-control .visually-hidden');
+    if (
+      !(select instanceof HTMLElement) ||
+      !(button instanceof HTMLElement) ||
+      !(issueKey instanceof HTMLElement) ||
+      !(hiddenLabel instanceof HTMLElement)
+    ) {
+      return null;
+    }
+
+    const selectBox = select.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    const issueKeyBox = issueKey.getBoundingClientRect();
+    const hiddenStyle = window.getComputedStyle(hiddenLabel);
+    return {
+      buttonDoesNotWrap: button.scrollHeight <= button.clientHeight + 1,
+      hiddenLabelIsVisualOnly:
+        hiddenStyle.position === 'absolute' &&
+        hiddenStyle.width === '1px' &&
+        hiddenStyle.height === '1px' &&
+        hiddenStyle.overflow === 'hidden',
+      sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
+      sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
+      whiteSpace: window.getComputedStyle(button).whiteSpace,
+    };
+  });
+
+  expect(layout).toEqual({
+    buttonDoesNotWrap: true,
+    hiddenLabelIsVisualOnly: true,
+    sameActionRow: true,
+    sameIssueKeyRow: true,
+    whiteSpace: 'nowrap',
+  });
+}
+
+async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> {
   const detailState = await frame.evaluate(() => {
+    const webLinks = document.querySelector('[aria-label="All Jira web links"]');
     const notes = document.querySelector('[aria-label="Technical notes"]');
     const notesBody = document.querySelector('.detail-technical-notes');
     const attachments = document.querySelector('[aria-label="Attachments"]');
     return {
+      afterWebLinks:
+        webLinks !== null &&
+        notes !== null &&
+        Boolean(webLinks.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING),
       beforeAttachments:
         notes !== null &&
         attachments !== null &&
@@ -527,10 +584,23 @@ async function expectTechnicalNotesBeforeAttachments(frame: Frame): Promise<void
   });
 
   expect(detailState).toEqual({
+    afterWebLinks: true,
     beforeAttachments: true,
     maxHeight: '220px',
     scrollable: true,
   });
+}
+
+async function expectNotificationReadState(
+  frame: Frame,
+  title: string,
+  unread: boolean
+): Promise<void> {
+  const item = frame.getByLabel(title);
+  await expect(item).toBeVisible();
+  await expect.poll(async () => item.evaluate((node) => node.getAttribute('data-unread'))).toBe(
+    String(unread)
+  );
 }
 
 async function expectLoadingCentered(status: Locator): Promise<void> {

@@ -24,6 +24,7 @@ import {
   type JiraCredentialInputOptions,
 } from './jiraOpsPanelSupport';
 import {
+  getUnreadNotificationCount,
   markAllNotificationsRead,
   markIssueNotificationsRead,
   type IssueUpdateBaseline,
@@ -318,6 +319,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
 
   private handleClearNotifications(): void {
     this.notifications = markAllNotificationsRead(this.notifications);
+    this.syncNotificationPollerState();
     this.persistNotifications();
     this.outputChannel.appendLine('Marked JiraOps notifications as read.');
     this.postNotificationsChanged('Notifications marked as read.');
@@ -345,6 +347,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
         outputChannel: this.outputChannel,
       });
       this.notifications = markIssueNotificationsRead(this.notifications, issue.key);
+      this.syncNotificationPollerState();
       this.persistNotifications();
       this.postNotificationsChanged('Opened cached issue details.');
       return;
@@ -358,6 +361,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       issue,
     });
     this.notifications = markIssueNotificationsRead(this.notifications, issue.key);
+    this.syncNotificationPollerState();
     this.persistNotifications();
     this.postNotificationsChanged('Opening issue details.');
     void this.populateIssueDetailPanel(panel, issue);
@@ -382,6 +386,9 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
 
   private async handleOpenNotifications(): Promise<void> {
     this.outputChannel.appendLine('Opening JiraOps notifications.');
+    this.outputChannel.appendLine(
+      `Loaded JiraOps notification history: ${String(this.notifications.length)} item(s), ${String(getUnreadNotificationCount(this.notifications))} unread.`
+    );
     this.postNotificationsChanged('Notification history is loaded.');
     const status = await this.loadConnectionStatus();
     if (!status.connected) {
@@ -475,6 +482,13 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
 
   private persistNotifications(): void {
     persistPanelNotificationState(this.globalState, this.notificationBaseline, this.notifications);
+  }
+
+  private syncNotificationPollerState(): void {
+    this.notificationPoller.restore({
+      baseline: this.notificationBaseline,
+      notifications: this.notifications,
+    });
   }
 
   private async applyKnownJiraOAuthCredentials(): Promise<void> {

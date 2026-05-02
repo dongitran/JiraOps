@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 13 - VS Code Beacon</title>
+  <desc id="desc">A VS Code activity beacon containing a Jira ticket mark.</desc>
+  <rect width="256" height="256" rx="52" fill="#0d1520"/>
+  <rect x="46" y="42" width="54" height="172" rx="18" fill="#161f2a" stroke="#2b3a48" stroke-width="6"/>
+  <circle cx="73" cy="76" r="12" fill="#2aa198"/><circle cx="73" cy="122" r="12" fill="#7c9cff"/><circle cx="73" cy="168" r="12" fill="#ffcf5a"/>
+  <rect x="116" y="68" width="92" height="120" rx="18" fill="#172933" stroke="#2aa198" stroke-width="8"/>
+  <path d="M139 106h46M139 134h31" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M160 48c34 0 58 24 58 58" fill="none" stroke="#65e4d7" stroke-width="8" stroke-linecap="round"/>
+</svg>

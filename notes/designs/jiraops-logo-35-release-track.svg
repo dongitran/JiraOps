@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 35 - Release Track</title>
+  <desc id="desc">A release track passing through issue cards.</desc>
+  <rect width="256" height="256" rx="50" fill="#10161e"/>
+  <path d="M44 184h168M64 184l36-88h56l36 88" fill="none" stroke="#2e4050" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="66" y="70" width="56" height="58" rx="14" fill="#172832" stroke="#2aa198" stroke-width="7"/>
+  <rect x="134" y="70" width="56" height="58" rx="14" fill="#172832" stroke="#7c9cff" stroke-width="7"/>
+  <path d="M82 99h24M150 99h24" stroke="#f8fbff" stroke-width="7" stroke-linecap="round"/>
+  <path d="M61 184c40-42 95-42 134 0" fill="none" stroke="#ffcf5a" stroke-width="9" stroke-linecap="round"/>
+</svg>

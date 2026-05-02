@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 22 - Alert Notch</title>
+  <desc id="desc">A Jira ticket with a high-visibility notification notch.</desc>
+  <rect width="256" height="256" rx="48" fill="#11161e"/>
+  <path d="M58 72h108l32 32v86H58z" fill="#172832" stroke="#2aa198" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M166 72v32h32" fill="none" stroke="#77e8dd" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M88 116h60M88 146h42" stroke="#f8fbff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M179 50h28v28h-28z" fill="#ff5d73"/>
+  <circle cx="193" cy="64" r="6" fill="#ffffff"/>
+</svg>

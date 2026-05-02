@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 48 - Marketplace Star</title>
+  <desc id="desc">A marketplace-friendly star badge over a Jira ticket.</desc>
+  <rect width="256" height="256" rx="54" fill="#0f151d"/>
+  <rect x="62" y="68" width="132" height="124" rx="24" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M88 105h64M88 136h42" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M178 49l12 25 28 4-20 19 5 27-25-13-25 13 5-27-20-19 28-4z" fill="#ffcf5a"/>
+  <path d="M89 169h78" stroke="#7c9cff" stroke-width="9" stroke-linecap="round"/>
+</svg>

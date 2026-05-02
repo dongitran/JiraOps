@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 02 - Board Pulse</title>
+  <desc id="desc">A Jira board with a live pulse for assigned issue updates.</desc>
+  <rect width="256" height="256" rx="48" fill="#11151c"/>
+  <rect x="50" y="54" width="45" height="136" rx="12" fill="#18242f" stroke="#45c4b0" stroke-width="6"/>
+  <rect x="106" y="54" width="45" height="136" rx="12" fill="#18242f" stroke="#45c4b0" stroke-width="6"/>
+  <rect x="162" y="54" width="45" height="136" rx="12" fill="#18242f" stroke="#45c4b0" stroke-width="6"/>
+  <path d="M64 94h20M64 122h16M120 86h18M120 119h17M176 101h16M176 133h14" stroke="#f4fbff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M42 210h45l18-29 24 48 21-36h64" fill="none" stroke="#ffcf5a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

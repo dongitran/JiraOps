@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 18 - Sprint Window</title>
+  <desc id="desc">A sprint planning window with a focused Jira detail rail.</desc>
+  <rect width="256" height="256" rx="48" fill="#0f1620"/>
+  <rect x="42" y="56" width="172" height="144" rx="18" fill="#172632" stroke="#35495a" stroke-width="6"/>
+  <path d="M42 91h172" stroke="#35495a" stroke-width="6"/>
+  <circle cx="66" cy="74" r="6" fill="#ff5d73"/><circle cx="86" cy="74" r="6" fill="#ffcf5a"/><circle cx="106" cy="74" r="6" fill="#2aa198"/>
+  <rect x="64" y="113" width="56" height="60" rx="12" fill="#203644" stroke="#2aa198" stroke-width="5"/>
+  <rect x="136" y="113" width="56" height="60" rx="12" fill="#203644" stroke="#7c9cff" stroke-width="5"/>
+  <path d="M78 138h28M150 138h28" stroke="#f8fbff" stroke-width="7" stroke-linecap="round"/>
+</svg>

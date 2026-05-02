@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 29 - Detail Beam</title>
+  <desc id="desc">A beam from compact sidebar issue to wide detail editor.</desc>
+  <rect width="256" height="256" rx="48" fill="#0f151d"/>
+  <rect x="38" y="64" width="56" height="128" rx="14" fill="#16242e" stroke="#2a3b4a" stroke-width="6"/>
+  <rect x="128" y="52" width="88" height="152" rx="18" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M94 108l34-24M94 148l34 24" stroke="#ffcf5a" stroke-width="10" stroke-linecap="round"/>
+  <path d="M55 95h22M55 126h22M148 91h47M148 122h34M148 154h52" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 05 - Command Tile</title>
+  <desc id="desc">A compact command tile with ticket status controls.</desc>
+  <rect width="256" height="256" rx="44" fill="#11161d"/>
+  <rect x="42" y="50" width="172" height="156" rx="20" fill="#17212b" stroke="#344457" stroke-width="6"/>
+  <rect x="60" y="72" width="72" height="18" rx="9" fill="#2aa198"/>
+  <rect x="60" y="109" width="136" height="20" rx="10" fill="#263545"/>
+  <rect x="60" y="146" width="84" height="20" rx="10" fill="#263545"/>
+  <circle cx="181" cy="80" r="16" fill="#ffcf5a"/>
+  <path d="M172 80l7 7 14-17" fill="none" stroke="#11161d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M158 157l23 23 34-45" fill="none" stroke="#7c9cff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

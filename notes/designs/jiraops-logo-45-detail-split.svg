@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 45 - Detail Split</title>
+  <desc id="desc">A split sidebar and detail panel mark for the JiraOps workflow.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <rect x="42" y="54" width="50" height="148" rx="16" fill="#172832" stroke="#334858" stroke-width="6"/>
+  <rect x="104" y="54" width="110" height="148" rx="18" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M58 89h18M58 123h18M58 157h18M126 91h62M126 124h42M126 157h68" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M92 128h12" stroke="#ffcf5a" stroke-width="12" stroke-linecap="round"/>
+</svg>

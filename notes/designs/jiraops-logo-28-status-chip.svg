@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 28 - Status Chip</title>
+  <desc id="desc">A status chip and dropdown chevron for compact issue transitions.</desc>
+  <rect width="256" height="256" rx="50" fill="#10161d"/>
+  <rect x="50" y="70" width="156" height="116" rx="22" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <rect x="73" y="99" width="110" height="36" rx="18" fill="#203b44"/>
+  <path d="M91 117h54" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M158 112l12 12 12-12" fill="none" stroke="#ffcf5a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M82 158h92" stroke="#7c9cff" stroke-width="9" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 30 - Cloud Workflow</title>
+  <desc id="desc">Jira Cloud workflow connected to a local command surface.</desc>
+  <rect width="256" height="256" rx="50" fill="#10161f"/>
+  <path d="M75 109c4-28 29-48 58-42 12-20 45-12 48 12 24 2 39 19 39 40 0 23-18 40-43 40H82c-25 0-44-16-44-39 0-20 15-36 37-41" fill="#172832" stroke="#2aa198" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="70" y="140" width="116" height="58" rx="14" fill="#10161f" stroke="#7c9cff" stroke-width="7"/>
+  <path d="M92 169h36M144 169h20" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="186" cy="92" r="12" fill="#ffcf5a"/>
+</svg>

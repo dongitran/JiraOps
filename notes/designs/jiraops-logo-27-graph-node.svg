@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 27 - Graph Node</title>
+  <desc id="desc">A Jira issue graph connected to merge request nodes.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151e"/>
+  <path d="M91 95l74-32M91 161l74 32M91 128h82" stroke="#324557" stroke-width="8" stroke-linecap="round"/>
+  <rect x="44" y="88" width="74" height="80" rx="16" fill="#172832" stroke="#2aa198" stroke-width="7"/>
+  <circle cx="184" cy="63" r="22" fill="#7c9cff"/>
+  <circle cx="184" cy="128" r="22" fill="#ffcf5a"/>
+  <circle cx="184" cy="193" r="22" fill="#2aa198"/>
+  <path d="M65 118h32M65 143h22" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+</svg>

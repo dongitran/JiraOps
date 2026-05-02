@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 16 - Secure Lane</title>
+  <desc id="desc">A shielded lane for secure Jira details and safe logging.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <path d="M128 43l63 25v48c0 39-23 66-63 84-40-18-63-45-63-84V68z" fill="#172a34" stroke="#2aa198" stroke-width="8"/>
+  <path d="M88 116h80M88 144h56" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M104 93l17 17 34-39" fill="none" stroke="#ffcf5a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M59 210h138" stroke="#7c9cff" stroke-width="9" stroke-linecap="round"/>
+</svg>

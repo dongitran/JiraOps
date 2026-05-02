@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 37 - Safe Output</title>
+  <desc id="desc">An output panel with shielded Jira operation logs.</desc>
+  <rect width="256" height="256" rx="48" fill="#10151c"/>
+  <rect x="42" y="60" width="172" height="136" rx="18" fill="#172832" stroke="#33495a" stroke-width="6"/>
+  <path d="M64 94h66M64 124h94M64 154h58" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M165 91l36 14v29c0 23-14 39-36 49-22-10-36-26-36-49v-29z" fill="#10151c" stroke="#2aa198" stroke-width="7"/>
+  <path d="M151 135l11 11 23-27" fill="none" stroke="#ffcf5a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

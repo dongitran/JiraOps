@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 11 - Auto Route</title>
+  <desc id="desc">A routed automation path through Jira ticket checkpoints.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f1722"/>
+  <path d="M54 184c24-54 62-27 74-72 10-37 39-50 76-38" fill="none" stroke="#2aa198" stroke-width="14" stroke-linecap="round"/>
+  <rect x="44" y="148" width="54" height="54" rx="14" fill="#172733" stroke="#6ee7dc" stroke-width="6"/>
+  <rect x="102" y="84" width="54" height="54" rx="14" fill="#172733" stroke="#6ee7dc" stroke-width="6"/>
+  <rect x="158" y="54" width="54" height="54" rx="14" fill="#172733" stroke="#6ee7dc" stroke-width="6"/>
+  <path d="M59 174h24M117 111h24M173 81h24" stroke="#f8fbff" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="204" cy="74" r="12" fill="#ffcf5a"/>
+</svg>

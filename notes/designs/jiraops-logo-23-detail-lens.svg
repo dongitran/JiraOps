@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 23 - Detail Lens</title>
+  <desc id="desc">A magnified lens over Jira issue details.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <rect x="50" y="54" width="122" height="130" rx="18" fill="#172832" stroke="#2a3d4d" stroke-width="6"/>
+  <path d="M74 86h68M74 116h50M74 146h72" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="154" cy="145" r="44" fill="#0f151d" stroke="#2aa198" stroke-width="11"/>
+  <path d="M186 177l32 32" stroke="#ffcf5a" stroke-width="12" stroke-linecap="round"/>
+  <path d="M133 145h42" stroke="#7c9cff" stroke-width="8" stroke-linecap="round"/>
+</svg>

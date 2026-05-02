@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 34 - Detail Matrix</title>
+  <desc id="desc">A matrix grid with one selected Jira issue.</desc>
+  <rect width="256" height="256" rx="48" fill="#10161d"/>
+  <g fill="#172832" stroke="#314657" stroke-width="5">
+    <rect x="50" y="50" width="50" height="50" rx="12"/><rect x="103" y="50" width="50" height="50" rx="12"/><rect x="156" y="50" width="50" height="50" rx="12"/>
+    <rect x="50" y="103" width="50" height="50" rx="12"/><rect x="103" y="103" width="50" height="50" rx="12"/><rect x="156" y="103" width="50" height="50" rx="12"/>
+    <rect x="50" y="156" width="50" height="50" rx="12"/><rect x="103" y="156" width="50" height="50" rx="12"/><rect x="156" y="156" width="50" height="50" rx="12"/>
+  </g>
+  <rect x="103" y="103" width="50" height="50" rx="12" fill="#2aa198"/>
+  <path d="M116 128h24M116 140h16" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="190" cy="66" r="10" fill="#ffcf5a"/>
+</svg>

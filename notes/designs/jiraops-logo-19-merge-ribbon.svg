@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 19 - Merge Ribbon</title>
+  <desc id="desc">A merge ribbon wrapping a ticket for MR aggregation.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151c"/>
+  <rect x="74" y="58" width="108" height="138" rx="20" fill="#172833" stroke="#2aa198" stroke-width="8"/>
+  <path d="M98 96h60M98 126h42" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M52 157c24-43 68-22 84-60 12-29 32-42 68-28" fill="none" stroke="#ffcf5a" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="52" cy="157" r="12" fill="#ffcf5a"/><circle cx="204" cy="69" r="12" fill="#ffcf5a"/>
+  <path d="M163 54l43 15-27 36" fill="none" stroke="#ffcf5a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

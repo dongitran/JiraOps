@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 06 - Linked Cards</title>
+  <desc id="desc">Two Jira cards connected to a merge request path.</desc>
+  <rect width="256" height="256" rx="52" fill="#0f141c"/>
+  <rect x="42" y="58" width="74" height="80" rx="16" fill="#17252e" stroke="#2aa198" stroke-width="7"/>
+  <rect x="140" y="118" width="74" height="80" rx="16" fill="#17252e" stroke="#7c9cff" stroke-width="7"/>
+  <path d="M64 88h30M64 111h22M162 148h30M162 171h22" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M116 98c38 0 24 60 24 60" fill="none" stroke="#ffcf5a" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="116" cy="98" r="10" fill="#ffcf5a"/><circle cx="140" cy="158" r="10" fill="#ffcf5a"/>
+</svg>

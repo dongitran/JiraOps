@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 38 - Merge Lattice</title>
+  <desc id="desc">A lattice of Jira tickets and merge request nodes.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <path d="M72 72l112 112M184 72L72 184M72 128h112M128 72v112" stroke="#314657" stroke-width="7" stroke-linecap="round"/>
+  <rect x="50" y="50" width="44" height="44" rx="12" fill="#172832" stroke="#2aa198" stroke-width="6"/>
+  <rect x="162" y="162" width="44" height="44" rx="12" fill="#172832" stroke="#2aa198" stroke-width="6"/>
+  <circle cx="184" cy="72" r="19" fill="#7c9cff"/><circle cx="72" cy="184" r="19" fill="#ffcf5a"/><circle cx="128" cy="128" r="22" fill="#2aa198"/>
+  <path d="M117 128h22" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+</svg>

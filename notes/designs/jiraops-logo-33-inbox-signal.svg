@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 33 - Inbox Signal</title>
+  <desc id="desc">An assigned issue inbox with signal waves.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <path d="M55 95h146l18 52v54H37v-54z" fill="#172832" stroke="#2aa198" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M70 118h116l12 35h-46c-7 13-41 13-48 0H58z" fill="#203844"/>
+  <path d="M91 82h74M105 58h46" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M171 58c20 8 34 24 40 45M185 38c29 12 50 36 59 67" fill="none" stroke="#ffcf5a" stroke-width="8" stroke-linecap="round"/>
+</svg>

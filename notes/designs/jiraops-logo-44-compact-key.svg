@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 44 - Compact Key</title>
+  <desc id="desc">A compact issue key block optimized for small icon size.</desc>
+  <rect width="256" height="256" rx="46" fill="#10161e"/>
+  <rect x="45" y="76" width="166" height="104" rx="24" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M73 128h38M128 128h55" stroke="#f8fbff" stroke-width="15" stroke-linecap="round"/>
+  <path d="M116 91v74" stroke="#334858" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="196" cy="76" r="13" fill="#ffcf5a"/>
+  <path d="M73 100h31M140 156h31" stroke="#7c9cff" stroke-width="8" stroke-linecap="round"/>
+</svg>

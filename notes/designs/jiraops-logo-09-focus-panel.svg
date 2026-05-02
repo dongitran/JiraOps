@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 09 - Focus Panel</title>
+  <desc id="desc">A sidebar and detail panel showing JiraOps focus workflow.</desc>
+  <rect width="256" height="256" rx="48" fill="#101419"/>
+  <rect x="42" y="52" width="56" height="152" rx="14" fill="#15222a" stroke="#2a3a45" stroke-width="6"/>
+  <rect x="108" y="52" width="106" height="152" rx="14" fill="#17262f" stroke="#2aa198" stroke-width="7"/>
+  <path d="M58 82h24M58 111h18M58 140h24M126 86h58M126 117h42M126 151h68" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <rect x="58" y="169" width="24" height="10" rx="5" fill="#ffcf5a"/>
+  <circle cx="202" cy="70" r="13" fill="#7c9cff"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 36 - Action Switch</title>
+  <desc id="desc">A compact status action switch for Details controls.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <rect x="48" y="82" width="160" height="92" rx="46" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <circle cx="91" cy="128" r="31" fill="#2aa198"/>
+  <path d="M81 128l9 9 19-23" fill="none" stroke="#0f151d" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M135 111h42M135 139h27" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="192" cy="77" r="12" fill="#ffcf5a"/>
+</svg>

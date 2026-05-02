@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 40 - Command Ribbon</title>
+  <desc id="desc">A command ribbon wrapped around an issue key panel.</desc>
+  <rect width="256" height="256" rx="50" fill="#0f151d"/>
+  <rect x="62" y="66" width="132" height="124" rx="22" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M38 116h180l-22 28 22 28H38l22-28z" fill="#243b4a" stroke="#7c9cff" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M82 144h92" stroke="#f8fbff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M92 94h44" stroke="#ffcf5a" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="185" cy="87" r="11" fill="#ffcf5a"/>
+</svg>

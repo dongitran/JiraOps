@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 01 - Ticket Orbit</title>
+  <desc id="desc">A central ticket with orbiting operation signals for Jira automation.</desc>
+  <defs><linearGradient id="g" x1="36" y1="32" x2="220" y2="226" gradientUnits="userSpaceOnUse"><stop stop-color="#30d5c8"/><stop offset="1" stop-color="#3078ff"/></linearGradient></defs>
+  <rect width="256" height="256" rx="56" fill="#101418"/>
+  <path d="M65 130c0-45 32-81 72-81 31 0 55 20 55 45 0 34-43 54-84 33" fill="none" stroke="url(#g)" stroke-width="11" stroke-linecap="round"/>
+  <path d="M78 79h77l23 23v77H78z" fill="#17242b" stroke="#30d5c8" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M155 80v23h23" fill="none" stroke="#8deee7" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M103 126h52M103 151h37" stroke="#f8fbff" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="190" cy="72" r="14" fill="#ffcf5a"/>
+</svg>

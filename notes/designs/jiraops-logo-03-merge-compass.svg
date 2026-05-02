@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 03 - Merge Compass</title>
+  <desc id="desc">Merge request lanes forming a compass for navigating Jira issue context.</desc>
+  <defs><linearGradient id="g" x1="42" y1="48" x2="214" y2="210" gradientUnits="userSpaceOnUse"><stop stop-color="#2dd4bf"/><stop offset="1" stop-color="#7c9cff"/></linearGradient></defs>
+  <rect width="256" height="256" rx="52" fill="#111827"/>
+  <circle cx="128" cy="128" r="70" fill="#172033" stroke="url(#g)" stroke-width="8"/>
+  <path d="M128 62v132M62 128h132" stroke="#32415d" stroke-width="8" stroke-linecap="round"/>
+  <path d="M128 82l26 72-26-13-26 13z" fill="#2dd4bf"/>
+  <circle cx="66" cy="128" r="13" fill="#ffcf5a"/><circle cx="190" cy="128" r="13" fill="#ffcf5a"/>
+  <path d="M70 128c22 0 36 31 58 31s36-31 58-31" fill="none" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+</svg>

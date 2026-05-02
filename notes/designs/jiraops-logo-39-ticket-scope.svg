@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 39 - Ticket Scope</title>
+  <desc id="desc">A Jira ticket inside a precise scoped frame.</desc>
+  <rect width="256" height="256" rx="50" fill="#10161d"/>
+  <path d="M58 91V58h33M165 58h33v33M198 165v33h-33M91 198H58v-33" fill="none" stroke="#7c9cff" stroke-width="10" stroke-linecap="round"/>
+  <rect x="76" y="76" width="104" height="104" rx="18" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M98 111h60M98 140h40" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="180" cy="76" r="11" fill="#ffcf5a"/>
+</svg>

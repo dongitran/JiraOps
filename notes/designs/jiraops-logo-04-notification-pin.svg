@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 04 - Notification Pin</title>
+  <desc id="desc">Layered tickets with an unread notification pin.</desc>
+  <rect width="256" height="256" rx="52" fill="#0f1419"/>
+  <rect x="60" y="86" width="126" height="92" rx="18" fill="#13262b" stroke="#2aa198" stroke-width="8"/>
+  <rect x="76" y="64" width="126" height="92" rx="18" fill="#172f35" stroke="#65e4d7" stroke-width="8"/>
+  <path d="M101 105h59M101 132h38" stroke="#f8fbff" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="187" cy="70" r="28" fill="#ff5d73"/>
+  <circle cx="187" cy="70" r="10" fill="#ffffff"/>
+  <path d="M187 108v16" stroke="#ff5d73" stroke-width="9" stroke-linecap="round"/>
+</svg>

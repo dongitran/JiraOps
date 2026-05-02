@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 08 - Ops Circuit</title>
+  <desc id="desc">Circuit trace through a Jira ticket for engineering operations.</desc>
+  <rect width="256" height="256" rx="46" fill="#101820"/>
+  <path d="M68 64h86l34 34v94H68z" fill="#162732" stroke="#2aa198" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M154 65v34h34" fill="none" stroke="#8eeadf" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M91 132h35v-24h42M126 132v34h46" fill="none" stroke="#ffcf5a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="91" cy="132" r="10" fill="#ffcf5a"/><circle cx="168" cy="108" r="10" fill="#ffcf5a"/><circle cx="172" cy="166" r="10" fill="#ffcf5a"/>
+  <path d="M91 91h36" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+</svg>

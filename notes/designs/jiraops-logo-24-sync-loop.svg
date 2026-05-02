@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 24 - Sync Loop</title>
+  <desc id="desc">A sync loop around assigned Jira tickets.</desc>
+  <rect width="256" height="256" rx="50" fill="#10161d"/>
+  <path d="M72 95a65 65 0 0 1 105-30l20 18M184 161a65 65 0 0 1-105 30l-20-18" fill="none" stroke="#2aa198" stroke-width="12" stroke-linecap="round"/>
+  <path d="M198 48v35h-35M58 208v-35h35" fill="none" stroke="#2aa198" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="86" y="87" width="84" height="82" rx="16" fill="#172832" stroke="#7c9cff" stroke-width="7"/>
+  <path d="M107 118h42M107 144h28" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+</svg>

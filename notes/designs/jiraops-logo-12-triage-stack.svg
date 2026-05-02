@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 12 - Triage Stack</title>
+  <desc id="desc">Layered issue cards with a priority signal for daily triage.</desc>
+  <rect width="256" height="256" rx="48" fill="#11151a"/>
+  <rect x="62" y="55" width="132" height="58" rx="16" fill="#18313a" stroke="#2aa198" stroke-width="7"/>
+  <rect x="50" y="102" width="156" height="58" rx="16" fill="#17262e" stroke="#55677a" stroke-width="6"/>
+  <rect x="62" y="149" width="132" height="58" rx="16" fill="#18313a" stroke="#7c9cff" stroke-width="7"/>
+  <path d="M82 84h64M82 131h82M82 178h54" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M174 67l9 17 19 3-14 13 3 19-17-9-17 9 3-19-14-13 19-3z" fill="#ffcf5a"/>
+</svg>

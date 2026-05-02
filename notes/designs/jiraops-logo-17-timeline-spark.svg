@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 17 - Timeline Spark</title>
+  <desc id="desc">A notification timeline with a spark marker for new updates.</desc>
+  <rect width="256" height="256" rx="48" fill="#10161e"/>
+  <path d="M74 48v160" stroke="#2f4050" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="74" cy="80" r="14" fill="#2aa198"/><circle cx="74" cy="128" r="14" fill="#7c9cff"/><circle cx="74" cy="176" r="14" fill="#ffcf5a"/>
+  <rect x="105" y="61" width="95" height="38" rx="12" fill="#172832" stroke="#2aa198" stroke-width="5"/>
+  <rect x="105" y="109" width="76" height="38" rx="12" fill="#172832" stroke="#43566a" stroke-width="5"/>
+  <rect x="105" y="157" width="95" height="38" rx="12" fill="#172832" stroke="#7c9cff" stroke-width="5"/>
+  <path d="M205 53l8 17 18 3-13 13 3 18-16-9-16 9 3-18-13-13 18-3z" fill="#ff5d73"/>
+</svg>

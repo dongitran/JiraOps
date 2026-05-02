@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 14 - Clone Bridge</title>
+  <desc id="desc">A bridge between original and cloned Jira work items.</desc>
+  <rect width="256" height="256" rx="50" fill="#111721"/>
+  <rect x="42" y="79" width="70" height="90" rx="16" fill="#182630" stroke="#2aa198" stroke-width="7"/>
+  <rect x="144" y="79" width="70" height="90" rx="16" fill="#182630" stroke="#7c9cff" stroke-width="7"/>
+  <path d="M66 111h25M66 137h18M168 111h25M168 137h18" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <path d="M112 124h32" stroke="#ffcf5a" stroke-width="12" stroke-linecap="round"/>
+  <path d="M131 105l20 19-20 19" fill="none" stroke="#ffcf5a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M80 58h98" stroke="#304255" stroke-width="8" stroke-linecap="round"/>
+</svg>

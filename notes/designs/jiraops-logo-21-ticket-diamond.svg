@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 21 - Ticket Diamond</title>
+  <desc id="desc">A diamond-shaped ticket mark for a premium compact icon.</desc>
+  <rect width="256" height="256" rx="52" fill="#10151c"/>
+  <path d="M128 35l83 93-83 93-83-93z" fill="#172734" stroke="#2aa198" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M94 118h70M94 145h48" stroke="#f8fbff" stroke-width="10" stroke-linecap="round"/>
+  <path d="M164 85l25 28-25 28" fill="none" stroke="#ffcf5a" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="78" cy="128" r="11" fill="#7c9cff"/>
+</svg>

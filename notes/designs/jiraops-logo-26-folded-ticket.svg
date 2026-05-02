@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 26 - Folded Ticket</title>
+  <desc id="desc">A folded Jira ticket with a route check mark.</desc>
+  <rect width="256" height="256" rx="50" fill="#10151d"/>
+  <path d="M62 57h94l38 38v104H62z" fill="#172832" stroke="#2aa198" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M156 58v37h38z" fill="#21434b"/>
+  <path d="M87 111h70M87 140h45" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <path d="M86 171l24 22 57-65" fill="none" stroke="#ffcf5a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

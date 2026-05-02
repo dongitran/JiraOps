@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 10 - Release Badge</title>
+  <desc id="desc">A polished release badge with a ticket check mark.</desc>
+  <defs><linearGradient id="g" x1="48" y1="42" x2="210" y2="216" gradientUnits="userSpaceOnUse"><stop stop-color="#2aa198"/><stop offset="1" stop-color="#204ecf"/></linearGradient></defs>
+  <rect width="256" height="256" rx="56" fill="#0f1520"/>
+  <path d="M128 38l74 31v58c0 45-29 75-74 94-45-19-74-49-74-94V69z" fill="url(#g)"/>
+  <path d="M91 126l25 25 53-62" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="80" y="172" width="96" height="20" rx="10" fill="#0f1520" opacity=".55"/>
+  <circle cx="184" cy="68" r="13" fill="#ffcf5a"/>
+</svg>

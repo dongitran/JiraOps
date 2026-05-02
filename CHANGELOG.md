@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.15
+
+- Remove the visible Status title from Details while keeping the status dropdown accessible and aligned with the issue key.
+- Keep the Details Log Work action on one line beside the status dropdown.
+- Preserve read notification history after Clear, issue-detail opens, and later on-demand notification polls.
+- Add stricter E2E coverage for compact Details actions, Technical notes placement, and read notification history.
+- Add 50 SVG logo and icon exploration concepts under `notes/designs`.
+
 ## 0.1.14
 
 - Move Details status changes into the compact header status dropdown so status updates no longer take over the page.

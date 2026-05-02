@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 15 - Worklog Dial</title>
+  <desc id="desc">A time logging dial placed over a Jira ticket.</desc>
+  <rect width="256" height="256" rx="48" fill="#10151b"/>
+  <rect x="57" y="62" width="142" height="132" rx="22" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M85 95h58M85 124h38" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="157" cy="157" r="43" fill="#10151b" stroke="#ffcf5a" stroke-width="10"/>
+  <path d="M157 132v27l19 14" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M122 48h50" stroke="#7c9cff" stroke-width="8" stroke-linecap="round"/>
+</svg>

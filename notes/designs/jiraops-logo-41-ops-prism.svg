@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 41 - Ops Prism</title>
+  <desc id="desc">A prism ticket form for a premium marketplace direction.</desc>
+  <rect width="256" height="256" rx="54" fill="#0f151e"/>
+  <path d="M128 38l74 44v88l-74 44-74-44V82z" fill="#172832" stroke="#2aa198" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M54 82l74 45 74-45M128 127v87" fill="none" stroke="#314657" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M91 105h74M98 145h60" stroke="#f8fbff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="202" cy="82" r="12" fill="#ffcf5a"/>
+</svg>

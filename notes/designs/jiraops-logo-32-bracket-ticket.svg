@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">JiraOps Concept 32 - Bracket Ticket</title>
+  <desc id="desc">Code brackets holding a Jira ticket for developer workflow.</desc>
+  <rect width="256" height="256" rx="50" fill="#10161d"/>
+  <path d="M74 80l-34 48 34 48M182 80l34 48-34 48" fill="none" stroke="#7c9cff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="86" y="62" width="84" height="132" rx="18" fill="#172832" stroke="#2aa198" stroke-width="8"/>
+  <path d="M106 99h45M106 126h35M106 153h45" stroke="#f8fbff" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="168" cy="74" r="12" fill="#ffcf5a"/>
+</svg>
