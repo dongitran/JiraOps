@@ -1,8 +1,15 @@
 export const WHATS_NEW_LAST_SEEN_VERSION_KEY =
   'jiraOps.whatsNew.lastSeenVersion.v1';
+export const WHATS_NEW_RELEASE_VERSION = '0.1.10';
+
+export interface WhatsNewSection {
+  readonly title: string;
+  readonly bullets: readonly string[];
+}
 
 export interface WhatsNewReleaseNotes {
   readonly bullets: readonly string[];
+  readonly sections: readonly WhatsNewSection[];
   readonly version: string;
 }
 
@@ -12,6 +19,69 @@ export interface ShouldShowWhatsNewOptions {
   readonly seenVersion: string | undefined;
   readonly suppress: boolean;
 }
+
+const WHATS_NEW_STYLE = `
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      padding: 28px;
+      background: var(--vscode-editor-background);
+      color: var(--vscode-editor-foreground);
+      font-family: var(--vscode-font-family);
+    }
+    main { display: grid; gap: 18px; max-width: 980px; }
+    header { display: grid; gap: 8px; }
+    header span {
+      color: var(--vscode-textLink-foreground);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    h1 { margin: 0; font-size: 34px; line-height: 1.1; }
+    p { margin: 0; color: var(--vscode-descriptionForeground); line-height: 1.5; }
+    .release-summary {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 8px;
+      background: var(--vscode-sideBar-background);
+    }
+    .release-summary div { display: grid; gap: 6px; }
+    .release-summary strong { font-size: 18px; }
+    .release-summary > span {
+      color: var(--vscode-textLink-foreground);
+      font-size: 28px;
+      font-weight: 750;
+    }
+    .release-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    article {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      background: var(--vscode-editorWidget-background);
+    }
+    article > span {
+      color: var(--vscode-textLink-foreground);
+      font-size: 11px;
+      font-weight: 750;
+    }
+    h2 { margin: 0; font-size: 14px; line-height: 1.35; }
+    ul { display: grid; gap: 8px; margin: 0; padding-left: 18px; }
+    li { line-height: 1.5; }
+    @media (max-width: 620px) {
+      body { padding: 18px; }
+      .release-summary { align-items: flex-start; flex-direction: column; }
+    }
+  `;
 
 export function shouldShowWhatsNew(options: ShouldShowWhatsNewOptions): boolean {
   if (options.suppress) {
@@ -28,23 +98,43 @@ export function shouldShowWhatsNew(options: ShouldShowWhatsNewOptions): boolean 
 export function parseLatestChangelogSection(
   changelog: string
 ): WhatsNewReleaseNotes {
+  return parseChangelogSectionByIndex(changelog, findLatestHeadingIndex(changelog));
+}
+
+export function parseChangelogSection(
+  changelog: string,
+  version: string
+): WhatsNewReleaseNotes {
   const lines = changelog.split(/\r?\n/u);
-  const headingIndex = lines.findIndex((line) => line.startsWith('## '));
+  const headingIndex = lines.findIndex((line) => line.trim() === `## ${version}`);
+  return parseChangelogSectionLines(lines, headingIndex);
+}
+
+function parseChangelogSectionByIndex(
+  changelog: string,
+  headingIndex: number
+): WhatsNewReleaseNotes {
+  return parseChangelogSectionLines(changelog.split(/\r?\n/u), headingIndex);
+}
+
+function parseChangelogSectionLines(
+  lines: readonly string[],
+  headingIndex: number
+): WhatsNewReleaseNotes {
   if (headingIndex < 0) {
     return {
       bullets: [],
+      sections: [],
       version: 'Unreleased',
     };
   }
 
   const version = lines[headingIndex]?.replace(/^##\s+/u, '').trim() ?? 'Unreleased';
   const bodyLines = readSectionBodyLines(lines, headingIndex + 1);
+  const sections = parseGroupedBullets(bodyLines);
   return {
-    bullets: bodyLines
-      .map((line) => line.trim())
-      .filter((line) => line.startsWith('- '))
-      .map((line) => line.slice(2).trim())
-      .filter((line) => line.length > 0),
+    bullets: sections.flatMap((section) => section.bullets),
+    sections,
     version,
   };
 }
@@ -61,23 +151,55 @@ export function renderWhatsNewHtml(notes: WhatsNewReleaseNotes): string {
   <body>
     <main aria-label="JiraOps release notes">
       <header>
-        <span>JiraOps ${escapeHtml(notes.version)}</span>
+        <span>JiraOps ${escapeHtml(notes.version)} Stable</span>
         <h1>What Is New</h1>
-        <p>Review the latest JiraOps changes before using this version.</p>
+        <p>Everything in the stable JiraOps workspace for daily Jira triage, issue details, and GitLab merge request context.</p>
       </header>
-      <section aria-label="Release highlights">
-        <ul>${renderWhatsNewBullets(notes.bullets)}</ul>
+      <section class="release-summary" aria-label="Stable release summary">
+        <div>
+          <strong>Stable workspace</strong>
+          <p>Connect Jira, scan assigned tickets, and open focused issue details from VS Code.</p>
+        </div>
+        <span>${escapeHtml(notes.version)}</span>
+      </section>
+      <section class="release-grid" aria-label="Release highlights">
+        ${renderWhatsNewSections(notes)}
       </section>
     </main>
   </body>
 </html>`;
 }
 
-function renderWhatsNewBullets(bullets: readonly string[]): string {
-  if (bullets.length === 0) {
-    return '<li>Review the changelog for the latest JiraOps changes.</li>';
+function renderWhatsNewSections(notes: WhatsNewReleaseNotes): string {
+  const sections =
+    notes.sections.length > 0
+      ? notes.sections
+      : [{ title: 'Release Highlights', bullets: notes.bullets }];
+  if (sections.length === 0 || sections.every((section) => section.bullets.length === 0)) {
+    return renderFeatureSection(
+      { title: 'Release Highlights', bullets: ['Review the changelog for the latest JiraOps changes.'] },
+      0
+    );
   }
 
+  return sections
+    .map((section, index) => {
+      return renderFeatureSection(section, index);
+    })
+    .join('');
+}
+
+function renderFeatureSection(section: WhatsNewSection, index: number): string {
+  const number = String(index + 1).padStart(2, '0');
+  return `
+        <article>
+          <span>${number}</span>
+          <h2>${escapeHtml(section.title)}</h2>
+          <ul>${renderSectionBullets(section.bullets)}</ul>
+        </article>`;
+}
+
+function renderSectionBullets(bullets: readonly string[]): string {
   return bullets
     .map((bullet) => {
       return `<li>${escapeHtml(bullet)}</li>`;
@@ -86,27 +208,7 @@ function renderWhatsNewBullets(bullets: readonly string[]): string {
 }
 
 function renderWhatsNewStyle(): string {
-  return `
-      :root { color-scheme: dark; }
-      body {
-        margin: 0;
-        padding: 28px;
-        background: var(--vscode-editor-background);
-        color: var(--vscode-editor-foreground);
-        font-family: var(--vscode-font-family);
-      }
-      main { display: grid; gap: 20px; max-width: 820px; }
-      header { display: grid; gap: 8px; }
-      span {
-        color: var(--vscode-textLink-foreground);
-        font-size: 12px;
-        font-weight: 700;
-      }
-      h1 { margin: 0; font-size: 34px; line-height: 1.1; }
-      p { margin: 0; color: var(--vscode-descriptionForeground); line-height: 1.5; }
-      ul { display: grid; gap: 8px; margin: 0; padding-left: 20px; }
-      li { line-height: 1.5; }
-    `;
+  return WHATS_NEW_STYLE;
 }
 
 export function readWhatsNewSeenVersion(
@@ -137,6 +239,57 @@ function readSectionBodyLines(
     bodyLines.push(line);
   }
   return bodyLines;
+}
+
+function parseGroupedBullets(lines: readonly string[]): WhatsNewSection[] {
+  const sections: WhatsNewSection[] = [];
+  let current: { title: string; bullets: string[] } = {
+    title: 'Release Highlights',
+    bullets: [],
+  };
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('### ')) {
+      current = pushSection(sections, current, trimmed.slice(4).trim());
+      continue;
+    }
+
+    if (trimmed.startsWith('- ')) {
+      current.bullets.push(trimmed.slice(2).trim());
+    }
+  }
+  pushNonEmptySection(sections, current);
+  return sections;
+}
+
+function pushSection(
+  sections: WhatsNewSection[],
+  current: { title: string; bullets: string[] },
+  nextTitle: string
+): { title: string; bullets: string[] } {
+  pushNonEmptySection(sections, current);
+  return {
+    title: nextTitle.length > 0 ? nextTitle : 'Release Highlights',
+    bullets: [],
+  };
+}
+
+function pushNonEmptySection(
+  sections: WhatsNewSection[],
+  section: { title: string; bullets: string[] }
+): void {
+  if (section.bullets.length === 0) {
+    return;
+  }
+
+  sections.push({
+    title: section.title,
+    bullets: section.bullets,
+  });
+}
+
+function findLatestHeadingIndex(changelog: string): number {
+  return changelog.split(/\r?\n/u).findIndex((line) => line.startsWith('## '));
 }
 
 function escapeHtml(value: string): string {

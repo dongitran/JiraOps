@@ -1,10 +1,6 @@
 import * as vscode from 'vscode';
 
-import {
-  applyJiraOAuthCredentialsToEnv,
-  ensureJiraOAuthCredentials,
-  getJiraOAuthCredentials,
-} from './jiraCredentials';
+import { applyJiraOAuthCredentialsToEnv, ensureJiraOAuthCredentials, getJiraOAuthCredentials } from './jiraCredentials';
 import {
   fetchAssignedJiraIssues,
   fetchJiraRemoteLinks,
@@ -13,22 +9,10 @@ import {
   type JiraConnectionStatus,
   type JiraTokens,
 } from './jiraClient';
-import {
-  createDashboardIssue,
-  type CloneWebLinks,
-  type DashboardIssue,
-} from './dashboardItems';
-import {
-  readCachedIssueDetailBundle,
-  type CachedIssueDetailBundle,
-} from './cachedIssueDetailBundle';
+import { createDashboardIssue, type CloneWebLinks, type DashboardIssue } from './dashboardItems';
+import { readCachedIssueDetailBundle, type CachedIssueDetailBundle } from './cachedIssueDetailBundle';
 import { showIssueDetailPanel, type IssueDetailPanelHandle } from './issueDetailPanel';
-import {
-  fetchJiraIssueDetail,
-  hydrateIssueAttachmentImages,
-  type JiraIssueDetail,
-  type JiraLinkedCloneIssue,
-} from './jiraIssueDetails';
+import { fetchJiraIssueDetail, hydrateIssueAttachmentImages, type JiraIssueDetail, type JiraLinkedCloneIssue } from './jiraIssueDetails';
 import {
   buildJiraOpsPanelHtml,
   connectionErrorMessage,
@@ -48,20 +32,20 @@ import {
 import {
   markAllNotificationsRead,
   markIssueNotificationsRead,
+  type IssueUpdateBaseline,
   type IssueUpdateNotificationResult,
   type JiraOpsNotification,
 } from './jiraNotifications';
 import {
-  readJiraOpsSettings,
-  writeJiraOpsSettings,
-  type JiraOpsSettings,
-} from './jiraOpsSettings';
+  ensurePanelNotificationBaseline,
+  persistPanelNotificationState,
+  recordPanelNotificationBaseline,
+  restorePanelNotificationState,
+} from './jiraOpsPanelNotificationState';
+import { readJiraOpsSettings, writeJiraOpsSettings, type JiraOpsSettings } from './jiraOpsSettings';
 import { NotificationPoller } from './notificationPoller';
 import type { RemoteWebLink } from './remoteLinks';
-import {
-  isJiraOpsTestMode,
-  resolveTestAssignedIssues,
-} from './testModeData';
+import { isJiraOpsTestMode, resolveTestAssignedIssues } from './testModeData';
 import { TtlCache, type TtlCacheResult } from './ttlCache';
 import {
   CONNECTION_CHANGED_MESSAGE_TYPE,
@@ -90,19 +74,14 @@ const JIRA_DETAIL_CACHE_TTL_MS = 5 * 60_000;
 const JIRA_REMOTE_LINK_CACHE_TTL_MS = 5 * 60_000;
 const MAX_CLONE_ISSUES_TO_LOAD = 10;
 
-export class JiraOpsPanelProvider
-  implements vscode.WebviewViewProvider, vscode.Disposable
-{
+export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private webviewView: vscode.WebviewView | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private readonly dashboardIssues: DashboardIssue[] = [];
-  private readonly issueDetailCache = new TtlCache<JiraIssueDetail>(
-    JIRA_DETAIL_CACHE_TTL_MS
-  );
-  private readonly remoteLinksCache = new TtlCache<readonly RemoteWebLink[]>(
-    JIRA_REMOTE_LINK_CACHE_TTL_MS
-  );
+  private readonly issueDetailCache = new TtlCache<JiraIssueDetail>(JIRA_DETAIL_CACHE_TTL_MS);
+  private readonly remoteLinksCache = new TtlCache<readonly RemoteWebLink[]>(JIRA_REMOTE_LINK_CACHE_TTL_MS);
   private readonly notificationPoller: NotificationPoller;
+  private notificationBaseline: IssueUpdateBaseline = {};
   private notifications: readonly JiraOpsNotification[] = [];
   private testModeConnected = false;
 
@@ -129,6 +108,13 @@ export class JiraOpsPanelProvider
       readSettings: () => Promise.resolve(readJiraOpsSettings(this.globalState)),
       resolveIntervalMs: (settings) => resolveNotificationPollIntervalMs(settings),
     });
+    const state = restorePanelNotificationState(
+      this.globalState,
+      this.notificationPoller,
+      this.outputChannel
+    );
+    this.notificationBaseline = state.baseline;
+    this.notifications = state.notifications;
   }
 
   public resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -257,6 +243,8 @@ export class JiraOpsPanelProvider
       this.dashboardIssues.splice(0);
       this.notificationPoller.dispose();
       this.notifications = [];
+      this.notificationBaseline = {};
+      this.persistNotifications();
       this.postNotificationsChanged('Notification polling is paused.');
       this.clearIssueCaches();
       this.outputChannel.appendLine('Jira connection was cleared.');
@@ -276,7 +264,7 @@ export class JiraOpsPanelProvider
 
     try {
       const assignedIssues = await this.loadAssignedIssues();
-      this.notificationPoller.prime(assignedIssues);
+      this.recordBaseline(assignedIssues);
       this.applyAssignedIssues(assignedIssues, 'manual refresh');
     } catch (error) {
       this.postMessage({
@@ -294,7 +282,7 @@ export class JiraOpsPanelProvider
     this.postMessage({ type: DASHBOARD_LOADING_MESSAGE_TYPE });
     try {
       const assignedIssues = await this.loadAssignedIssues();
-      this.notificationPoller.prime(assignedIssues);
+      this.ensureBaseline(assignedIssues);
       this.applyAssignedIssues(assignedIssues, 'initial load');
       await this.notificationPoller.start();
     } catch (error) {
@@ -328,6 +316,7 @@ export class JiraOpsPanelProvider
 
   private handleClearNotifications(): void {
     this.notifications = markAllNotificationsRead(this.notifications);
+    this.persistNotifications();
     this.outputChannel.appendLine('Marked JiraOps notifications as read.');
     this.postNotificationsChanged('Notifications marked as read.');
   }
@@ -358,6 +347,7 @@ export class JiraOpsPanelProvider
         outputChannel: this.outputChannel,
       });
       this.notifications = markIssueNotificationsRead(this.notifications, issue.key);
+      this.persistNotifications();
       this.postNotificationsChanged('Opened cached issue details.');
       return;
     }
@@ -369,6 +359,7 @@ export class JiraOpsPanelProvider
       issue,
     });
     this.notifications = markIssueNotificationsRead(this.notifications, issue.key);
+    this.persistNotifications();
     this.postNotificationsChanged('Opening issue details.');
     void this.populateIssueDetailPanel(panel, issue);
   }
@@ -600,14 +591,20 @@ export class JiraOpsPanelProvider
     this.outputChannel.appendLine('Cleared cached Jira issue details and remote links.');
   }
 
-  private logCacheResult<T>(
-    label: string,
-    issueKey: string,
-    result: TtlCacheResult<T>
-  ): void {
-    this.outputChannel.appendLine(
-      `${label} cache ${result.status} for ${issueKey}.`
-    );
+  private recordBaseline(issues: readonly JiraAssignedIssue[]): void {
+    this.notificationBaseline = recordPanelNotificationBaseline(this.globalState, this.notificationPoller, this.notifications, issues);
+  }
+
+  private ensureBaseline(issues: readonly JiraAssignedIssue[]): void {
+    this.notificationBaseline = ensurePanelNotificationBaseline(this.globalState, this.notificationPoller, this.notificationBaseline, this.notifications, issues);
+  }
+
+  private persistNotifications(): void {
+    persistPanelNotificationState(this.globalState, this.notificationBaseline, this.notifications);
+  }
+
+  private logCacheResult<T>(label: string, issueKey: string, result: TtlCacheResult<T>): void {
+    this.outputChannel.appendLine(`${label} cache ${result.status} for ${issueKey}.`);
   }
 
   private async applyKnownJiraOAuthCredentials(): Promise<void> {
@@ -657,8 +654,10 @@ export class JiraOpsPanelProvider
     result: IssueUpdateNotificationResult
   ): void {
     this.notifications = result.notifications;
+    this.notificationBaseline = result.nextBaseline;
+    this.persistNotifications();
     const count = result.newNotifications.length;
-    this.postNotificationsChanged('Checked assigned issue updates just now.');
+    this.postNotificationsChanged('Notification polling is current.');
     if (count === 0) {
       return;
     }

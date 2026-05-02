@@ -5,6 +5,7 @@ import {
   buildIssueUpdateBaseline,
   type IssueUpdateBaseline,
   type IssueUpdateNotificationResult,
+  type JiraOpsNotificationState,
   type JiraOpsNotification,
 } from './jiraNotifications';
 import {
@@ -79,6 +80,12 @@ export class NotificationPoller {
   public prime(issues: readonly JiraAssignedIssue[]): void {
     this.baseline = buildIssueUpdateBaseline(issues);
     this.baselineReady = true;
+  }
+
+  public restore(state: JiraOpsNotificationState): void {
+    this.baseline = state.baseline;
+    this.baselineReady = Object.keys(state.baseline).length > 0;
+    this.notifications = state.notifications;
   }
 
   private async runPoll(reason: string): Promise<boolean> {

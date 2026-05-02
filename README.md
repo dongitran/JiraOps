@@ -1,6 +1,6 @@
 # JiraOps
 
-[![Version](https://img.shields.io/badge/version-0.1.11--pre--release-2aa198)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.1.12--pre--release-2aa198)](./CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.90.0-007acc)](https://code.visualstudio.com/api)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20-339933)](https://nodejs.org/)
@@ -16,7 +16,7 @@ issue details in a wider VS Code editor tab.
 - **Compact native header:** show connection state in the JiraOps view title bar instead of an internal webview banner.
 - **GitLab MR focus:** keep assigned-ticket cards compact and show direct plus clone-linked merge requests in Details.
 - **Wide issue details:** open a selected issue immediately with a loading state, then show formatted Jira content, comments, image attachments, merge requests, and Jira web links.
-- **Assigned issue update notifications:** poll Jira in the background, refresh assigned tickets from the same result, and surface unread updates in the sidebar.
+- **Assigned issue update notifications:** poll Jira in the background, refresh assigned tickets from the same result, persist local unread history, and surface unread updates in the sidebar.
 - **Cached detail reopen:** reuse fresh issue detail and remote-link cache entries so recently opened Details can reopen without another loading state.
 - **Explicit Jira connection control:** connect from Home, then manage disconnect from Settings.
 - **What Is New tab:** show release notes once per installed JiraOps version.
@@ -114,6 +114,7 @@ VS Code Activity Bar
   -> fetchJiraIssueDetail loads formatted description, comments, attachments, and clone links
   -> fetchJiraRemoteLinks loads direct and clone issue links with TTL cache
   -> NotificationPoller reuses assigned-issue search results for unread update notices
+  -> globalState stores bounded JiraOps notification history and update baselines
   -> extractGitLabMergeRequests derives MR rows from remote links
   -> sidebar renders assigned tickets and WebviewPanel renders issue details
 ```

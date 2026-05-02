@@ -6,8 +6,9 @@ import {
 } from './jiraCredentials';
 import { JiraOpsPanelProvider, LINKS_VIEW_ID } from './jiraOpsPanel';
 import {
+  WHATS_NEW_RELEASE_VERSION,
   markWhatsNewSeen,
-  parseLatestChangelogSection,
+  parseChangelogSection,
   readWhatsNewSeenVersion,
   renderWhatsNewHtml,
   shouldShowWhatsNew,
@@ -104,29 +105,27 @@ async function showWhatsNewIfNeeded(
   context: vscode.ExtensionContext,
   outputChannel: vscode.OutputChannel
 ): Promise<void> {
-  const currentVersion = readExtensionVersion(context);
+  const packageVersion = readExtensionVersion(context);
+  const releaseVersion = WHATS_NEW_RELEASE_VERSION;
   const suppress = process.env['JIRA_OPS_SUPPRESS_WHATS_NEW'] === '1';
   const force = process.env['JIRA_OPS_FORCE_WHATS_NEW'] === '1';
   const seenVersion = readWhatsNewSeenVersion(context.globalState);
-  if (!shouldShowWhatsNew({ currentVersion, force, seenVersion, suppress })) {
-    outputChannel.appendLine(`What Is New skipped for JiraOps ${currentVersion}.`);
+  if (!shouldShowWhatsNew({ currentVersion: releaseVersion, force, seenVersion, suppress })) {
+    outputChannel.appendLine(`What Is New skipped for JiraOps ${releaseVersion}. Package version: ${packageVersion}.`);
     return;
   }
 
   const changelog = await readChangelog(context, outputChannel);
-  const notes = parseLatestChangelogSection(changelog);
+  const notes = parseChangelogSection(changelog, releaseVersion);
   const panel = vscode.window.createWebviewPanel(
     'jiraOps.whatsNew',
-    `JiraOps ${currentVersion}`,
+    `JiraOps ${releaseVersion}`,
     vscode.ViewColumn.Active,
     { enableScripts: false }
   );
-  panel.webview.html = renderWhatsNewHtml({
-    bullets: notes.bullets,
-    version: currentVersion,
-  });
-  await markWhatsNewSeen(context.globalState, currentVersion);
-  outputChannel.appendLine(`What Is New shown for JiraOps ${currentVersion}.`);
+  panel.webview.html = renderWhatsNewHtml(notes);
+  await markWhatsNewSeen(context.globalState, releaseVersion);
+  outputChannel.appendLine(`What Is New shown for JiraOps ${releaseVersion}. Package version: ${packageVersion}.`);
 }
 
 async function readChangelog(

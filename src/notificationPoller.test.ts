@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 import type { JiraAssignedIssue } from './jiraClient';
 import { NotificationPoller } from './notificationPoller';
 import type { JiraOpsSettings } from './jiraOpsSettings';
+import type { IssueUpdateNotificationResult } from './jiraNotifications';
 
 function assignedIssue(key: string, updated: string): JiraAssignedIssue {
   return {
@@ -26,7 +27,7 @@ function defaultSettings(): JiraOpsSettings {
 describe('NotificationPoller', () => {
   test('updates the dashboard from the same fetched assigned issues', async () => {
     const onIssues = vi.fn<(issues: readonly JiraAssignedIssue[]) => void>();
-    const onNotifications = vi.fn();
+    const onNotifications = vi.fn<(result: IssueUpdateNotificationResult) => void>();
     const poller = new NotificationPoller({
       fetchIssues: () =>
         Promise.resolve([assignedIssue('OPS-123', '2026-05-01T08:20:00.000Z')]),
@@ -88,6 +89,43 @@ describe('NotificationPoller', () => {
     await expect(poller.pollNow('manual')).resolves.toBe(false);
     expect(onNotifications).not.toHaveBeenCalled();
     expect(errors).toEqual(['network unavailable']);
+  });
+
+  test('restores old notifications and baseline before polling', async () => {
+    const results: IssueUpdateNotificationResult[] = [];
+    const poller = new NotificationPoller({
+      fetchIssues: () =>
+        Promise.resolve([assignedIssue('OPS-123', '2026-05-01T08:24:00.000Z')]),
+      log: () => undefined,
+      onError: () => undefined,
+      onIssues: () => undefined,
+      onNotifications: (result) => {
+        results.push(result);
+      },
+      readSettings: () => Promise.resolve(defaultSettings()),
+    });
+    poller.restore({
+      baseline: {
+        'OPS-123': '2026-05-01T08:20:00.000Z',
+      },
+      notifications: [
+        {
+          id: 'OPS-456:2026-05-01T08:18:00.000Z',
+          issueKey: 'OPS-456',
+          title: 'OPS-456 was updated',
+          detail: 'Assigned issue update detected by JiraOps.',
+          updated: '2026-05-01T08:18:00.000Z',
+          unread: true,
+        },
+      ],
+    });
+
+    await expect(poller.pollNow('manual')).resolves.toBe(true);
+    const result = results[0];
+    expect(result?.notifications.filter((item) => item.unread).map((item) => item.issueKey).sort()).toEqual([
+      'OPS-123',
+      'OPS-456',
+    ]);
   });
 
   test('uses the configured interval for scheduled polling', async () => {

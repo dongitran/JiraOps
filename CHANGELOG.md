@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.12
+
+- Keep What Is New focused on the stable `0.1.10` release while this build remains in the pre-release lane.
+- Expand the stable `0.1.10` What Is New content with the complete stable feature set.
+- Persist bounded JiraOps notification history and assigned-issue update baselines across extension-host restarts.
+- Remove noisy poll-status copy from the Notifications screen and reduce the Clear action width.
+- Show the assigned ticket count inline as `Assigned to me (5)`.
+- Label clone merge request cards with the linked clone Jira ticket key.
+
 ## 0.1.11
 
 - Show a What Is New editor tab once per JiraOps version.
@@ -13,6 +22,32 @@
 
 - Promote JiraOps to a stable VS Code Marketplace release.
 - Publish CI-built VSIX packages and GitHub releases as stable instead of pre-release.
+
+### Assigned-ticket dashboard
+
+- Load active Jira issues assigned to the connected Jira user with a bounded JQL search.
+- Keep assigned-ticket cards compact for the VS Code sidebar.
+- Move the Jira connection state into the native JiraOps view header.
+- Keep Settings and disconnect controls out of the main dashboard.
+
+### Issue details
+
+- Open a selected issue in a wide editor tab with a focused loading state.
+- Render Jira descriptions, comments, image attachments, status, priority, and updated time.
+- Preserve safe external link opening while keeping raw URLs out of visible detail cards.
+
+### Jira and GitLab context
+
+- Surface direct GitLab merge requests from Jira remote web links.
+- Show clone-linked GitLab merge requests in Details for cloned Jira work items.
+- Keep generic Jira web links available in Details without crowding assigned-ticket cards.
+
+### Safety and quality
+
+- Store Jira OAuth app credentials in VS Code SecretStorage when environment variables are unavailable.
+- Refresh expired Jira tokens when a refresh token is available.
+- Add output-channel logs for extension actions without logging OAuth secrets, tokens, or Authorization headers.
+- Cover the dashboard, details, Jira parsing, remote links, and extension flows with unit and E2E tests.
 
 ## 0.1.9
 

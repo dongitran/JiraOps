@@ -142,22 +142,47 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.11 Pre-Release</span>
+        <span>JiraOps 0.1.10 Stable</span>
         <h1>What Is New</h1>
-        <p>Assigned issue updates now run quietly in the background, refresh the dashboard from the same Jira query, and keep recently opened details warm.</p>
+        <p>JiraOps is ready for daily Jira triage: assigned tickets, GitLab merge request context, focused Details, safer Jira auth, and a stable release lane.</p>
       </header>
+      <section class="whats-new-hero" aria-label="Stable release summary">
+        <div>
+          <strong>Stable workspace</strong>
+          <p>Open JiraOps, connect Jira, scan assigned work, then inspect the exact issue context in a wide editor tab.</p>
+        </div>
+        <span>0.1.10</span>
+      </section>
       <section class="whats-new-grid" aria-label="Release highlights">
         <article>
-          <strong>Assigned Issue Updates</strong>
-          <p>JiraOps detects new or updated assigned tickets from the existing Jira search flow and shows an unread count in the sidebar.</p>
+          <span>01</span>
+          <strong>Assigned-ticket dashboard</strong>
+          <p>Load active Jira issues assigned to you with compact cards built for narrow VS Code sidebars.</p>
         </article>
         <article>
-          <strong>Polling Settings</strong>
-          <p>The default interval is 1 minute, configurable from Settings without adding a second ticket refresh cron.</p>
+          <span>02</span>
+          <strong>Wide Details view</strong>
+          <p>Open issue descriptions, comments, image attachments, status, priority, and supporting Jira web links in an editor tab.</p>
         </article>
         <article>
-          <strong>Cached Details</strong>
-          <p>Recently loaded details reopen directly from cache when all issue and merge request data is still fresh.</p>
+          <span>03</span>
+          <strong>GitLab MR context</strong>
+          <p>Separate direct GitLab merge requests from general web links, and keep clone-linked MRs available inside Details.</p>
+        </article>
+        <article>
+          <span>04</span>
+          <strong>Clean Jira connection</strong>
+          <p>Use OAuth credentials from environment variables or VS Code SecretStorage without exposing tokens in the UI.</p>
+        </article>
+        <article>
+          <span>05</span>
+          <strong>Native VS Code polish</strong>
+          <p>Connection state lives in the native view header, while Settings keeps disconnect and credential cleanup workflows out of the main dashboard.</p>
+        </article>
+        <article>
+          <span>06</span>
+          <strong>Stable release lane</strong>
+          <p>Version 0.1.10 is the stable Marketplace release. Experimental pre-release work stays outside this What Is New panel.</p>
         </article>
       </section>
     </article>
@@ -323,7 +348,7 @@ function renderCloneMergeRequests(mergeRequests) {
           return `
             <a class="detail-link detail-link-primary" href="${escapeAttribute(mergeRequest.url)}" target="_blank" rel="noreferrer">
               <strong>${escapeHtml(mergeRequest.title)}</strong>
-              <span>${escapeHtml(mergeRequest.issueKey)} · ${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}</span>
+              <span>Clone ticket ${escapeHtml(mergeRequest.issueKey)} - ${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}</span>
             </a>
           `;
         })

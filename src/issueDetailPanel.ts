@@ -335,7 +335,7 @@ function renderCloneMergeRequestLink(
   return `
     <a class="detail-link detail-link-primary" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer" data-url="${escapeAttribute(link.url)}">
       <strong>${escapeHtml(link.title)}</strong>
-      <span>${escapeHtml(link.issueKey)} · ${escapeHtml(link.projectPath)} !${escapeHtml(link.iid)}</span>
+      <span>Clone ticket ${escapeHtml(link.issueKey)} - ${escapeHtml(link.projectPath)} !${escapeHtml(link.iid)}</span>
     </a>
   `;
 }

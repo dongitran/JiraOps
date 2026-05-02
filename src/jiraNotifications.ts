@@ -1,6 +1,7 @@
 import type { JiraAssignedIssue } from './jiraClient';
 
 const MAX_NOTIFICATION_HISTORY = 30;
+export const JIRA_OPS_NOTIFICATION_STATE_KEY = 'jiraOps.notifications.v1';
 
 export interface JiraOpsNotification {
   readonly id: string;
@@ -24,6 +25,16 @@ export interface IssueUpdateNotificationResult {
   readonly nextBaseline: IssueUpdateBaseline;
   readonly newNotifications: readonly JiraOpsNotification[];
   readonly notifications: readonly JiraOpsNotification[];
+}
+
+export interface JiraOpsNotificationState {
+  readonly baseline: IssueUpdateBaseline;
+  readonly notifications: readonly JiraOpsNotification[];
+}
+
+export interface JiraOpsNotificationMemento {
+  get(key: string): unknown;
+  update(key: string, value: unknown): Thenable<void>;
 }
 
 export function computeIssueUpdateNotifications(
@@ -101,6 +112,36 @@ export function formatNotificationLogSummary(
   return `Detected ${String(notifications.length)} assigned issue update(s): ${issueKeys.join(', ')}.`;
 }
 
+export function normalizeJiraOpsNotificationState(
+  value: unknown
+): JiraOpsNotificationState {
+  if (!isRecord(value)) {
+    return emptyNotificationState();
+  }
+
+  return {
+    baseline: normalizeBaseline(value['baseline']),
+    notifications: normalizeNotifications(value['notifications']),
+  };
+}
+
+export function readJiraOpsNotificationState(
+  memento: JiraOpsNotificationMemento
+): JiraOpsNotificationState {
+  return normalizeJiraOpsNotificationState(
+    memento.get(JIRA_OPS_NOTIFICATION_STATE_KEY)
+  );
+}
+
+export async function writeJiraOpsNotificationState(
+  memento: JiraOpsNotificationMemento,
+  state: JiraOpsNotificationState
+): Promise<JiraOpsNotificationState> {
+  const normalized = normalizeJiraOpsNotificationState(state);
+  await memento.update(JIRA_OPS_NOTIFICATION_STATE_KEY, normalized);
+  return normalized;
+}
+
 function createNotificationForIssue(
   issue: JiraAssignedIssue,
   previousBaseline: IssueUpdateBaseline,
@@ -120,6 +161,68 @@ function createNotificationForIssue(
   }
 
   return createIssueNotification(issue, 'updated');
+}
+
+function normalizeBaseline(value: unknown): IssueUpdateBaseline {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  const baseline: IssueUpdateBaseline = {};
+  for (const [issueKey, updated] of Object.entries(value)) {
+    if (issueKey.trim().length > 0 && typeof updated === 'string') {
+      baseline[issueKey] = updated;
+    }
+  }
+  return baseline;
+}
+
+function normalizeNotifications(value: unknown): JiraOpsNotification[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((notification) => normalizeNotification(notification))
+    .filter((notification): notification is JiraOpsNotification => {
+      return notification !== null;
+    })
+    .slice(0, MAX_NOTIFICATION_HISTORY);
+}
+
+function normalizeNotification(value: unknown): JiraOpsNotification | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const { detail, id, issueKey, title, unread, updated } = value;
+  if (
+    !isNonEmptyString(detail) ||
+    !isNonEmptyString(id) ||
+    !isNonEmptyString(issueKey) ||
+    !isNonEmptyString(title) ||
+    !isNonEmptyString(updated) ||
+    typeof unread !== 'boolean'
+  ) {
+    return null;
+  }
+
+  return { detail, id, issueKey, title, unread, updated };
+}
+
+function emptyNotificationState(): JiraOpsNotificationState {
+  return {
+    baseline: {},
+    notifications: [],
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function createIssueNotification(

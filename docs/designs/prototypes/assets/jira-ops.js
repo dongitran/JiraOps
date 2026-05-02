@@ -473,8 +473,7 @@ function renderDashboardToolbar() {
   return `
     <section class="dashboard-toolbar" aria-label="Assigned ticket actions">
       <div class="dashboard-title">
-        <span class="dashboard-eyebrow">Assigned to me</span>
-        <strong>${String(issueCount)} tickets</strong>
+        <strong>Assigned to me (${String(issueCount)})</strong>
       </div>
       <div class="dashboard-actions">
         ${renderNotificationButton()}
@@ -508,7 +507,6 @@ function renderNotificationsScreen() {
         </button>
         <div class="settings-title">
           <h2>Notifications</h2>
-          <p>${escapeHtml(state.pollStatus)}</p>
         </div>
       </div>
       <div class="notification-summary" role="status">
@@ -814,7 +812,7 @@ function loadMockDashboard() {
       state.notifications = MOCK_NOTIFICATIONS;
     }
     state.pollStatus = state.notificationSettings.enabled
-      ? 'Checked assigned issue updates just now.'
+      ? `Polling every ${String(state.notificationSettings.intervalMinutes)} minute${state.notificationSettings.intervalMinutes === 1 ? '' : 's'}.`
       : 'Notification polling is disabled.';
     state.loading = false;
     state.status = '';

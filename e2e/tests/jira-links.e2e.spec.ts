@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps release notes after an extension update', async () => {
+  test('User can review JiraOps 0.1.10 stable release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,9 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.10 Stable')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'assigned issue'
+        'Assigned-ticket dashboard'
       );
+      await expect(whatsNewFrame.getByText('0.1.11')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -53,6 +55,8 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await clickWithFallback(frame.getByRole('button', { name: 'Connect Jira' }));
 
       await expectLoadedDashboard(frame);
+      await expect(frame.getByText('Assigned to me (5)')).toBeVisible();
+      await expect(frame.getByText('5 tickets', { exact: true })).toHaveCount(0);
       await expect(frame.getByRole('status')).toHaveCount(0);
       await expect(frame.getByRole('button', { name: 'Disconnect' })).toHaveCount(0);
       await expect(frame.getByText('Jira Cloud')).toHaveCount(0);
@@ -140,6 +144,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
           name: /Backport alert window tuning/u,
         })
       ).toBeVisible();
+      await expect(detailFrame.getByText(/Clone ticket OPS-111/u)).toBeVisible();
       await expect(detailFrame.getByText('https://')).toHaveCount(0);
       await expect(detailFrame.getByText('In Progress', { exact: true })).toBeVisible();
     } finally {
@@ -221,6 +226,9 @@ test.describe('Jira Ops assigned ticket workflow', () => {
           name: /Clean stale inventory reservations/u,
         })
       ).toBeVisible();
+      await expect(
+        detailFrame.getByLabel('Clone merge requests').getByText(/Clone ticket OPS-222/u)
+      ).toHaveCount(2);
       await expect(
         detailFrame.getByLabel('Clone merge requests').getByRole('link', {
           name: /Add reservation cleanup observability/u,
@@ -323,7 +331,9 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await clickWithFallback(notificationButton);
 
       await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+      await expect(frame.getByText('Checked assigned issue updates just now.')).toHaveCount(0);
       await expect(frame.getByText('OPS-123 was updated')).toBeVisible();
+      await expectClearButtonUsesCompactWidth(frame);
       await clickWithFallback(frame.getByRole('button', { name: 'Clear' }));
       await returnToDashboard(frame);
       await expect(frame.getByRole('button', { name: 'Open notifications' })).toBeVisible();
@@ -348,7 +358,7 @@ async function expectHomeShell(frame: Frame): Promise<void> {
 }
 
 async function expectLoadedDashboard(frame: Frame): Promise<void> {
-  await expect(frame.getByText('5 tickets', { exact: true })).toBeVisible();
+  await expect(frame.getByText('Assigned to me (5)', { exact: true })).toBeVisible();
   await expect(frame.getByText('GitLab merge requests')).toHaveCount(0);
   await expect(frame.getByLabel('OPS-123 assigned ticket')).toBeVisible();
   await expect(frame.getByLabel('OPS-900 assigned ticket')).toBeVisible();
@@ -461,6 +471,19 @@ async function expectCompactDashboardGeometry(frame: Frame): Promise<void> {
     paddingLeft: '0px',
     paddingRight: '0px',
   });
+}
+
+async function expectClearButtonUsesCompactWidth(frame: Frame): Promise<void> {
+  const clearButton = frame.getByRole('button', { name: 'Clear' });
+  const readRatio = async (): Promise<number> => {
+    return clearButton.evaluate((button) => {
+      const summary = button.parentElement;
+      const summaryWidth = summary?.getBoundingClientRect().width ?? 0;
+      return summaryWidth <= 0 ? 0 : button.getBoundingClientRect().width / summaryWidth;
+    });
+  };
+  await expect.poll(readRatio).toBeGreaterThan(0.32);
+  expect(await readRatio()).toBeLessThan(0.38);
 }
 
 async function resolveBoundingBox(locator: Locator): Promise<NonNullable<Awaited<ReturnType<Locator['boundingBox']>>>> {

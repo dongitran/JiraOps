@@ -183,15 +183,13 @@ body.gallery-theme-high-contrast {
 .editor-whats-new {
   display: grid;
   align-content: start;
-  gap: 18px;
+  gap: 16px;
   min-height: 70vh;
 }
 
 .editor-whats-new-header {
   display: grid;
   gap: 8px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--gallery-border);
 }
 
 .editor-whats-new-header span {
@@ -216,6 +214,47 @@ body.gallery-theme-high-contrast {
   line-height: 1.5;
 }
 
+.whats-new-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid color-mix(in oklab, var(--gallery-accent) 42%, var(--gallery-border));
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--gallery-side) 82%, transparent);
+}
+
+.whats-new-hero div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.whats-new-hero strong {
+  color: var(--gallery-text);
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.whats-new-hero p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--gallery-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.whats-new-hero > span {
+  flex: 0 0 auto;
+  color: var(--gallery-accent);
+  font-size: 28px;
+  font-weight: 750;
+  line-height: 1;
+}
+
 .whats-new-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -223,13 +262,31 @@ body.gallery-theme-high-contrast {
 }
 
 .whats-new-grid article {
+  position: relative;
   display: grid;
   gap: 6px;
   min-width: 0;
-  padding: 12px;
+  padding: 14px 12px 12px;
   border: 1px solid var(--gallery-border);
   border-radius: 6px;
   background: color-mix(in oklab, var(--gallery-side) 72%, transparent);
+}
+
+.whats-new-grid article::before {
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--gallery-accent);
+  content: "";
+}
+
+.whats-new-grid article > span {
+  color: var(--gallery-accent);
+  font-size: 11px;
+  font-weight: 750;
 }
 
 .whats-new-grid strong {
@@ -559,6 +616,13 @@ body.gallery-theme-high-contrast {
 
   .editor-surface {
     display: none;
+  }
+}
+
+@media (max-width: 780px) {
+  .whats-new-hero {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 

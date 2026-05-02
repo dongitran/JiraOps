@@ -192,15 +192,15 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  padding: 4px;
+  gap: 8px;
+  padding: 6px 4px;
   border-bottom: 1px solid var(--border-color);
-  background: var(--surface-bg);
+  background: var(--page-bg);
 }
 
 .dashboard-title {
-  display: grid;
-  gap: 3px;
+  display: flex;
+  align-items: center;
   min-width: 0;
 }
 
@@ -212,8 +212,9 @@ a:focus-visible {
 }
 
 .dashboard-title strong {
-  font-size: 14px;
-  font-weight: 650;
+  color: var(--text-color);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .dashboard-title span:not(.dashboard-eyebrow) {
@@ -682,6 +683,12 @@ a:focus-visible {
   padding: 8px 4px;
   border-bottom: 1px solid var(--border-color);
   background: var(--surface-bg);
+}
+
+.notification-summary .clear-notifications-button {
+  flex: 0 0 35%;
+  max-width: 35%;
+  min-width: 0;
 }
 
 .notification-summary strong {
