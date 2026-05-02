@@ -215,7 +215,6 @@ function renderIssueDetailLoading(message) {
 }
 
 function renderIssueDetail(issue) {
-  const cacheText = issue.cached === true ? 'Cached detail' : issue.status;
   editorSurface.innerHTML = `
     <article class="editor-detail" aria-label="${escapeAttribute(issue.key)} details">
       <header class="editor-detail-header">
@@ -223,9 +222,8 @@ function renderIssueDetail(issue) {
           <span class="detail-key">${escapeHtml(issue.key)}</span>
           <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
         </div>
-        <span class="detail-status-line" aria-label="Issue status">${escapeHtml(cacheText)}</span>
+        ${renderDetailHeaderActions(issue)}
       </header>
-      ${renderDetailActions(issue)}
       <section class="detail-section detail-content-section" aria-label="Description and comments">
         ${renderIssueContent(issue)}
       </section>
@@ -258,31 +256,51 @@ function renderIssueDetail(issue) {
         </div>
         ${renderAttachments(issue.attachments)}
       </section>
+      ${renderWorklogDialog(issue)}
     </article>
   `;
   bindDetailActions(issue);
 }
 
-function renderDetailActions(issue) {
+function renderDetailHeaderActions(issue) {
   return `
-    <section class="detail-actions" aria-label="Issue actions">
-      <form class="detail-action-card" data-detail-action="status">
-        <div class="detail-action-title">
-          <strong>Change Status</strong>
-          <span>${escapeHtml(issue.status)}</span>
-        </div>
-        <label>
-          <span>Next status</span>
-          <select name="transition" ${issue.transitions.length === 0 ? 'disabled' : ''}>
-            ${renderTransitionOptions(issue.transitions)}
-          </select>
-        </label>
-        <button type="submit" ${issue.transitions.length === 0 ? 'disabled' : ''}>Change Status</button>
-      </form>
-      <form class="detail-action-card" data-detail-action="work">
-        <div class="detail-action-title">
-          <strong>Log Work</strong>
-          <span>Minutes spent</span>
+    <div class="detail-header-actions" aria-label="Issue actions">
+      <label class="detail-status-control">
+        <span>Status</span>
+        <select name="transition" aria-label="Issue status" data-detail-status-select ${issue.transitions.length === 0 ? 'disabled' : ''}>
+          ${renderTransitionOptions(issue.status, issue.transitions)}
+        </select>
+      </label>
+      <button class="detail-log-work-button" type="button" data-detail-action="open-worklog">Log Work</button>
+      <p class="detail-action-status" role="status" aria-live="polite"></p>
+    </div>
+  `;
+}
+
+function renderTransitionOptions(currentStatus, transitions) {
+  const current = `<option value="" data-status="${escapeAttribute(currentStatus)}" selected>${escapeHtml(currentStatus)}</option>`;
+  if (transitions.length === 0) {
+    return current;
+  }
+
+  const transitionOptions = transitions
+    .map((transition) => {
+      return `<option value="${escapeAttribute(transition.id)}" data-status="${escapeAttribute(transition.toStatus)}">${escapeHtml(transition.toStatus)}</option>`;
+    })
+    .join('');
+  return `${current}${transitionOptions}`;
+}
+
+function renderWorklogDialog(issue) {
+  return `
+    <dialog class="detail-worklog-dialog" aria-label="Log Work">
+      <form class="detail-worklog-form" data-detail-action="work" data-issue-key="${escapeAttribute(issue.key)}">
+        <div class="detail-dialog-heading">
+          <div>
+            <span>${escapeHtml(issue.key)}</span>
+            <h2>Log Work</h2>
+          </div>
+          <button type="button" class="detail-dialog-close" data-detail-action="close-worklog" aria-label="Close Log Work">&times;</button>
         </div>
         <label>
           <span>Minutes</span>
@@ -290,25 +308,16 @@ function renderDetailActions(issue) {
         </label>
         <label>
           <span>Note</span>
-          <textarea name="note" rows="2" autocomplete="off" placeholder="Add a short work note…"></textarea>
+          <textarea name="note" rows="4" autocomplete="off" placeholder="Add a short work note…"></textarea>
         </label>
-        <button type="submit">Log Work</button>
+        <p class="detail-dialog-status" role="status" aria-live="polite"></p>
+        <div class="detail-dialog-actions">
+          <button type="button" class="detail-dialog-secondary" data-detail-action="close-worklog">Cancel</button>
+          <button type="submit" class="detail-dialog-primary">Log Work</button>
+        </div>
       </form>
-      <p class="detail-action-status" role="status" aria-live="polite"></p>
-    </section>
+    </dialog>
   `;
-}
-
-function renderTransitionOptions(transitions) {
-  if (transitions.length === 0) {
-    return '<option>No available transitions</option>';
-  }
-
-  return transitions
-    .map((transition) => {
-      return `<option value="${escapeAttribute(transition.id)}" data-status="${escapeAttribute(transition.toStatus)}">${escapeHtml(transition.name)} -> ${escapeHtml(transition.toStatus)}</option>`;
-    })
-    .join('');
 }
 
 function renderTechnicalNotesSection(issue) {
@@ -472,12 +481,20 @@ function renderAttachments(attachments) {
 }
 
 function bindDetailActions(issue) {
-  const statusForm = editorSurface.querySelector('form[data-detail-action="status"]');
-  if (statusForm instanceof HTMLFormElement) {
-    statusForm.addEventListener('submit', (event) => {
-      event.preventDefault();
-      applyPrototypeStatusTransition(statusForm, issue);
+  const statusSelect = editorSurface.querySelector('[data-detail-status-select]');
+  if (statusSelect instanceof HTMLSelectElement) {
+    statusSelect.addEventListener('change', () => {
+      applyPrototypeStatusTransition(statusSelect, issue);
     });
+  }
+
+  const worklogButton = editorSurface.querySelector('[data-detail-action="open-worklog"]');
+  if (worklogButton instanceof HTMLButtonElement) {
+    worklogButton.addEventListener('click', openPrototypeWorklogDialog);
+  }
+
+  for (const closeButton of editorSurface.querySelectorAll('[data-detail-action="close-worklog"]')) {
+    closeButton.addEventListener('click', closePrototypeWorklogDialog);
   }
 
   const workForm = editorSurface.querySelector('form[data-detail-action="work"]');
@@ -489,44 +506,77 @@ function bindDetailActions(issue) {
   }
 }
 
-function applyPrototypeStatusTransition(form, issue) {
-  const select = form.elements.namedItem('transition');
-  if (!(select instanceof HTMLSelectElement) || select.selectedOptions.length === 0) {
+function applyPrototypeStatusTransition(select, issue) {
+  if (select.selectedOptions.length === 0 || select.value.length === 0) {
     setDetailActionStatus('Choose an available status transition.');
     return;
   }
 
   const nextStatus = select.selectedOptions[0]?.dataset.status ?? '';
+  select.disabled = true;
+  setDetailActionStatus('Updating status…');
   issue.status = nextStatus.length > 0 ? nextStatus : issue.status;
-  const statusLine = editorSurface.querySelector('.detail-status-line');
-  if (statusLine instanceof HTMLElement) {
-    statusLine.textContent = issue.status;
+  const currentOption = select.querySelector('option[value=""]');
+  if (currentOption instanceof HTMLOptionElement) {
+    currentOption.textContent = issue.status;
+    currentOption.dataset.status = issue.status;
   }
+  select.value = '';
+  select.disabled = false;
   setDetailActionStatus(`Status changed to ${issue.status}.`);
+}
+
+function openPrototypeWorklogDialog() {
+  const dialog = editorSurface.querySelector('.detail-worklog-dialog');
+  if (!(dialog instanceof HTMLDialogElement)) {
+    return;
+  }
+
+  setWorklogDialogStatus('');
+  if (typeof dialog.showModal === 'function') {
+    dialog.showModal();
+    return;
+  }
+  dialog.setAttribute('open', '');
+}
+
+function closePrototypeWorklogDialog() {
+  const dialog = editorSurface.querySelector('.detail-worklog-dialog');
+  if (dialog instanceof HTMLDialogElement) {
+    dialog.close();
+  }
 }
 
 function applyPrototypeWorkLog(form) {
   const minutesInput = form.elements.namedItem('minutes');
   const noteInput = form.elements.namedItem('note');
   if (!(minutesInput instanceof HTMLInputElement)) {
-    setDetailActionStatus('Enter minutes from 1 to 1440.');
+    setWorklogDialogStatus('Enter minutes from 1 to 1440.');
     return;
   }
 
   const minutes = Number.parseInt(minutesInput.value, 10);
   if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
-    setDetailActionStatus('Enter minutes from 1 to 1440.');
+    setWorklogDialogStatus('Enter minutes from 1 to 1440.');
     return;
   }
 
   if (noteInput instanceof HTMLTextAreaElement) {
     noteInput.value = '';
   }
+  closePrototypeWorklogDialog();
   setDetailActionStatus(`Logged ${String(minutes)} minute${minutes === 1 ? '' : 's'}.`);
 }
 
 function setDetailActionStatus(message) {
   const status = editorSurface.querySelector('.detail-action-status');
+  if (status instanceof HTMLElement) {
+    status.textContent = message;
+  }
+}
+
+function setWorklogDialogStatus(message) {
+  const status = editorSurface.querySelector('.detail-dialog-status');
   if (status instanceof HTMLElement) {
     status.textContent = message;
   }

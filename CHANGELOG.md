@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.14
+
+- Move Details status changes into the compact header status dropdown so status updates no longer take over the page.
+- Replace the large Log Work section with a focused dialog opened from a compact header button.
+- Keep Details action feedback close to the header while preserving Jira action validation and safe output-channel logs.
+- Update the prototype and E2E coverage for the compact status and worklog flows.
+
 ## 0.1.13
 
 - Add bordered Jira table rendering in Details and keep Technical notes in a capped scrollable section above Attachments.

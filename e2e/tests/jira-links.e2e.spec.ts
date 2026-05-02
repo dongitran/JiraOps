@@ -151,7 +151,10 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       ).toBeVisible();
       await expect(detailFrame.getByText(/Clone ticket OPS-111/u)).toBeVisible();
       await expect(detailFrame.getByText('https://')).toHaveCount(0);
-      await expect(detailFrame.getByLabel('Issue status')).toHaveText('In Progress');
+      await expect(detailFrame.getByRole('combobox', { name: 'Issue status' })).toHaveValue('');
+      await expect(
+        detailFrame.getByRole('combobox', { name: 'Issue status' }).getByRole('option').first()
+      ).toHaveText('In Progress');
       await expectTechnicalNotesBeforeAttachments(detailFrame);
     } finally {
       await cleanupExtensionHost(session);
@@ -171,17 +174,30 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
       await expect(detailFrame.getByLabel('Issue actions')).toBeVisible();
-      await detailFrame.getByRole('combobox', { name: 'Next status' }).selectOption('31');
-      await clickWithFallback(detailFrame.getByRole('button', { name: 'Change Status' }));
-      await expect(detailFrame.getByRole('status')).toContainText(
-        'Status changed to Code Review.'
-      );
-      await expect(detailFrame.getByText('Code Review', { exact: true })).toBeVisible();
+      await expect(detailFrame.getByRole('button', { name: 'Change Status' })).toHaveCount(0);
+      await expect(detailFrame.getByRole('combobox', { name: 'Next status' })).toHaveCount(0);
+      await detailFrame.getByRole('combobox', { name: 'Issue status' }).selectOption('31');
+      await expect(
+        detailFrame.getByRole('status').filter({ hasText: 'Status changed to Code Review.' })
+      ).toBeVisible();
+      await expect(detailFrame.getByRole('combobox', { name: 'Issue status' })).toHaveValue('');
+      await expect(
+        detailFrame.getByRole('combobox', { name: 'Issue status' }).getByRole('option').first()
+      ).toHaveText('Code Review');
 
-      await detailFrame.getByRole('spinbutton', { name: 'Minutes' }).fill('45');
-      await detailFrame.getByRole('textbox', { name: 'Note' }).fill('Reviewed retry budget.');
+      const logWorkDialog = detailFrame.getByRole('dialog', { name: 'Log Work' });
+      await expect(logWorkDialog).toBeHidden();
       await clickWithFallback(detailFrame.getByRole('button', { name: 'Log Work' }));
-      await expect(detailFrame.getByRole('status')).toContainText('Logged 45 minutes.');
+      await expect(logWorkDialog).toBeVisible();
+      await logWorkDialog.getByRole('spinbutton', { name: 'Minutes' }).fill('45');
+      await logWorkDialog.getByRole('textbox', { name: 'Note' }).fill('Reviewed retry budget.');
+      await clickWithFallback(
+        logWorkDialog.getByRole('button', { name: 'Log Work', exact: true })
+      );
+      await expect(logWorkDialog).toBeHidden();
+      await expect(
+        detailFrame.getByRole('status').filter({ hasText: 'Logged 45 minutes.' })
+      ).toBeVisible();
     } finally {
       await cleanupExtensionHost(session);
     }

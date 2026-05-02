@@ -362,18 +362,6 @@ body.gallery-theme-high-contrast {
   -webkit-line-clamp: 3;
 }
 
-.detail-status-line {
-  flex: 0 0 auto;
-  max-width: 180px;
-  overflow: hidden;
-  color: var(--gallery-muted);
-  font-size: 12px;
-  line-height: 1.5;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .detail-section {
   display: grid;
   gap: 10px;
@@ -459,58 +447,31 @@ body.gallery-theme-high-contrast {
   min-width: 0;
 }
 
-.detail-actions {
+.detail-header-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 10px;
-  min-width: 0;
-}
-
-.detail-action-card {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--gallery-border);
-  border-radius: 6px;
-  background: color-mix(in oklab, var(--gallery-side) 88%, transparent);
-}
-
-.detail-action-title {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  grid-template-columns: minmax(138px, 180px) auto;
+  align-items: end;
+  justify-content: end;
   gap: 8px;
   min-width: 0;
 }
 
-.detail-action-title strong,
-.detail-action-title span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.detail-action-title strong {
-  color: var(--gallery-text);
-  font-size: 13px;
-}
-
-.detail-action-title span,
-.detail-action-card label span {
-  color: var(--gallery-muted);
-  font-size: 12px;
-}
-
-.detail-action-card label {
+.detail-status-control {
   display: grid;
   gap: 4px;
   min-width: 0;
 }
 
-.detail-action-card input,
-.detail-action-card select,
-.detail-action-card textarea {
+.detail-status-control span,
+.detail-worklog-form label span,
+.detail-dialog-heading span {
+  color: var(--gallery-muted);
+  font-size: 12px;
+}
+
+.detail-status-control select,
+.detail-worklog-form input,
+.detail-worklog-form textarea {
   width: 100%;
   min-height: 30px;
   padding: 5px 7px;
@@ -521,34 +482,133 @@ body.gallery-theme-high-contrast {
   font: inherit;
 }
 
-.detail-action-card textarea {
-  min-height: 58px;
-  resize: vertical;
+.detail-status-control select:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
-.detail-action-card button {
-  justify-self: start;
+.detail-status-control select:focus-visible,
+.detail-log-work-button:focus-visible,
+.detail-worklog-form input:focus-visible,
+.detail-worklog-form textarea:focus-visible,
+.detail-dialog-close:focus-visible,
+.detail-dialog-primary:focus-visible,
+.detail-dialog-secondary:focus-visible {
+  outline: 2px solid var(--gallery-focus);
+  outline-offset: 2px;
+}
+
+.detail-log-work-button,
+.detail-dialog-primary,
+.detail-dialog-secondary,
+.detail-dialog-close {
   min-height: 30px;
-  padding: 0 10px;
-  border: 1px solid transparent;
+  border: 1px solid var(--gallery-border);
   border-radius: 4px;
-  background: var(--gallery-accent);
-  color: #ffffff;
+  background: color-mix(in oklab, var(--gallery-side) 88%, transparent);
+  color: var(--gallery-text);
   font: inherit;
   font-weight: 650;
 }
 
-.detail-action-card button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
+.detail-log-work-button,
+.detail-dialog-primary {
+  border-color: transparent;
+  background: var(--gallery-accent);
+  color: #ffffff;
+}
+
+.detail-log-work-button {
+  padding: 0 10px;
+}
+
+.detail-log-work-button:hover,
+.detail-dialog-primary:hover {
+  filter: brightness(1.05);
+}
+
+.detail-dialog-secondary:hover,
+.detail-dialog-close:hover {
+  border-color: color-mix(in oklab, var(--gallery-accent) 55%, var(--gallery-border));
 }
 
 .detail-action-status {
   grid-column: 1 / -1;
-  min-height: 20px;
+  min-height: 0;
   margin: 0;
   color: var(--gallery-muted);
   font-size: 12px;
+  text-align: right;
+}
+
+.detail-action-status:empty {
+  display: none;
+}
+
+.detail-worklog-dialog {
+  width: min(420px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--gallery-border);
+  border-radius: 8px;
+  background: var(--gallery-bg);
+  color: var(--gallery-text);
+}
+
+.detail-worklog-dialog::backdrop {
+  background: rgb(0 0 0 / 52%);
+}
+
+.detail-worklog-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.detail-dialog-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detail-dialog-heading h2 {
+  margin: 2px 0 0;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.detail-dialog-close {
+  width: 30px;
+  padding: 0;
+  font-size: 18px;
+}
+
+.detail-worklog-form label {
+  display: grid;
+  gap: 4px;
+}
+
+.detail-worklog-form textarea {
+  min-height: 94px;
+  resize: vertical;
+}
+
+.detail-dialog-status {
+  min-height: 18px;
+  margin: 0;
+  color: var(--gallery-muted);
+  font-size: 12px;
+}
+
+.detail-dialog-actions {
+  display: flex;
+  justify-content: end;
+  gap: 8px;
+}
+
+.detail-dialog-primary,
+.detail-dialog-secondary {
+  padding: 0 12px;
 }
 
 .detail-technical-notes {
@@ -759,5 +819,15 @@ body.gallery-theme-high-contrast {
 @media (max-width: 920px) {
   .editor-surface {
     padding: 20px;
+  }
+
+  .editor-detail-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .detail-header-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-content: stretch;
   }
 }

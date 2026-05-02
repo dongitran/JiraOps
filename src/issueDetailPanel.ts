@@ -1,57 +1,11 @@
 import * as vscode from 'vscode';
 
 import type { DashboardIssue } from './dashboardItems';
+import { ISSUE_DETAIL_SCRIPT_BODY } from './issueDetailPanelScript';
 import type { JiraIssueAttachment, JiraIssueComment, JiraIssueDetail, JiraIssueTransition } from './jiraIssueDetails';
 import { isLogWorkMessage, isOpenExternalLinkMessage, isTransitionIssueMessage } from './webviewMessages';
 
 const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
-const ISSUE_DETAIL_SCRIPT_BODY = `
-      const vscode = acquireVsCodeApi();
-      for (const link of document.querySelectorAll('a[href]')) {
-        link.addEventListener('click', (event) => {
-          event.preventDefault();
-          vscode.postMessage({ type: 'jiraOps.openExternalLink', url: link.href });
-        });
-      }
-      for (const form of document.querySelectorAll('form[data-detail-action]')) {
-        form.addEventListener('submit', (event) => {
-          event.preventDefault();
-          if (form.dataset.detailAction === 'status') {
-            const transition = new FormData(form).get('transition');
-            vscode.postMessage({
-              type: 'jiraOps.transitionIssue',
-              issueKey: form.dataset.issueKey,
-              transitionId: typeof transition === 'string' ? transition : '',
-            });
-            return;
-          }
-          const formData = new FormData(form);
-          const minutes = Number.parseInt(String(formData.get('minutes') ?? ''), 10);
-          vscode.postMessage({
-            type: 'jiraOps.logWork',
-            issueKey: form.dataset.issueKey,
-            minutes,
-            comment: String(formData.get('comment') ?? ''),
-          });
-        });
-      }
-      window.addEventListener('message', (event) => {
-        if (!event.data || event.data.type !== 'jiraOps.detailActionResult') {
-          return;
-        }
-        const actionStatus = document.querySelector('.detail-action-status');
-        if (actionStatus instanceof HTMLElement) {
-          actionStatus.textContent = event.data.message;
-          actionStatus.dataset.tone = event.data.success === true ? 'success' : 'error';
-        }
-        if (event.data.success === true && typeof event.data.status === 'string' && event.data.status.length > 0) {
-          const statusLine = document.querySelector('.detail-status-line');
-          if (statusLine instanceof HTMLElement) {
-            statusLine.textContent = event.data.status;
-          }
-        }
-      });
-`;
 
 export interface ShowIssueDetailPanelOptions {
   readonly actions?: IssueDetailActionHandlers;
@@ -364,21 +318,27 @@ function renderIssueDetailLoading(issue: DashboardIssue): string {
 function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): string {
   return `
     <main class="detail-shell" aria-label="${escapeAttribute(issue.key)} details">
-      <header class="detail-page-header">
-        <div class="detail-page-title">
-          <span class="issue-key">${escapeHtml(issue.key)}</span>
-          <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
-        </div>
-        <span class="detail-status-line" aria-label="Issue status">${escapeHtml(issue.status)}</span>
-      </header>
-      ${renderIssueActionsSection(issue, detail)}
+      ${renderIssueDetailHeader(issue, detail)}
       ${renderIssueContentSection(detail)}
       ${renderMergeRequestSection(issue)}
       ${renderCloneMergeRequestSection(issue)}
       ${renderWebLinksSection(issue)}
       ${renderTechnicalNotesSection(detail)}
       ${renderAttachmentsSection(detail.attachments)}
+      ${renderWorklogDialog(issue)}
     </main>
+  `;
+}
+
+function renderIssueDetailHeader(issue: DashboardIssue, detail: JiraIssueDetail): string {
+  return `
+    <header class="detail-page-header">
+      <div class="detail-page-title">
+        <span class="issue-key">${escapeHtml(issue.key)}</span>
+        <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
+      </div>
+      ${renderHeaderActions(issue, detail)}
+    </header>
   `;
 }
 
@@ -400,26 +360,48 @@ function renderIssueContentSection(detail: JiraIssueDetail): string {
   `;
 }
 
-function renderIssueActionsSection(issue: DashboardIssue, detail: JiraIssueDetail): string {
+function renderHeaderActions(issue: DashboardIssue, detail: JiraIssueDetail): string {
   return `
-    <section class="detail-actions" aria-label="Issue actions">
-      <form class="detail-action-card" data-detail-action="status" data-issue-key="${escapeAttribute(issue.key)}">
-        <div class="detail-action-title">
-          <strong>Change Status</strong>
-          <span>${escapeHtml(detail.status)}</span>
-        </div>
-        <label>
-          <span>Next status</span>
-          <select name="transition" ${detail.transitions.length === 0 ? 'disabled' : ''}>
-            ${renderTransitionOptions(detail.transitions)}
-          </select>
-        </label>
-        <button type="submit" ${detail.transitions.length === 0 ? 'disabled' : ''}>Change Status</button>
-      </form>
-      <form class="detail-action-card" data-detail-action="work" data-issue-key="${escapeAttribute(issue.key)}">
-        <div class="detail-action-title">
-          <strong>Log Work</strong>
-          <span>Minutes spent</span>
+    <div class="detail-header-actions" aria-label="Issue actions">
+      <label class="detail-status-control">
+        <span>Status</span>
+        <select name="transition" aria-label="Issue status" data-detail-status-select data-issue-key="${escapeAttribute(issue.key)}" ${detail.transitions.length === 0 ? 'disabled' : ''}>
+          ${renderTransitionOptions(issue.status, detail.transitions)}
+        </select>
+      </label>
+      <button class="detail-log-work-button" type="button" data-detail-action="open-worklog">Log Work</button>
+      <p class="detail-action-status" role="status" aria-live="polite"></p>
+    </div>
+  `;
+}
+
+function renderTransitionOptions(
+  currentStatus: string,
+  transitions: readonly JiraIssueTransition[]
+): string {
+  const current = `<option value="" data-status="${escapeAttribute(currentStatus)}" selected>${escapeHtml(currentStatus)}</option>`;
+  if (transitions.length === 0) {
+    return current;
+  }
+
+  const transitionOptions = transitions
+    .map((transition) => {
+      return `<option value="${escapeAttribute(transition.id)}" data-status="${escapeAttribute(transition.toStatus)}">${escapeHtml(transition.toStatus)}</option>`;
+    })
+    .join('');
+  return `${current}${transitionOptions}`;
+}
+
+function renderWorklogDialog(issue: DashboardIssue): string {
+  return `
+    <dialog class="detail-worklog-dialog" aria-label="Log Work">
+      <form class="detail-worklog-form" data-detail-action="work" data-issue-key="${escapeAttribute(issue.key)}">
+        <div class="detail-dialog-heading">
+          <div>
+            <span>${escapeHtml(issue.key)}</span>
+            <h2>Log Work</h2>
+          </div>
+          <button type="button" class="detail-dialog-close" data-detail-action="close-worklog" aria-label="Close Log Work">&times;</button>
         </div>
         <label>
           <span>Minutes</span>
@@ -427,25 +409,16 @@ function renderIssueActionsSection(issue: DashboardIssue, detail: JiraIssueDetai
         </label>
         <label>
           <span>Note</span>
-          <textarea name="comment" rows="2" autocomplete="off" placeholder="Add a short work note&hellip;"></textarea>
+          <textarea name="comment" rows="4" autocomplete="off" placeholder="Add a short work note&hellip;"></textarea>
         </label>
-        <button type="submit">Log Work</button>
+        <p class="detail-dialog-status" role="status" aria-live="polite"></p>
+        <div class="detail-dialog-actions">
+          <button type="button" class="detail-dialog-secondary" data-detail-action="close-worklog">Cancel</button>
+          <button type="submit" class="detail-dialog-primary" data-detail-action="submit-worklog">Log Work</button>
+        </div>
       </form>
-      <p class="detail-action-status" role="status" aria-live="polite"></p>
-    </section>
+    </dialog>
   `;
-}
-
-function renderTransitionOptions(transitions: readonly JiraIssueTransition[]): string {
-  if (transitions.length === 0) {
-    return '<option value="">No available transitions</option>';
-  }
-
-  return transitions
-    .map((transition) => {
-      return `<option value="${escapeAttribute(transition.id)}">${escapeHtml(transition.name)} -> ${escapeHtml(transition.toStatus)}</option>`;
-    })
-    .join('');
 }
 
 function renderTechnicalNotesSection(detail: JiraIssueDetail): string {
