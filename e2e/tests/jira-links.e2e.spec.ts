@@ -159,6 +159,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
         detailFrame.getByRole('combobox', { name: 'Issue status' }).getByRole('option').first()
       ).toHaveText('In Progress');
       await expectCompactDetailHeaderActions(detailFrame);
+      await expectLongDetailTitleDoesNotOverlapStatus(detailFrame);
       await expectTechnicalNotesNearAttachments(detailFrame);
     } finally {
       await cleanupExtensionHost(session);
@@ -203,6 +204,26 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         detailFrame.getByRole('status').filter({ hasText: 'Logged 45 minutes.' })
       ).toBeVisible();
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User can open issue details in a narrow editor with status controls on the issue key row', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      await session.window.setViewportSize({ width: 1200, height: 827 });
+      const frame = await openLoadedDashboard(session.window);
+
+      await clickWithFallback(
+        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
+          name: 'Details',
+        })
+      );
+
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      await expectNarrowDetailHeaderActionsOnIssueKeyRow(detailFrame);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -543,15 +564,22 @@ async function expectTableBordersAreVisible(table: Locator): Promise<void> {
 async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
   await expect(frame.getByLabel('Issue actions').getByText('Status', { exact: true })).toHaveCount(0);
   const layout = await frame.evaluate(() => {
+    const header = document.querySelector('.detail-page-header');
+    const metaRow = document.querySelector('.detail-page-meta-row');
+    const actions = document.querySelector('.detail-header-actions');
     const select = document.querySelector('[data-detail-status-select]');
     const button = document.querySelector('[data-detail-action="open-worklog"]');
     const issueKey = document.querySelector('.issue-key');
+    const title = document.querySelector('.detail-page-title h1');
     const hiddenLabel = document.querySelector('.detail-status-control .visually-hidden');
     if (
+      !(header instanceof HTMLElement) ||
+      !(metaRow instanceof HTMLElement) ||
+      !(actions instanceof HTMLElement) ||
       !(select instanceof HTMLElement) ||
       !(button instanceof HTMLElement) ||
       !(issueKey instanceof HTMLElement) ||
-      !(document.querySelector('.detail-page-title h1') instanceof HTMLElement) ||
+      !(title instanceof HTMLElement) ||
       !(hiddenLabel instanceof HTMLElement)
     ) {
       return null;
@@ -560,18 +588,20 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
     const selectBox = select.getBoundingClientRect();
     const buttonBox = button.getBoundingClientRect();
     const issueKeyBox = issueKey.getBoundingClientRect();
-    const titleBox = document.querySelector('.detail-page-title h1')?.getBoundingClientRect();
+    const titleBox = title.getBoundingClientRect();
+    const actionsBox = actions.getBoundingClientRect();
     const hiddenStyle = window.getComputedStyle(hiddenLabel);
-    const actionStyle = window.getComputedStyle(select.closest('.detail-header-actions') ?? select);
+    const actionStyle = window.getComputedStyle(actions);
     const overlapsTitle =
-      titleBox !== undefined &&
       selectBox.left < titleBox.right &&
       titleBox.left < selectBox.right &&
       selectBox.top < titleBox.bottom &&
       titleBox.top < selectBox.bottom;
     return {
+      actionAboveTitle: actionsBox.bottom <= titleBox.top,
       actionMarginBottom: actionStyle.marginBottom,
       buttonDoesNotWrap: button.scrollHeight <= button.clientHeight + 1,
+      headerDisplay: window.getComputedStyle(header).display,
       hiddenLabelIsVisualOnly:
         hiddenStyle.position === 'absolute' &&
         hiddenStyle.width === '1px' &&
@@ -580,19 +610,141 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
       sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
       sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
       statusDoesNotOverlapTitle: !overlapsTitle,
+      titleGap: Math.round(titleBox.top - actionsBox.bottom),
       whiteSpace: window.getComputedStyle(button).whiteSpace,
     };
   });
 
-  expect(layout).toEqual({
-    actionMarginBottom: '6px',
+  if (layout === null) {
+    throw new Error('Expected detail header layout to be measurable.');
+  }
+
+  expect(layout).toMatchObject({
+    actionAboveTitle: true,
+    actionMarginBottom: '0px',
     buttonDoesNotWrap: true,
+    headerDisplay: 'grid',
     hiddenLabelIsVisualOnly: true,
     sameActionRow: true,
     sameIssueKeyRow: true,
     statusDoesNotOverlapTitle: true,
     whiteSpace: 'nowrap',
   });
+  expect(layout.titleGap).toBeGreaterThanOrEqual(0);
+  expect(layout.titleGap).toBeLessThanOrEqual(6);
+}
+
+async function expectNarrowDetailHeaderActionsOnIssueKeyRow(frame: Frame): Promise<void> {
+  await expect(frame.getByLabel('Issue actions')).toBeVisible();
+  const layout = await frame.evaluate(() => {
+    const shell = document.querySelector('.detail-shell');
+    const header = document.querySelector('.detail-page-header');
+    const actions = document.querySelector('.detail-header-actions');
+    const issueKey = document.querySelector('.issue-key');
+    const title = document.querySelector('.detail-page-title h1');
+    const select = document.querySelector('[data-detail-status-select]');
+    const button = document.querySelector('[data-detail-action="open-worklog"]');
+    if (
+      !(shell instanceof HTMLElement) ||
+      !(header instanceof HTMLElement) ||
+      !(actions instanceof HTMLElement) ||
+      !(issueKey instanceof HTMLElement) ||
+      !(title instanceof HTMLElement) ||
+      !(select instanceof HTMLElement) ||
+      !(button instanceof HTMLElement)
+    ) {
+      return null;
+    }
+
+    const titleBox = title.getBoundingClientRect();
+    const actionsBox = actions.getBoundingClientRect();
+    const issueKeyBox = issueKey.getBoundingClientRect();
+    const selectBox = select.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    const overlapsTitle =
+      selectBox.left < titleBox.right &&
+      titleBox.left < selectBox.right &&
+      selectBox.top < titleBox.bottom &&
+      titleBox.top < selectBox.bottom;
+    return {
+      actionAboveTitle: actionsBox.bottom <= titleBox.top,
+      actionMarginBottom: window.getComputedStyle(actions).marginBottom,
+      headerDisplay: window.getComputedStyle(header).display,
+      sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
+      sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
+      shellWidth: Math.round(shell.getBoundingClientRect().width),
+      statusDoesNotOverlapTitle: !overlapsTitle,
+      titleGap: Math.round(titleBox.top - actionsBox.bottom),
+    };
+  });
+
+  expect(layout).toEqual({
+    actionAboveTitle: true,
+    actionMarginBottom: '0px',
+    headerDisplay: 'grid',
+    sameActionRow: true,
+    sameIssueKeyRow: true,
+    shellWidth: expect.any(Number),
+    statusDoesNotOverlapTitle: true,
+    titleGap: expect.any(Number),
+  });
+  expect(layout?.shellWidth).toBeGreaterThan(340);
+  expect(layout?.shellWidth).toBeLessThan(920);
+  expect(layout?.titleGap).toBeGreaterThanOrEqual(0);
+  expect(layout?.titleGap).toBeLessThanOrEqual(6);
+}
+
+async function expectLongDetailTitleDoesNotOverlapStatus(frame: Frame): Promise<void> {
+  const layout = await frame.evaluate(() => {
+    const title = document.querySelector('.detail-page-title h1');
+    const actions = document.querySelector('.detail-header-actions');
+    const select = document.querySelector('[data-detail-status-select]');
+    const button = document.querySelector('[data-detail-action="open-worklog"]');
+    const header = document.querySelector('.detail-page-header');
+    const issueKey = document.querySelector('.issue-key');
+    if (
+      !(title instanceof HTMLElement) ||
+      !(actions instanceof HTMLElement) ||
+      !(select instanceof HTMLElement) ||
+      !(button instanceof HTMLElement) ||
+      !(header instanceof HTMLElement) ||
+      !(issueKey instanceof HTMLElement)
+    ) {
+      return null;
+    }
+
+    const longTitle = `Demo${'X'.repeat(140)}`;
+    title.textContent = longTitle;
+    title.setAttribute('title', longTitle);
+    const titleBox = title.getBoundingClientRect();
+    const actionsBox = actions.getBoundingClientRect();
+    const issueKeyBox = issueKey.getBoundingClientRect();
+    const selectBox = select.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    return {
+      actionAboveTitle: actionsBox.bottom <= titleBox.top,
+      actionWidth: Math.round(actionsBox.width),
+      headerDisplay: window.getComputedStyle(header).display,
+      sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
+      sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
+      statusDoesNotOverlapTitle: !(
+        selectBox.left < titleBox.right &&
+        titleBox.left < selectBox.right &&
+        selectBox.top < titleBox.bottom &&
+        titleBox.top < selectBox.bottom
+      ),
+    };
+  });
+
+  expect(layout).toEqual({
+    actionAboveTitle: true,
+    actionWidth: expect.any(Number),
+    headerDisplay: 'grid',
+    sameActionRow: true,
+    sameIssueKeyRow: true,
+    statusDoesNotOverlapTitle: true,
+  });
+  expect(layout?.actionWidth).toBeGreaterThanOrEqual(278);
 }
 
 async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> {

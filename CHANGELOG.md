@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.20
+
+- Keep Details status actions on the Jira key row while tightening top and bottom header spacing in the prototype and extension views.
+
 ## 0.1.19
 
 - Add right-side spacing to the sidebar Refresh and Disconnect buttons.

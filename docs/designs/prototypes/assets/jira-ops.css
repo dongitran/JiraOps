@@ -847,7 +847,7 @@ a:focus-visible {
 
 .jira-detail-page {
   min-height: 100vh;
-  padding: 24px;
+  padding: 12px 24px 20px;
 }
 
 .jira-detail-loading-page {
@@ -893,17 +893,22 @@ a:focus-visible {
 }
 
 .detail-page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 18px;
+  display: grid;
+  gap: 4px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
+}
+
+.detail-page-meta-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
 }
 
 .detail-page-title {
   display: grid;
-  gap: 6px;
   min-width: 0;
 }
 
@@ -1011,13 +1016,14 @@ a:focus-visible {
 
 .detail-header-actions {
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: minmax(132px, 176px) max-content;
   align-items: start;
   align-self: start;
   justify-content: end;
   gap: 8px;
   min-width: 0;
-  margin-bottom: 6px;
+  margin-bottom: 0;
 }
 
 .detail-status-control {
@@ -1418,16 +1424,6 @@ a:focus-visible {
   }
 
   .jira-detail-page {
-    padding: 18px;
-  }
-
-  .detail-page-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .detail-header-actions {
-    grid-template-columns: minmax(0, 1fr) auto;
-    justify-content: stretch;
+    padding: 12px 18px 18px;
   }
 }
