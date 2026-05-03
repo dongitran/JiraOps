@@ -156,6 +156,7 @@ describe('jiraAdfRenderer', () => {
     });
 
     expect(sections).toEqual({
+      activityHtml: '',
       mainHtml:
         '<h3>Overview</h3><p>Main implementation notes.</p><h3>Rollout</h3><p>Ship behind the alert toggle.</p>',
       technicalNotesHtml: '<p>Keep the idempotency guard.</p>',
@@ -184,6 +185,7 @@ describe('jiraAdfRenderer', () => {
     });
 
     expect(sections).toEqual({
+      activityHtml: '',
       mainHtml: '<p>Main ticket content.</p>',
       technicalNotesHtml: '<p>Keep retry budget in place.</p>',
     });
@@ -230,9 +232,62 @@ describe('jiraAdfRenderer', () => {
     });
 
     expect(sections).toEqual({
+      activityHtml: '',
       mainHtml:
         '<h3>Test Strategy</h3><p>Run checkout and reconciliation regression.</p><h3>Rollout</h3><p>Ship after QA sign-off.</p>',
       technicalNotesHtml: '<p>Keep the rollback query pinned.</p>',
+    });
+  });
+
+  test('splits activity out of technical notes and main description', () => {
+    const sections = renderAdfHtmlSections({
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Overview' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Main ticket content.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Technical Note:' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Keep retry budget in place.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 4 },
+          content: [{ type: 'text', text: 'Activity' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Current User moved this issue to review.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Rollout' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Ship after QA sign-off.' }],
+        },
+      ],
+    });
+
+    expect(sections).toEqual({
+      activityHtml: '<p>Current User moved this issue to review.</p>',
+      mainHtml:
+        '<h3>Overview</h3><p>Main ticket content.</p><h3>Rollout</h3><p>Ship after QA sign-off.</p>',
+      technicalNotesHtml: '<p>Keep retry budget in place.</p>',
     });
   });
 });

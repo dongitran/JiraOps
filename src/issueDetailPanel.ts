@@ -323,6 +323,7 @@ function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): stri
       ${renderMergeRequestSection(issue)}
       ${renderCloneMergeRequestSection(issue)}
       ${renderWebLinksSection(issue)}
+      ${renderActivitySection(detail)}
       ${renderTechnicalNotesSection(detail)}
       ${renderAttachmentsSection(detail.attachments)}
       ${renderWorklogDialog(issue)}
@@ -432,6 +433,19 @@ function renderTechnicalNotesSection(detail: JiraIssueDetail): string {
     </div>
   `;
   return renderDetailSection('Technical notes', null, content);
+}
+
+function renderActivitySection(detail: JiraIssueDetail): string {
+  if (detail.activityHtml.length === 0) {
+    return '';
+  }
+
+  const content = `
+    <div class="detail-content jira-adf-content">
+      ${detail.activityHtml}
+    </div>
+  `;
+  return renderDetailSection('Activity', null, content);
 }
 
 function renderComments(comments: readonly JiraIssueComment[]): string {

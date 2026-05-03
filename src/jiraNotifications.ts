@@ -101,6 +101,22 @@ export function markIssueNotificationsRead(
   }));
 }
 
+export function seedAssignedIssueNotificationHistory(options: {
+  readonly existingNotifications: readonly JiraOpsNotification[];
+  readonly issues: readonly JiraAssignedIssue[];
+}): readonly JiraOpsNotification[] {
+  const knownNotificationIds = new Set(
+    options.existingNotifications.map((notification) => notification.id)
+  );
+  const seededNotifications = options.issues
+    .map(createAssignedIssueHistoryNotification)
+    .filter((notification) => !knownNotificationIds.has(notification.id));
+  return [...seededNotifications, ...options.existingNotifications].slice(
+    0,
+    MAX_NOTIFICATION_HISTORY
+  );
+}
+
 export function formatNotificationLogSummary(
   notifications: readonly JiraOpsNotification[]
 ): string {
@@ -239,6 +255,19 @@ function createIssueNotification(
     issueKey: issue.key,
     title: `${issue.key} was ${reasonText}`,
     unread: true,
+    updated: issue.updated,
+  };
+}
+
+function createAssignedIssueHistoryNotification(
+  issue: JiraAssignedIssue
+): JiraOpsNotification {
+  return {
+    detail: 'Current assigned issue activity captured by JiraOps.',
+    id: `${issue.key}:${issue.updated}`,
+    issueKey: issue.key,
+    title: `${issue.key} assigned issue activity`,
+    unread: false,
     updated: issue.updated,
   };
 }

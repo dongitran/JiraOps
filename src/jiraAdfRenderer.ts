@@ -2,6 +2,7 @@ type AdfNode = Record<string, unknown>;
 type NodeRenderer = (node: AdfNode) => string;
 
 export interface RenderedAdfHtmlSections {
+  readonly activityHtml: string;
   readonly mainHtml: string;
   readonly technicalNotesHtml: string;
 }
@@ -11,10 +12,16 @@ interface AdfMark {
   readonly attrs: AdfNode | null;
 }
 
-interface TechnicalNotesSection {
-  readonly end: number;
-  readonly notesContent: readonly unknown[];
-  readonly start: number;
+interface ExtractedAdfSections {
+  readonly activityContent: readonly unknown[];
+  readonly mainContent: readonly unknown[];
+  readonly technicalNotesContent: readonly unknown[];
+}
+
+interface ExtractableSectionMarker {
+  readonly kind: 'activity' | 'technicalNotes';
+  readonly level: number;
+  readonly nodeType: 'heading' | 'paragraph';
 }
 
 const NODE_RENDERERS: Record<string, NodeRenderer> = {
@@ -47,28 +54,18 @@ export function renderAdfHtmlSections(value: unknown): RenderedAdfHtmlSections {
   const content = getTopLevelContent(value);
   if (content === null) {
     return {
+      activityHtml: '',
       mainHtml: renderAdfHtml(value),
       technicalNotesHtml: '',
     };
   }
 
-  const section = findTechnicalNotesSection(content);
-  if (section === null) {
-    return {
-      mainHtml: renderChildren({ content, type: 'doc' }),
-      technicalNotesHtml: '',
-    };
-  }
+  const sections = splitExtractableSections(content);
 
   return {
-    mainHtml: renderChildren({
-      content: [...content.slice(0, section.start), ...content.slice(section.end)],
-      type: 'doc',
-    }),
-    technicalNotesHtml: renderChildren({
-      content: section.notesContent,
-      type: 'doc',
-    }),
+    activityHtml: renderChildren({ content: sections.activityContent, type: 'doc' }),
+    mainHtml: renderChildren({ content: sections.mainContent, type: 'doc' }),
+    technicalNotesHtml: renderChildren({ content: sections.technicalNotesContent, type: 'doc' }),
   };
 }
 
@@ -190,71 +187,114 @@ function getTopLevelContent(value: unknown): readonly unknown[] | null {
   return Array.isArray(content) ? content : null;
 }
 
-function findTechnicalNotesSection(
-  content: readonly unknown[]
-): TechnicalNotesSection | null {
-  for (let index = 0; index < content.length; index += 1) {
-    const node = content[index];
-    if (isTechnicalNotesHeading(node)) {
-      const end = findSectionEnd(content, index, headingLevel(node));
-      return {
-        start: index,
-        end,
-        notesContent: content.slice(index + 1, end),
-      };
+function splitExtractableSections(content: readonly unknown[]): ExtractedAdfSections {
+  const consumedIndexes = new Set<number>();
+  const activityContent: unknown[] = [];
+  const technicalNotesContent: unknown[] = [];
+  let index = 0;
+  while (index < content.length) {
+    const marker = resolveExtractableSectionMarker(content[index]);
+    if (marker === null) {
+      index += 1;
+      continue;
     }
 
-    if (isTechnicalNotesParagraphMarker(node)) {
-      const end = findParagraphSectionEnd(content, index);
-      return {
-        start: index,
-        end,
-        notesContent: content.slice(index + 1, end),
-      };
-    }
+    const end = findExtractableSectionEnd(content, index, marker);
+    appendSectionContent(marker.kind, content.slice(index + 1, end), {
+      activityContent,
+      technicalNotesContent,
+    });
+    markConsumedIndexes(consumedIndexes, index, end);
+    index = end;
   }
-  return null;
+
+  return {
+    activityContent,
+    mainContent: content.filter((_, contentIndex) => !consumedIndexes.has(contentIndex)),
+    technicalNotesContent,
+  };
 }
 
-function findSectionEnd(
+function appendSectionContent(
+  kind: ExtractableSectionMarker['kind'],
+  content: readonly unknown[],
+  sections: {
+    readonly activityContent: unknown[];
+    readonly technicalNotesContent: unknown[];
+  }
+): void {
+  if (kind === 'activity') {
+    sections.activityContent.push(...content);
+    return;
+  }
+
+  sections.technicalNotesContent.push(...content);
+}
+
+function markConsumedIndexes(indexes: Set<number>, start: number, end: number): void {
+  for (let index = start; index < end; index += 1) {
+    indexes.add(index);
+  }
+}
+
+function findExtractableSectionEnd(
   content: readonly unknown[],
   startIndex: number,
-  startLevel: number
+  marker: ExtractableSectionMarker
 ): number {
   for (let index = startIndex + 1; index < content.length; index += 1) {
-    const node = content[index];
-    if (isHeading(node) && headingLevel(node) <= startLevel) {
+    if (resolveExtractableSectionMarker(content[index]) !== null) {
+      return index;
+    }
+
+    if (isSectionBoundary(content[index], marker)) {
       return index;
     }
   }
   return content.length;
 }
 
-function findParagraphSectionEnd(content: readonly unknown[], startIndex: number): number {
-  for (let index = startIndex + 1; index < content.length; index += 1) {
-    if (isHeading(content[index])) {
-      return index;
-    }
-  }
-  return content.length;
-}
-
-function isTechnicalNotesHeading(value: unknown): boolean {
+function isSectionBoundary(value: unknown, marker: ExtractableSectionMarker): boolean {
   if (!isHeading(value)) {
     return false;
   }
 
-  const heading = normalizeHeadingText(extractTextFromAdf(value));
-  return heading === 'technical note' || heading === 'technical notes';
+  return marker.nodeType === 'paragraph' || headingLevel(value) <= marker.level;
 }
 
-function isTechnicalNotesParagraphMarker(value: unknown): boolean {
-  if (!isParagraph(value)) {
-    return false;
+function resolveExtractableSectionMarker(
+  value: unknown
+): ExtractableSectionMarker | null {
+  if (isHeading(value)) {
+    const kind = resolveSectionKind(value);
+    return kind === null
+      ? null
+      : {
+          kind,
+          level: headingLevel(value),
+          nodeType: 'heading',
+        };
   }
 
+  if (!isParagraph(value)) {
+    return null;
+  }
+
+  const kind = resolveSectionKind(value);
+  return kind === null ? null : { kind, level: 3, nodeType: 'paragraph' };
+}
+
+function resolveSectionKind(value: unknown): ExtractableSectionMarker['kind'] | null {
   const text = normalizeHeadingText(extractTextFromAdf(value));
-  return text === 'technical note' || text === 'technical notes';
+  if (text === 'activity') {
+    return 'activity';
+  }
+
+  if (text === 'technical note' || text === 'technical notes') {
+    return 'technicalNotes';
+  }
+
+  return null;
 }
 
 function isHeading(value: unknown): value is AdfNode {

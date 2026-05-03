@@ -9,6 +9,7 @@ import {
   markAllNotificationsRead,
   normalizeJiraOpsNotificationState,
   readJiraOpsNotificationState,
+  seedAssignedIssueNotificationHistory,
   writeJiraOpsNotificationState,
 } from './jiraNotifications';
 
@@ -134,6 +135,57 @@ describe('JiraOps assigned issue notifications', () => {
     const readNotifications = markAllNotificationsRead(result.notifications);
     expect(readNotifications).toHaveLength(1);
     expect(getUnreadNotificationCount(readNotifications)).toBe(0);
+  });
+
+  test('seeds assigned issue notification history as read items without summaries', () => {
+    const notifications = seedAssignedIssueNotificationHistory({
+      existingNotifications: [],
+      issues: [
+        assignedIssue('OPS-123', '2026-05-01T08:24:00.000Z'),
+        assignedIssue('OPS-456', '2026-05-01T08:18:00.000Z', 'Another sensitive summary'),
+      ],
+    });
+
+    expect(notifications).toEqual([
+      {
+        id: 'OPS-123:2026-05-01T08:24:00.000Z',
+        issueKey: 'OPS-123',
+        title: 'OPS-123 assigned issue activity',
+        detail: 'Current assigned issue activity captured by JiraOps.',
+        updated: '2026-05-01T08:24:00.000Z',
+        unread: false,
+      },
+      {
+        id: 'OPS-456:2026-05-01T08:18:00.000Z',
+        issueKey: 'OPS-456',
+        title: 'OPS-456 assigned issue activity',
+        detail: 'Current assigned issue activity captured by JiraOps.',
+        updated: '2026-05-01T08:18:00.000Z',
+        unread: false,
+      },
+    ]);
+    expect(JSON.stringify(notifications)).not.toContain('Sensitive customer escalation summary');
+    expect(JSON.stringify(notifications)).not.toContain('Another sensitive summary');
+  });
+
+  test('does not duplicate seeded history already stored for the same timestamp', () => {
+    const existing = [
+      {
+        id: 'OPS-123:2026-05-01T08:24:00.000Z',
+        issueKey: 'OPS-123',
+        title: 'OPS-123 assigned issue activity',
+        detail: 'Current assigned issue activity captured by JiraOps.',
+        updated: '2026-05-01T08:24:00.000Z',
+        unread: false,
+      },
+    ];
+
+    const notifications = seedAssignedIssueNotificationHistory({
+      existingNotifications: existing,
+      issues: [assignedIssue('OPS-123', '2026-05-01T08:24:00.000Z')],
+    });
+
+    expect(notifications).toEqual(existing);
   });
 
   test('normalizes persisted notification history and baseline safely', () => {

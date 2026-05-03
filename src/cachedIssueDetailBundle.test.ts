@@ -23,6 +23,7 @@ function dashboardIssue(): DashboardIssue {
 
 function issueDetail(): JiraIssueDetail {
   return {
+    activityHtml: '',
     attachments: [],
     comments: [],
     descriptionHtml: '<p>Ready</p>',

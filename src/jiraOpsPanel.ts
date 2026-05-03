@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { applyJiraOAuthCredentialsToEnv, ensureJiraOAuthCredentials, getJiraOAuthCredentials } from './jiraCredentials';
 import {
+  buildAssignedIssuesSearchBody,
   fetchAssignedJiraIssues,
   OAuthJiraTokenProvider,
   type JiraAssignedIssue,
@@ -19,6 +20,7 @@ import {
   JiraConnectionRequiredError,
   resolveNotificationPollIntervalMs,
   testConnectionStatus,
+  toAssignedIssue,
   waitForConfiguredDetailDelay,
   webLinkHost,
   type JiraCredentialInputOptions,
@@ -27,6 +29,7 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsRead,
   markIssueNotificationsRead,
+  seedAssignedIssueNotificationHistory,
   type IssueUpdateBaseline,
   type IssueUpdateNotificationResult,
   type JiraOpsNotification,
@@ -386,6 +389,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
 
   private async handleOpenNotifications(): Promise<void> {
     this.outputChannel.appendLine('Opening JiraOps notifications.');
+    this.seedNotificationHistoryFromDashboard('notifications view');
     this.outputChannel.appendLine(
       `Loaded JiraOps notification history: ${String(this.notifications.length)} item(s), ${String(getUnreadNotificationCount(this.notifications))} unread.`
     );
@@ -417,10 +421,16 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       throw new JiraConnectionRequiredError();
     }
 
-    return fetchAssignedJiraIssues({
+    const searchBody = buildAssignedIssuesSearchBody();
+    this.outputChannel.appendLine(
+      `Running Jira assigned issue search with maxResults=${String(searchBody.maxResults)}, fields=${searchBody.fields.join(',')}, jql="${searchBody.jql}".`
+    );
+    const issues = await fetchAssignedJiraIssues({
       accessToken: tokens.accessToken,
       cloudId: tokens.cloudId,
     });
+    this.outputChannel.appendLine(`Fetched ${String(issues.length)} assigned Jira issue(s) from Jira.`);
+    return issues;
   }
 
   private applyAssignedIssues(
@@ -491,6 +501,30 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     });
   }
 
+  private seedNotificationHistoryFromDashboard(reason: string): void {
+    if (this.notifications.length > 0) {
+      this.outputChannel.appendLine('Skipped JiraOps notification history seed because history already exists.');
+      return;
+    }
+
+    if (this.dashboardIssues.length === 0) {
+      this.outputChannel.appendLine('Skipped JiraOps notification history seed because no assigned tickets are loaded.');
+      return;
+    }
+
+    const seededNotifications = seedAssignedIssueNotificationHistory({
+      existingNotifications: this.notifications,
+      issues: this.dashboardIssues.map(toAssignedIssue),
+    });
+    const seededCount = seededNotifications.length - this.notifications.length;
+    this.notifications = seededNotifications;
+    this.syncNotificationPollerState();
+    this.persistNotifications();
+    this.outputChannel.appendLine(
+      `Seeded JiraOps notification history with ${String(seededCount)} current assigned issue activity item(s) for ${reason}.`
+    );
+  }
+
   private async applyKnownJiraOAuthCredentials(): Promise<void> {
     const credentials = await getJiraOAuthCredentials();
     applyJiraOAuthCredentialsToEnv(credentials);
@@ -541,6 +575,9 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     this.notificationBaseline = result.nextBaseline;
     this.persistNotifications();
     const count = result.newNotifications.length;
+    this.outputChannel.appendLine(
+      `Persisted JiraOps notification state: ${String(this.notifications.length)} item(s), ${String(getUnreadNotificationCount(this.notifications))} unread, ${String(Object.keys(this.notificationBaseline).length)} baseline issue(s).`
+    );
     this.postNotificationsChanged('Notification polling is current.');
     if (count === 0) {
       return;

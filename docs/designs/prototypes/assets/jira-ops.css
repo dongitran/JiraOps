@@ -235,6 +235,7 @@ a:focus-visible {
 
 .refresh-button {
   flex: 0 0 auto;
+  margin-right: 6px;
   min-width: 92px;
 }
 
@@ -628,6 +629,10 @@ a:focus-visible {
   min-width: 0;
 }
 
+.settings-connection-actions .connection-button {
+  margin-right: 6px;
+}
+
 .settings-notifications {
   display: grid;
   gap: 10px;
@@ -1012,6 +1017,7 @@ a:focus-visible {
   justify-content: end;
   gap: 8px;
   min-width: 0;
+  margin-bottom: 6px;
 }
 
 .detail-status-control {
@@ -1369,6 +1375,12 @@ a:focus-visible {
     width: 100%;
   }
 
+  .dashboard-actions .refresh-button {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
   .notification-button {
     width: 32px;
     flex: 0 0 32px;
@@ -1386,6 +1398,13 @@ a:focus-visible {
 
   .settings-connection-actions {
     width: 100%;
+  }
+
+  .settings-connection-actions .connection-button {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    margin-right: 6px;
   }
 
   .notification-summary .clear-notifications-button {

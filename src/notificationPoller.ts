@@ -97,6 +97,7 @@ export class NotificationPoller {
 
     this.options.log(`Running JiraOps notification poll for ${reason}.`);
     const issues = await this.options.fetchIssues();
+    this.options.log(`Fetched ${String(issues.length)} assigned Jira issue(s) for notification poll ${reason}.`);
     await this.options.onIssues(issues);
     const result = computeIssueUpdateNotifications({
       existingNotifications: this.notifications,
@@ -108,6 +109,9 @@ export class NotificationPoller {
     this.baselineReady = true;
     this.notifications = result.notifications;
     await this.options.onNotifications(result);
+    this.options.log(
+      `JiraOps notification poll baseline now tracks ${String(Object.keys(this.baseline).length)} issue(s); history has ${String(this.notifications.length)} item(s).`
+    );
     this.options.log(formatNotificationLogSummary(result.newNotifications));
     return true;
   }

@@ -19,7 +19,7 @@ export function restorePanelNotificationState(
   const state = readJiraOpsNotificationState(memento);
   poller.restore(state);
   outputChannel.appendLine(
-    `Restored ${String(state.notifications.length)} JiraOps notification item(s).`
+    `Restored ${String(state.notifications.length)} JiraOps notification item(s) with ${String(Object.keys(state.baseline).length)} baseline issue(s).`
   );
   return state;
 }

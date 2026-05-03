@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.19
+
+- Add right-side spacing to the sidebar Refresh and Disconnect buttons.
+- Keep Details status actions separated from the issue title and move Activity below All Jira web links.
+- Seed Notifications from the current assigned-issue dashboard when no local notification history exists.
+- Add sanitized output-channel logs around assigned issue search, notification seeding, polling, and persistence.
+
 ## 0.1.18
 
 - Move paragraph-style Jira `Technical Note` markers out of Description and into the bottom Technical notes section below All Jira web links.

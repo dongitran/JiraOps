@@ -220,6 +220,8 @@ function createOps123IssueDetail(): JiraIssueDetail {
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window. Tighten thresholds and keep on-call context visible.',
     descriptionHtml:
       '<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><ul><li><p>Tighten the delayed settlement threshold.</p></li><li><p>Keep the on-call runbook visible for reviewers.</p></li></ul><table><tr><th><p>Signal</p></th><th><p>Current</p></th><th><p>Target</p></th></tr><tr><td><p>Delayed settlements</p></td><td><p>15 minutes</p></td><td><p>8 minutes</p></td></tr><tr><td><p>Retry budget</p></td><td><p>4 attempts</p></td><td><p>3 attempts</p></td></tr></table><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p>',
+    activityHtml:
+      '<p>Current User moved the ticket into review after validating the alert threshold plan.</p>',
     technicalNotesHtml:
       '<p>The payment processor can emit duplicate settlement callbacks after regional failover. Keep the idempotency guard before changing alert thresholds.</p><ul><li><p>Do not alert while the retry budget is still active.</p></li><li><p>Keep a manual override in the runbook for settlement holidays.</p></li><li><p>Coordinate the dashboard annotation with the observability owner.</p></li><li><p>Confirm that the batch monitor excludes sandbox merchants.</p></li><li><p>Backfill the previous 24 hours before enabling the tighter threshold.</p></li><li><p>Leave the legacy metric in place until the release train closes.</p></li><li><p>Notify support before cutting over the paging policy.</p></li><li><p>Capture before-and-after alert counts in the release note.</p></li><li><p>Keep the rollback threshold documented for the on-call engineer.</p></li><li><p>Verify downstream reporting jobs after the first live settlement batch.</p></li></ul>',
     comments: [
@@ -271,6 +273,7 @@ function createOps321IssueDetail(): JiraIssueDetail {
       'This ticket tracks the cloned inventory cleanup task. The active implementation MR is attached to the cloned work item.',
     descriptionHtml:
       '<p>This ticket tracks the cloned inventory cleanup task. The active implementation MR is attached to the cloned work item.</p>',
+    activityHtml: '',
     technicalNotesHtml: '',
     comments: [
       {
@@ -311,6 +314,7 @@ function createDefaultIssueDetail(issueKey: string, summary: string): JiraIssueD
     updated: assignedIssue?.updated ?? '2026-05-01T00:00:00.000+0000',
     descriptionText: 'No description was provided for this test issue.',
     descriptionHtml: '<p>No description was provided for this test issue.</p>',
+    activityHtml: '',
     technicalNotesHtml: '',
     comments: [],
     attachments: [],

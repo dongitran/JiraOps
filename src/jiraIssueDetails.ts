@@ -52,6 +52,7 @@ export interface JiraLinkedCloneIssue {
 }
 
 export interface JiraIssueDetail {
+  readonly activityHtml: string;
   readonly key: string;
   readonly summary: string;
   readonly status: string;
@@ -240,6 +241,7 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
   const descriptionSections = renderAdfHtmlSections(fields.description);
   return {
     key: parseResult.data.key,
+    activityHtml: descriptionSections.activityHtml,
     summary: fields.summary,
     status: fields.status.name,
     statusCategory: fields.status.statusCategory.name,

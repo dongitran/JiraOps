@@ -128,6 +128,7 @@ describe('jira issue details', () => {
       updated: '2026-05-01T08:20:00.000+0000',
       descriptionText: 'Main ticket content.',
       descriptionHtml: '<p>Main ticket content.</p>',
+      activityHtml: '',
       technicalNotesHtml: '',
       comments: [
         {
@@ -288,6 +289,7 @@ describe('jira issue details', () => {
       priority: null,
       descriptionText: '',
       descriptionHtml: '',
+      activityHtml: '',
       technicalNotesHtml: '',
       comments: [
         {
@@ -358,6 +360,7 @@ describe('jira issue details', () => {
         fetchImpl: fetchMock,
       })
     ).resolves.toMatchObject({
+      activityHtml: '',
       descriptionHtml: '<p>Main ticket content.</p>',
       technicalNotesHtml: '<p>Keep retry budget in place.</p>',
     });
@@ -410,6 +413,7 @@ describe('jira issue details', () => {
         fetchImpl: fetchMock,
       })
     ).resolves.toMatchObject({
+      activityHtml: '',
       descriptionHtml: '<p>Main ticket content.</p>',
       technicalNotesHtml: '<p>Keep retry budget in place.</p>',
     });
@@ -483,6 +487,7 @@ describe('jira issue details', () => {
         fetchImpl: fetchMock,
       })
     ).resolves.toMatchObject({
+      activityHtml: '',
       descriptionHtml:
         '<h3>Test Strategy</h3><p>Run checkout and reconciliation regression.</p><h3>Rollout</h3><p>Ship after QA sign-off.</p>',
       technicalNotesHtml: '<p>Keep the rollback query pinned.</p>',
@@ -584,6 +589,7 @@ describe('jira issue details', () => {
         },
       ],
       linkedCloneIssues: [],
+      activityHtml: '',
       technicalNotesHtml: '',
       transitions: [],
     };

@@ -135,7 +135,10 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(issueContent.getByRole('columnheader', { name: 'Signal' })).toBeVisible();
       await expect(issueContent.getByRole('cell', { name: '8 minutes' })).toBeVisible();
       await expectTableBordersAreVisible(issueContent.getByRole('table'));
-      await expect(detailFrame.getByText('Current User')).toBeVisible();
+      await expect(issueContent.getByText('Current User', { exact: true })).toBeVisible();
+      await expect(
+        detailFrame.getByLabel('Activity').getByText('Current User moved the ticket')
+      ).toBeVisible();
       await expect(
         detailFrame.getByRole('img', { name: 'reconciliation-alert-preview.png' })
       ).toBeVisible();
@@ -310,6 +313,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await openSettingsFromViewTitle(session.window);
       await expect(frame.getByRole('heading', { name: 'Settings' })).toBeVisible();
       await expect(frame.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+      await expectSettingsDisconnectInset(frame);
       await expect(frame.getByRole('button', { name: 'Refresh' })).toHaveCount(0);
       await expect(frame.getByText('sample-access-value')).toHaveCount(0);
       await expect(frame.getByRole('spinbutton', { name: 'Poll interval' })).toHaveValue(
@@ -393,6 +397,8 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
       await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
       await expect(frame.getByText('Checked assigned issue updates just now.')).toHaveCount(0);
+      await expect(frame.getByText('OPS-456 assigned issue activity')).toBeVisible();
+      await expectNotificationReadState(frame, 'OPS-456 assigned issue activity', false);
       await expect(frame.getByText('OPS-123 was updated')).toBeVisible({ timeout: 8_000 });
       await expectClearButtonUsesCompactWidth(frame);
       await clickWithFallback(frame.getByRole('button', { name: 'Clear' }));
@@ -424,6 +430,20 @@ async function expectHomeShell(frame: Frame): Promise<void> {
   await expect(frame.getByLabel('JiraOps workspace')).toBeVisible();
   await expect(frame.getByLabel('Assigned Jira tickets')).toBeVisible();
   await expect(frame.getByRole('button', { name: 'Refresh' })).toBeVisible();
+  const refreshInset = await frame.evaluate(() => {
+    const toolbar = document.querySelector('.dashboard-toolbar');
+    const refresh = document.querySelector('.refresh-button');
+    if (!(toolbar instanceof HTMLElement) || !(refresh instanceof HTMLElement)) {
+      return null;
+    }
+
+    return {
+      marginRight: window.getComputedStyle(refresh).marginRight,
+      rightGap: Math.round(toolbar.getBoundingClientRect().right - refresh.getBoundingClientRect().right),
+    };
+  });
+  expect(refreshInset?.marginRight).toBe('6px');
+  expect(refreshInset?.rightGap).toBeGreaterThanOrEqual(6);
 }
 
 async function expectLoadedDashboard(frame: Frame): Promise<void> {
@@ -531,6 +551,7 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
       !(select instanceof HTMLElement) ||
       !(button instanceof HTMLElement) ||
       !(issueKey instanceof HTMLElement) ||
+      !(document.querySelector('.detail-page-title h1') instanceof HTMLElement) ||
       !(hiddenLabel instanceof HTMLElement)
     ) {
       return null;
@@ -539,8 +560,17 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
     const selectBox = select.getBoundingClientRect();
     const buttonBox = button.getBoundingClientRect();
     const issueKeyBox = issueKey.getBoundingClientRect();
+    const titleBox = document.querySelector('.detail-page-title h1')?.getBoundingClientRect();
     const hiddenStyle = window.getComputedStyle(hiddenLabel);
+    const actionStyle = window.getComputedStyle(select.closest('.detail-header-actions') ?? select);
+    const overlapsTitle =
+      titleBox !== undefined &&
+      selectBox.left < titleBox.right &&
+      titleBox.left < selectBox.right &&
+      selectBox.top < titleBox.bottom &&
+      titleBox.top < selectBox.bottom;
     return {
+      actionMarginBottom: actionStyle.marginBottom,
       buttonDoesNotWrap: button.scrollHeight <= button.clientHeight + 1,
       hiddenLabelIsVisualOnly:
         hiddenStyle.position === 'absolute' &&
@@ -549,15 +579,18 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
         hiddenStyle.overflow === 'hidden',
       sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
       sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
+      statusDoesNotOverlapTitle: !overlapsTitle,
       whiteSpace: window.getComputedStyle(button).whiteSpace,
     };
   });
 
   expect(layout).toEqual({
+    actionMarginBottom: '6px',
     buttonDoesNotWrap: true,
     hiddenLabelIsVisualOnly: true,
     sameActionRow: true,
     sameIssueKeyRow: true,
+    statusDoesNotOverlapTitle: true,
     whiteSpace: 'nowrap',
   });
 }
@@ -565,11 +598,20 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
 async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> {
   const detailState = await frame.evaluate(() => {
     const webLinks = document.querySelector('[aria-label="All Jira web links"]');
+    const activity = document.querySelector('[aria-label="Activity"]');
     const notes = document.querySelector('[aria-label="Technical notes"]');
     const notesBody = document.querySelector('.detail-technical-notes');
     const attachments = document.querySelector('[aria-label="Attachments"]');
     const previousSection = attachments?.previousElementSibling ?? null;
     return {
+      activityAfterWebLinks:
+        webLinks !== null &&
+        activity !== null &&
+        Boolean(webLinks.compareDocumentPosition(activity) & Node.DOCUMENT_POSITION_FOLLOWING),
+      activityBeforeTechnicalNotes:
+        activity !== null &&
+        notes !== null &&
+        Boolean(activity.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING),
       afterWebLinks:
         webLinks !== null &&
         notes !== null &&
@@ -586,12 +628,34 @@ async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> 
   });
 
   expect(detailState).toEqual({
+    activityAfterWebLinks: true,
+    activityBeforeTechnicalNotes: true,
     afterWebLinks: true,
     beforeAttachments: true,
     immediatelyAboveAttachments: true,
     maxHeight: '220px',
     scrollable: true,
   });
+}
+
+async function expectSettingsDisconnectInset(frame: Frame): Promise<void> {
+  const disconnectInset = await frame.evaluate(() => {
+    const row = document.querySelector('.settings-connection');
+    const disconnect = [...document.querySelectorAll('button')].find((button) => {
+      return button.textContent.trim() === 'Disconnect';
+    });
+    if (!(row instanceof HTMLElement) || !(disconnect instanceof HTMLElement)) {
+      return null;
+    }
+
+    return {
+      marginRight: window.getComputedStyle(disconnect).marginRight,
+      rightGap: Math.round(row.getBoundingClientRect().right - disconnect.getBoundingClientRect().right),
+    };
+  });
+
+  expect(disconnectInset?.marginRight).toBe('6px');
+  expect(disconnectInset?.rightGap).toBeGreaterThanOrEqual(6);
 }
 
 async function expectNotificationReadState(

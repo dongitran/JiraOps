@@ -43,6 +43,8 @@ const MOCK_ISSUES = [
       '<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><ul><li>Tighten the delayed settlement threshold.</li><li>Keep the on-call runbook visible for reviewers.</li></ul><table><tr><th>Signal</th><th>Current</th><th>Target</th></tr><tr><td>Delayed settlements</td><td>15 minutes</td><td>8 minutes</td></tr><tr><td>Retry budget</td><td>4 attempts</td><td>3 attempts</td></tr></table><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p><h3>Test Strategy</h3><p>Run checkout and reconciliation regression before moving the alert threshold.</p>',
     technicalNotesHtml:
       '<p>The payment processor can emit duplicate settlement callbacks after regional failover. Keep the idempotency guard before changing alert thresholds.</p><ul><li>Do not alert while the retry budget is still active.</li><li>Keep a manual override in the runbook for settlement holidays.</li><li>Coordinate the dashboard annotation with the observability owner.</li><li>Confirm that the batch monitor excludes sandbox merchants.</li><li>Backfill the previous 24 hours before enabling the tighter threshold.</li><li>Leave the legacy metric in place until the release train closes.</li><li>Notify support before cutting over the paging policy.</li><li>Capture before-and-after alert counts in the release note.</li><li>Keep the rollback threshold documented for the on-call engineer.</li><li>Verify downstream reporting jobs after the first live settlement batch.</li></ul>',
+    activityHtml:
+      '<p>Current User moved the ticket into review after validating the alert threshold plan.</p>',
     transitions: [
       {
         id: '31',
@@ -145,6 +147,7 @@ const MOCK_ISSUES = [
     description:
       'Confirm the checkout release has rollout toggles, rollback notes, and deployment observability before approving the release MR.',
     technicalNotesHtml: '',
+    activityHtml: '',
     transitions: [
       {
         id: '31',
@@ -193,6 +196,7 @@ const MOCK_ISSUES = [
     description:
       'This ticket tracks the cloned inventory cleanup task. The active implementation MR is attached to the cloned work item.',
     technicalNotesHtml: '',
+    activityHtml: '',
     transitions: [
       {
         id: '21',
@@ -259,6 +263,7 @@ const MOCK_ISSUES = [
     description:
       'A compact layout test ticket with a single long token in the summary. The title must stay inside the sidebar card.',
     technicalNotesHtml: '',
+    activityHtml: '',
     transitions: [],
     comments: [],
     attachments: [],
@@ -277,6 +282,7 @@ const MOCK_ISSUES = [
     description:
       'Verify the retry schedule, dead-letter routing, and alert escalation path for warehouse webhook failures.',
     technicalNotesHtml: '',
+    activityHtml: '',
     transitions: [
       {
         id: '11',

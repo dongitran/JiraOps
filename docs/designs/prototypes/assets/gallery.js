@@ -248,6 +248,7 @@ function renderIssueDetail(issue) {
         </div>
         ${renderWebLinks(issue.webLinks)}
       </section>
+      ${renderActivitySection(issue)}
       ${renderTechnicalNotesSection(issue)}
       <section class="detail-section" aria-label="Attachments" data-detail-section="attachments">
         <div class="detail-section-heading">
@@ -317,6 +318,23 @@ function renderWorklogDialog(issue) {
         </div>
       </form>
     </dialog>
+  `;
+}
+
+function renderActivitySection(issue) {
+  if (typeof issue.activityHtml !== 'string' || issue.activityHtml.length === 0) {
+    return '';
+  }
+
+  return `
+    <section class="detail-section" aria-label="Activity" data-detail-section="activity">
+      <div class="detail-section-heading">
+        <h2>Activity</h2>
+      </div>
+      <div class="detail-content jira-adf-content">
+        ${issue.activityHtml}
+      </div>
+    </section>
   `;
 }
 
@@ -589,6 +607,7 @@ function isIssueDetail(value) {
     typeof value.summary === 'string' &&
     typeof value.status === 'string' &&
     typeof value.description === 'string' &&
+    typeof value.activityHtml === 'string' &&
     typeof value.technicalNotesHtml === 'string' &&
     Array.isArray(value.transitions) &&
     value.transitions.every(isIssueTransition) &&
