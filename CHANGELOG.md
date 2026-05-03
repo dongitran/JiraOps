@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.25
+
+### Dashboard
+
+- Assigned tickets, compact and scannable.
+
+### Details
+
+- Issue context, links, and activity.
+
+### Notifications
+
+- Unread updates stay visible.
+
+### Jira Actions
+
+- Change status and log work safely.
+
 ## 0.1.24
 
 ### Dashboard

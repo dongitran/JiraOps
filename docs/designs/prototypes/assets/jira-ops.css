@@ -204,7 +204,7 @@ a:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 4px;
+  padding: 6px 2px 6px 4px;
   border-bottom: 1px solid var(--border-color);
   background: var(--page-bg);
 }
@@ -235,7 +235,7 @@ a:focus-visible {
 
 .refresh-button {
   flex: 0 0 auto;
-  margin-right: 6px;
+  margin-right: 3px;
   min-width: 92px;
 }
 
@@ -585,7 +585,7 @@ a:focus-visible {
 .settings-connection {
   display: block;
   min-width: 0;
-  padding: 8px 4px;
+  padding: 8px 2px 8px 4px;
   border-bottom: 1px solid var(--border-color);
   background: var(--surface-bg);
 }
@@ -630,7 +630,7 @@ a:focus-visible {
 }
 
 .settings-connection-actions .connection-button {
-  margin-right: 6px;
+  margin-right: 3px;
 }
 
 .settings-notifications {
@@ -1410,7 +1410,7 @@ a:focus-visible {
     flex: 1 1 auto;
     width: auto;
     min-width: 0;
-    margin-right: 6px;
+    margin-right: 3px;
   }
 
   .notification-summary .clear-notifications-button {

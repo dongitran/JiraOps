@@ -9,7 +9,7 @@ import {
 
 const CHANGELOG = `# Changelog
 
-## 0.1.24
+## 0.1.25
 
 ### Dashboard
 
@@ -95,7 +95,7 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.24')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.25')).toEqual({
       bullets: [
         'Assigned tickets, compact and scannable.',
         'Issue context, links, and activity.',
@@ -120,7 +120,7 @@ describe('What Is New', () => {
           bullets: ['Change status and log work safely.'],
         },
       ],
-      version: '0.1.24',
+      version: '0.1.25',
     });
   });
 
@@ -133,10 +133,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.24',
+      version: '0.1.25',
     });
 
-    expect(html).toContain('JiraOps 0.1.24 Stable');
+    expect(html).toContain('JiraOps 0.1.25 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

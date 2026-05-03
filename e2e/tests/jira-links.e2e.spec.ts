@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.24 stable release notes', async () => {
+  test('User can review JiraOps 0.1.25 stable release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.24 Stable')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.25 Stable')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
         'Jira Actions'
       );
-      await expect(whatsNewFrame.getByText('0.1.23')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.24')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -463,8 +463,8 @@ async function expectHomeShell(frame: Frame): Promise<void> {
       rightGap: Math.round(toolbar.getBoundingClientRect().right - refresh.getBoundingClientRect().right),
     };
   });
-  expect(refreshInset?.marginRight).toBe('6px');
-  expect(refreshInset?.rightGap).toBeGreaterThanOrEqual(6);
+  expect(refreshInset?.marginRight).toBe('3px');
+  expect(refreshInset?.rightGap).toBe(5);
 }
 
 async function expectLoadedDashboard(frame: Frame): Promise<void> {
@@ -806,8 +806,8 @@ async function expectSettingsDisconnectInset(frame: Frame): Promise<void> {
     };
   });
 
-  expect(disconnectInset?.marginRight).toBe('6px');
-  expect(disconnectInset?.rightGap).toBeGreaterThanOrEqual(6);
+  expect(disconnectInset?.marginRight).toBe('3px');
+  expect(disconnectInset?.rightGap).toBe(5);
 }
 
 async function expectNotificationReadState(
