@@ -9,6 +9,18 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.22
+
+### Details
+
+- Keep the Details title above the Jira key/status action row.
+- Keep status transitions and Log Work compact in the header.
+
+### Stable release lane
+
+- Publish CI-built VSIX packages and GitHub releases as stable.
+- Show stable 0.1.22 What Is New content once per installed JiraOps version.
+
 ## 0.1.11
 
 - Add assigned issue update notifications.
@@ -68,29 +80,31 @@ describe('What Is New', () => {
     ).toBe(false);
   });
 
-  test('parses the stable What Is New changelog section instead of the newest pre-release section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.10')).toEqual({
+  test('parses the stable What Is New changelog section', () => {
+    expect(parseChangelogSection(CHANGELOG, '0.1.22')).toEqual({
       bullets: [
-        'Load active assigned Jira tickets.',
-        'Keep connection state in the native view header.',
-        'Show Jira descriptions, comments, attachments, and remote web links.',
+        'Keep the Details title above the Jira key/status action row.',
+        'Keep status transitions and Log Work compact in the header.',
+        'Publish CI-built VSIX packages and GitHub releases as stable.',
+        'Show stable 0.1.22 What Is New content once per installed JiraOps version.',
       ],
       sections: [
         {
-          title: 'Dashboard',
+          title: 'Details',
           bullets: [
-            'Load active assigned Jira tickets.',
-            'Keep connection state in the native view header.',
+            'Keep the Details title above the Jira key/status action row.',
+            'Keep status transitions and Log Work compact in the header.',
           ],
         },
         {
-          title: 'Details',
+          title: 'Stable release lane',
           bullets: [
-            'Show Jira descriptions, comments, attachments, and remote web links.',
+            'Publish CI-built VSIX packages and GitHub releases as stable.',
+            'Show stable 0.1.22 What Is New content once per installed JiraOps version.',
           ],
         },
       ],
-      version: '0.1.10',
+      version: '0.1.22',
     });
   });
 
@@ -103,10 +117,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.10',
+      version: '0.1.22',
     });
 
-    expect(html).toContain('JiraOps 0.1.10 Stable');
+    expect(html).toContain('JiraOps 0.1.22 Stable');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');
     expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
     expect(html).not.toContain('<script>alert("x")</script>');

@@ -142,47 +142,47 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.10 Stable</span>
+        <span>JiraOps 0.1.22 Stable</span>
         <h1>What Is New</h1>
-        <p>JiraOps is ready for daily Jira triage: assigned tickets, GitLab merge request context, focused Details, safer Jira auth, and a stable release lane.</p>
+        <p>JiraOps is back on the stable release lane with compact assigned work, focused Details, unread notifications, and safe Jira actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
           <strong>Stable workspace</strong>
-          <p>Open JiraOps, connect Jira, scan assigned work, then inspect the exact issue context in a wide editor tab.</p>
+          <p>Connect Jira, scan assigned tickets, open Details, change status, and log focused work from VS Code.</p>
         </div>
-        <span>0.1.10</span>
+        <span>0.1.22</span>
       </section>
       <section class="whats-new-grid" aria-label="Release highlights">
         <article>
           <span>01</span>
           <strong>Assigned-ticket dashboard</strong>
-          <p>Load active Jira issues assigned to you with compact cards built for narrow VS Code sidebars.</p>
+          <p>Keep assigned Jira tickets compact in the VS Code sidebar with native connection state and focused Settings controls.</p>
         </article>
         <article>
           <span>02</span>
-          <strong>Wide Details view</strong>
-          <p>Open issue descriptions, comments, image attachments, status, priority, and supporting Jira web links in an editor tab.</p>
+          <strong>Title-first Details</strong>
+          <p>Open Jira content, comments, attachments, merge requests, and Jira web links with the title above the compact action row.</p>
         </article>
         <article>
           <span>03</span>
-          <strong>GitLab MR context</strong>
-          <p>Separate direct GitLab merge requests from general web links, and keep clone-linked MRs available inside Details.</p>
+          <strong>Jira actions</strong>
+          <p>Change available statuses and log work from Details without exposing credentials or raw note bodies in logs.</p>
         </article>
         <article>
           <span>04</span>
-          <strong>Clean Jira connection</strong>
-          <p>Use OAuth credentials from environment variables or VS Code SecretStorage without exposing tokens in the UI.</p>
+          <strong>Notifications</strong>
+          <p>Surface unread assigned issue updates from persisted local notification history.</p>
         </article>
         <article>
           <span>05</span>
-          <strong>Native VS Code polish</strong>
-          <p>Connection state lives in the native view header, while Settings keeps disconnect and credential cleanup workflows out of the main dashboard.</p>
+          <strong>Cached reopen</strong>
+          <p>Reopen recently loaded Details from fresh issue-detail and remote-link cache entries.</p>
         </article>
         <article>
           <span>06</span>
           <strong>Stable release lane</strong>
-          <p>Version 0.1.10 is the stable Marketplace release. Experimental pre-release work stays outside this What Is New panel.</p>
+          <p>Version 0.1.22 publishes as the stable Marketplace release and normal GitHub release.</p>
         </article>
       </section>
     </article>

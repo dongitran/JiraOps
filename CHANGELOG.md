@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.1.22
+
+- Promote JiraOps back to the stable release lane with the current Details, notifications, cache, and Jira action refinements.
+
+### Assigned-ticket dashboard
+
+- Keep assigned Jira tickets compact in the VS Code sidebar with native connection state and focused Settings controls.
+- Surface unread assigned issue updates from persisted local notification history.
+
+### Details
+
+- Open issue Details in a wide editor tab with Jira content, comments, image attachments, GitLab merge requests, and Jira web links.
+- Keep the Details title above the Jira key/status action row, with status transitions and Log Work kept compact in the header.
+- Keep Activity below All Jira web links and Technical notes immediately above Attachments.
+
+### Jira actions and cache
+
+- Change available Jira statuses and log work from Details without exposing credentials or raw note bodies in logs.
+- Reopen recently loaded issue Details from fresh issue-detail and remote-link cache entries.
+
+### Stable release lane
+
+- Publish CI-built VSIX packages and GitHub releases as stable instead of pre-release.
+- Show stable `0.1.22` What Is New content once per installed JiraOps version.
+
 ## 0.1.21
 
 - Move the Details title above the Jira key/status action row while keeping the compact header spacing.
