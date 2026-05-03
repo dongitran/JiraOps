@@ -194,7 +194,7 @@ body.gallery-theme-high-contrast {
 .editor-whats-new {
   display: grid;
   align-content: start;
-  gap: 16px;
+  gap: 14px;
   min-height: 70vh;
 }
 
@@ -211,7 +211,7 @@ body.gallery-theme-high-contrast {
 
 .editor-whats-new-header h1 {
   margin: 0;
-  font-size: clamp(28px, 4vw, 42px);
+  font-size: clamp(30px, 4vw, 44px);
   letter-spacing: 0;
   line-height: 1.1;
   text-wrap: balance;
@@ -231,9 +231,9 @@ body.gallery-theme-high-contrast {
   justify-content: space-between;
   gap: 16px;
   min-width: 0;
-  padding: 18px;
+  padding: 16px 18px;
   border: 1px solid color-mix(in oklab, var(--gallery-accent) 42%, var(--gallery-border));
-  border-radius: 8px;
+  border-radius: 7px;
   background: color-mix(in oklab, var(--gallery-side) 82%, transparent);
 }
 
@@ -260,43 +260,43 @@ body.gallery-theme-high-contrast {
 
 .whats-new-hero > span {
   flex: 0 0 auto;
-  color: var(--gallery-accent);
-  font-size: 28px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid color-mix(in oklab, var(--gallery-accent) 48%, var(--gallery-border));
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--gallery-accent) 14%, transparent);
+  font-size: 24px;
   font-weight: 750;
   line-height: 1;
 }
 
 .whats-new-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 10px;
 }
 
 .whats-new-grid article {
-  position: relative;
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  padding: 14px 12px 12px;
+  padding: 12px;
   border: 1px solid var(--gallery-border);
   border-radius: 6px;
   background: color-mix(in oklab, var(--gallery-side) 72%, transparent);
 }
 
-.whats-new-grid article::before {
-  position: absolute;
-  top: 0;
-  left: 12px;
-  right: 12px;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--gallery-accent);
-  content: "";
-}
-
 .whats-new-grid article > span {
-  color: var(--gallery-accent);
-  font-size: 11px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in oklab, var(--gallery-accent) 35%, var(--gallery-border));
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--gallery-accent) 10%, transparent);
+  font-size: 18px;
   font-weight: 750;
 }
 
@@ -309,7 +309,7 @@ body.gallery-theme-high-contrast {
   margin: 0;
   color: var(--gallery-muted);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -835,6 +835,10 @@ body.gallery-theme-high-contrast {
   .whats-new-hero {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .whats-new-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 }
 

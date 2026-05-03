@@ -9,17 +9,27 @@ import {
 
 const CHANGELOG = `# Changelog
 
-## 0.1.22
+## 0.1.23
+
+### Dashboard
+
+- Compact tickets, cleaner Jira state.
 
 ### Details
 
-- Keep the Details title above the Jira key/status action row.
-- Keep status transitions and Log Work compact in the header.
+- Title first, actions below.
 
-### Stable release lane
+### Notifications
 
-- Publish CI-built VSIX packages and GitHub releases as stable.
-- Show stable 0.1.22 What Is New content once per installed JiraOps version.
+- Unread updates stay visible.
+
+### Stable Release
+
+- Stable build with cleaner notes.
+
+## 0.1.22
+
+- Promote JiraOps back to the stable release lane.
 
 ## 0.1.11
 
@@ -81,30 +91,32 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.22')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.23')).toEqual({
       bullets: [
-        'Keep the Details title above the Jira key/status action row.',
-        'Keep status transitions and Log Work compact in the header.',
-        'Publish CI-built VSIX packages and GitHub releases as stable.',
-        'Show stable 0.1.22 What Is New content once per installed JiraOps version.',
+        'Compact tickets, cleaner Jira state.',
+        'Title first, actions below.',
+        'Unread updates stay visible.',
+        'Stable build with cleaner notes.',
       ],
       sections: [
         {
-          title: 'Details',
-          bullets: [
-            'Keep the Details title above the Jira key/status action row.',
-            'Keep status transitions and Log Work compact in the header.',
-          ],
+          title: 'Dashboard',
+          bullets: ['Compact tickets, cleaner Jira state.'],
         },
         {
-          title: 'Stable release lane',
-          bullets: [
-            'Publish CI-built VSIX packages and GitHub releases as stable.',
-            'Show stable 0.1.22 What Is New content once per installed JiraOps version.',
-          ],
+          title: 'Details',
+          bullets: ['Title first, actions below.'],
+        },
+        {
+          title: 'Notifications',
+          bullets: ['Unread updates stay visible.'],
+        },
+        {
+          title: 'Stable Release',
+          bullets: ['Stable build with cleaner notes.'],
         },
       ],
-      version: '0.1.22',
+      version: '0.1.23',
     });
   });
 
@@ -117,10 +129,12 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.22',
+      version: '0.1.23',
     });
 
-    expect(html).toContain('JiraOps 0.1.22 Stable');
+    expect(html).toContain('JiraOps 0.1.23 Stable');
+    expect(html).toContain('🚀');
+    expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');
     expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
     expect(html).not.toContain('<script>alert("x")</script>');

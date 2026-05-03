@@ -142,47 +142,37 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.22 Stable</span>
+        <span>JiraOps 0.1.23 Stable</span>
         <h1>What Is New</h1>
-        <p>JiraOps is back on the stable release lane with compact assigned work, focused Details, unread notifications, and safe Jira actions.</p>
+        <p>Cleaner triage, faster Details, and safer Jira actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable workspace</strong>
-          <p>Connect Jira, scan assigned tickets, open Details, change status, and log focused work from VS Code.</p>
+          <strong>Stable 0.1.23</strong>
+          <p>Four focused updates for daily Jira work in VS Code.</p>
         </div>
-        <span>0.1.22</span>
+        <span>🚀</span>
       </section>
       <section class="whats-new-grid" aria-label="Release highlights">
         <article>
-          <span>01</span>
-          <strong>Assigned-ticket dashboard</strong>
-          <p>Keep assigned Jira tickets compact in the VS Code sidebar with native connection state and focused Settings controls.</p>
+          <span aria-hidden="true">📌</span>
+          <strong>Dashboard</strong>
+          <p>Compact assigned tickets and cleaner Jira state.</p>
         </article>
         <article>
-          <span>02</span>
-          <strong>Title-first Details</strong>
-          <p>Open Jira content, comments, attachments, merge requests, and Jira web links with the title above the compact action row.</p>
+          <span aria-hidden="true">🧾</span>
+          <strong>Details</strong>
+          <p>Title first, actions tucked below.</p>
         </article>
         <article>
-          <span>03</span>
-          <strong>Jira actions</strong>
-          <p>Change available statuses and log work from Details without exposing credentials or raw note bodies in logs.</p>
-        </article>
-        <article>
-          <span>04</span>
+          <span aria-hidden="true">🔔</span>
           <strong>Notifications</strong>
-          <p>Surface unread assigned issue updates from persisted local notification history.</p>
+          <p>Unread updates stay easy to spot.</p>
         </article>
         <article>
-          <span>05</span>
-          <strong>Cached reopen</strong>
-          <p>Reopen recently loaded Details from fresh issue-detail and remote-link cache entries.</p>
-        </article>
-        <article>
-          <span>06</span>
-          <strong>Stable release lane</strong>
-          <p>Version 0.1.22 publishes as the stable Marketplace release and normal GitHub release.</p>
+          <span aria-hidden="true">✅</span>
+          <strong>Stable Release</strong>
+          <p>0.1.23 ships as the stable build.</p>
         </article>
       </section>
     </article>

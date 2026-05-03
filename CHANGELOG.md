@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.23
+
+### Dashboard
+
+- Compact tickets, cleaner Jira state.
+
+### Details
+
+- Title first, actions below.
+
+### Notifications
+
+- Unread updates stay visible.
+
+### Stable Release
+
+- Stable build with cleaner notes.
+
 ## 0.1.22
 
 - Promote JiraOps back to the stable release lane with the current Details, notifications, cache, and Jira action refinements.

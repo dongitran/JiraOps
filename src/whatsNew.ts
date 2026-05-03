@@ -1,6 +1,6 @@
 export const WHATS_NEW_LAST_SEEN_VERSION_KEY =
   'jiraOps.whatsNew.lastSeenVersion.v1';
-export const WHATS_NEW_RELEASE_VERSION = '0.1.22';
+export const WHATS_NEW_RELEASE_VERSION = '0.1.23';
 
 export interface WhatsNewSection {
   readonly title: string;
@@ -24,64 +24,76 @@ const WHATS_NEW_STYLE = `
     :root { color-scheme: dark; }
     body {
       margin: 0;
-      padding: 28px;
+      padding: 24px;
       background: var(--vscode-editor-background);
       color: var(--vscode-editor-foreground);
       font-family: var(--vscode-font-family);
     }
-    main { display: grid; gap: 18px; max-width: 980px; }
+    main { display: grid; gap: 16px; max-width: 940px; }
     header { display: grid; gap: 8px; }
     header span {
       color: var(--vscode-textLink-foreground);
       font-size: 12px;
       font-weight: 700;
     }
-    h1 { margin: 0; font-size: 34px; line-height: 1.1; }
+    h1 { margin: 0; font-size: 38px; line-height: 1.1; }
     p { margin: 0; color: var(--vscode-descriptionForeground); line-height: 1.5; }
     .release-summary {
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
       gap: 16px;
-      padding: 18px;
+      padding: 16px 18px;
       border: 1px solid var(--vscode-panel-border);
-      border-radius: 8px;
+      border-radius: 7px;
       background: var(--vscode-sideBar-background);
     }
     .release-summary div { display: grid; gap: 6px; }
     .release-summary strong { font-size: 18px; }
     .release-summary > span {
-      color: var(--vscode-textLink-foreground);
-      font-size: 28px;
-      font-weight: 750;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      background: var(--vscode-editorWidget-background);
+      font-size: 24px;
     }
     .release-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 10px;
     }
     article {
       display: grid;
       gap: 8px;
       min-width: 0;
-      padding: 14px;
+      padding: 12px;
       border: 1px solid var(--vscode-panel-border);
       border-radius: 6px;
       background: var(--vscode-editorWidget-background);
     }
     article > span {
-      color: var(--vscode-textLink-foreground);
-      font-size: 11px;
-      font-weight: 750;
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      font-size: 18px;
     }
     h2 { margin: 0; font-size: 14px; line-height: 1.35; }
-    ul { display: grid; gap: 8px; margin: 0; padding-left: 18px; }
-    li { line-height: 1.5; }
+    ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; }
+    li { line-height: 1.4; }
     @media (max-width: 620px) {
       body { padding: 18px; }
       .release-summary { align-items: flex-start; flex-direction: column; }
+      .release-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
     }
   `;
+
+const RELEASE_ICONS = ['📌', '🧾', '🔔', '✅'] as const;
 
 export function shouldShowWhatsNew(options: ShouldShowWhatsNewOptions): boolean {
   if (options.suppress) {
@@ -153,14 +165,14 @@ export function renderWhatsNewHtml(notes: WhatsNewReleaseNotes): string {
       <header>
         <span>JiraOps ${escapeHtml(notes.version)} Stable</span>
         <h1>What Is New</h1>
-        <p>Everything in the stable JiraOps workspace for daily Jira triage, issue details, and GitLab merge request context.</p>
+        <p>Cleaner triage, faster Details, and safer Jira actions.</p>
       </header>
       <section class="release-summary" aria-label="Stable release summary">
         <div>
-          <strong>Stable workspace</strong>
-          <p>Connect Jira, scan assigned tickets, and open focused issue details from VS Code.</p>
+          <strong>Stable ${escapeHtml(notes.version)}</strong>
+          <p>Four focused updates for daily Jira work in VS Code.</p>
         </div>
-        <span>${escapeHtml(notes.version)}</span>
+        <span aria-hidden="true">🚀</span>
       </section>
       <section class="release-grid" aria-label="Release highlights">
         ${renderWhatsNewSections(notes)}
@@ -190,10 +202,10 @@ function renderWhatsNewSections(notes: WhatsNewReleaseNotes): string {
 }
 
 function renderFeatureSection(section: WhatsNewSection, index: number): string {
-  const number = String(index + 1).padStart(2, '0');
+  const icon = RELEASE_ICONS[index % RELEASE_ICONS.length] ?? '✨';
   return `
         <article>
-          <span>${number}</span>
+          <span aria-hidden="true">${escapeHtml(icon)}</span>
           <h2>${escapeHtml(section.title)}</h2>
           <ul>${renderSectionBullets(section.bullets)}</ul>
         </article>`;
