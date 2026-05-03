@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.23 stable release notes', async () => {
+  test('User can review JiraOps 0.1.24 stable release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.23 Stable')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.24 Stable')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'Stable Release'
+        'Jira Actions'
       );
-      await expect(whatsNewFrame.getByText('0.1.22')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.23')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }

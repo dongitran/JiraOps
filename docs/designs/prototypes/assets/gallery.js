@@ -142,14 +142,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.23 Stable</span>
+        <span>JiraOps 0.1.24 Stable</span>
         <h1>What Is New</h1>
-        <p>Cleaner triage, faster Details, and safer Jira actions.</p>
+        <p>Cleaner triage, focused Details, visible updates, and safe actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable 0.1.23</strong>
-          <p>Four focused updates for daily Jira work in VS Code.</p>
+          <strong>Stable 0.1.24</strong>
+          <p>Four core JiraOps workflows in one clean view.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -157,22 +157,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Dashboard</strong>
-          <p>Compact assigned tickets and cleaner Jira state.</p>
+          <p>Assigned tickets, compact and scannable.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
           <strong>Details</strong>
-          <p>Title first, actions tucked below.</p>
+          <p>Issue context, links, and activity.</p>
         </article>
         <article>
           <span aria-hidden="true">🔔</span>
           <strong>Notifications</strong>
-          <p>Unread updates stay easy to spot.</p>
+          <p>Unread updates stay visible.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
-          <strong>Stable Release</strong>
-          <p>0.1.23 ships as the stable build.</p>
+          <strong>Jira Actions</strong>
+          <p>Change status and log work safely.</p>
         </article>
       </section>
     </article>

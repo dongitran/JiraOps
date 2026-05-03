@@ -1,6 +1,6 @@
 export const WHATS_NEW_LAST_SEEN_VERSION_KEY =
   'jiraOps.whatsNew.lastSeenVersion.v1';
-export const WHATS_NEW_RELEASE_VERSION = '0.1.23';
+export const WHATS_NEW_RELEASE_VERSION = '0.1.24';
 
 export interface WhatsNewSection {
   readonly title: string;
@@ -67,6 +67,7 @@ const WHATS_NEW_STYLE = `
     }
     article {
       display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
       gap: 8px;
       min-width: 0;
       padding: 12px;
@@ -75,6 +76,8 @@ const WHATS_NEW_STYLE = `
       background: var(--vscode-editorWidget-background);
     }
     article > span {
+      grid-column: 1;
+      grid-row: 1;
       display: grid;
       place-items: center;
       width: 32px;
@@ -83,8 +86,9 @@ const WHATS_NEW_STYLE = `
       border-radius: 6px;
       font-size: 18px;
     }
-    h2 { margin: 0; font-size: 14px; line-height: 1.35; }
+    h2 { grid-column: 2; grid-row: 1; align-self: center; min-width: 0; margin: 0; font-size: 14px; line-height: 1.35; }
     ul { display: grid; gap: 6px; margin: 0; padding-left: 18px; }
+    article ul { grid-column: 1 / -1; grid-row: 2; }
     li { line-height: 1.4; }
     @media (max-width: 620px) {
       body { padding: 18px; }
@@ -165,12 +169,12 @@ export function renderWhatsNewHtml(notes: WhatsNewReleaseNotes): string {
       <header>
         <span>JiraOps ${escapeHtml(notes.version)} Stable</span>
         <h1>What Is New</h1>
-        <p>Cleaner triage, faster Details, and safer Jira actions.</p>
+        <p>Cleaner triage, focused Details, visible updates, and safe actions.</p>
       </header>
       <section class="release-summary" aria-label="Stable release summary">
         <div>
           <strong>Stable ${escapeHtml(notes.version)}</strong>
-          <p>Four focused updates for daily Jira work in VS Code.</p>
+          <p>Four core JiraOps workflows in one clean view.</p>
         </div>
         <span aria-hidden="true">🚀</span>
       </section>

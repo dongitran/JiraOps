@@ -280,6 +280,7 @@ body.gallery-theme-high-contrast {
 
 .whats-new-grid article {
   display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
   gap: 8px;
   min-width: 0;
   padding: 12px;
@@ -289,6 +290,8 @@ body.gallery-theme-high-contrast {
 }
 
 .whats-new-grid article > span {
+  grid-column: 1;
+  grid-row: 1;
   display: grid;
   place-items: center;
   width: 32px;
@@ -301,11 +304,17 @@ body.gallery-theme-high-contrast {
 }
 
 .whats-new-grid strong {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  min-width: 0;
   color: var(--gallery-text);
   font-size: 13px;
 }
 
 .whats-new-grid p {
+  grid-column: 1 / -1;
+  grid-row: 2;
   margin: 0;
   color: var(--gallery-muted);
   font-size: 13px;

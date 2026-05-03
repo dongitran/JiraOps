@@ -9,21 +9,25 @@ import {
 
 const CHANGELOG = `# Changelog
 
-## 0.1.23
+## 0.1.24
 
 ### Dashboard
 
-- Compact tickets, cleaner Jira state.
+- Assigned tickets, compact and scannable.
 
 ### Details
 
-- Title first, actions below.
+- Issue context, links, and activity.
 
 ### Notifications
 
 - Unread updates stay visible.
 
-### Stable Release
+### Jira Actions
+
+- Change status and log work safely.
+
+## 0.1.23
 
 - Stable build with cleaner notes.
 
@@ -91,32 +95,32 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.23')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.24')).toEqual({
       bullets: [
-        'Compact tickets, cleaner Jira state.',
-        'Title first, actions below.',
+        'Assigned tickets, compact and scannable.',
+        'Issue context, links, and activity.',
         'Unread updates stay visible.',
-        'Stable build with cleaner notes.',
+        'Change status and log work safely.',
       ],
       sections: [
         {
           title: 'Dashboard',
-          bullets: ['Compact tickets, cleaner Jira state.'],
+          bullets: ['Assigned tickets, compact and scannable.'],
         },
         {
           title: 'Details',
-          bullets: ['Title first, actions below.'],
+          bullets: ['Issue context, links, and activity.'],
         },
         {
           title: 'Notifications',
           bullets: ['Unread updates stay visible.'],
         },
         {
-          title: 'Stable Release',
-          bullets: ['Stable build with cleaner notes.'],
+          title: 'Jira Actions',
+          bullets: ['Change status and log work safely.'],
         },
       ],
-      version: '0.1.23',
+      version: '0.1.24',
     });
   });
 
@@ -129,10 +133,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.23',
+      version: '0.1.24',
     });
 
-    expect(html).toContain('JiraOps 0.1.23 Stable');
+    expect(html).toContain('JiraOps 0.1.24 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');
