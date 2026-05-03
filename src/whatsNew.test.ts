@@ -9,7 +9,7 @@ import {
 
 const CHANGELOG = `# Changelog
 
-## 0.1.25
+## 0.1.26
 
 ### Dashboard
 
@@ -17,11 +17,11 @@ const CHANGELOG = `# Changelog
 
 ### Details
 
-- Issue context, links, and activity.
+- Jira links, activity, and notes in order.
 
-### Notifications
+### MR Clone
 
-- Unread updates stay visible.
+- Port linked MRs to another GitLab group.
 
 ### Jira Actions
 
@@ -95,11 +95,11 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.25')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.26')).toEqual({
       bullets: [
         'Assigned tickets, compact and scannable.',
-        'Issue context, links, and activity.',
-        'Unread updates stay visible.',
+        'Jira links, activity, and notes in order.',
+        'Port linked MRs to another GitLab group.',
         'Change status and log work safely.',
       ],
       sections: [
@@ -109,18 +109,18 @@ describe('What Is New', () => {
         },
         {
           title: 'Details',
-          bullets: ['Issue context, links, and activity.'],
+          bullets: ['Jira links, activity, and notes in order.'],
         },
         {
-          title: 'Notifications',
-          bullets: ['Unread updates stay visible.'],
+          title: 'MR Clone',
+          bullets: ['Port linked MRs to another GitLab group.'],
         },
         {
           title: 'Jira Actions',
           bullets: ['Change status and log work safely.'],
         },
       ],
-      version: '0.1.25',
+      version: '0.1.26',
     });
   });
 
@@ -133,10 +133,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.25',
+      version: '0.1.26',
     });
 
-    expect(html).toContain('JiraOps 0.1.25 Stable');
+    expect(html).toContain('JiraOps 0.1.26 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

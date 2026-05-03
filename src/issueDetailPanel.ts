@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
 
 import type { DashboardIssue } from './dashboardItems';
+import type { CloneMergeRequestInput, CloneMergeRequestResult } from './gitportClone';
+import {
+  renderCloneDialog,
+  renderCloneMergeRequestSection,
+} from './issueDetailCloneControls';
 import { ISSUE_DETAIL_SCRIPT_BODY } from './issueDetailPanelScript';
 import type { JiraIssueAttachment, JiraIssueComment, JiraIssueDetail, JiraIssueTransition } from './jiraIssueDetails';
-import { isLogWorkMessage, isOpenExternalLinkMessage, isTransitionIssueMessage } from './webviewMessages';
+import { isCloneMergeRequestMessage, isLogWorkMessage, isOpenExternalLinkMessage, isTransitionIssueMessage } from './webviewMessages';
 
 const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
 
@@ -21,6 +26,9 @@ export interface IssueDetailPanelHandle {
 }
 
 export interface IssueDetailActionHandlers {
+  readonly cloneMergeRequest: (
+    input: CloneMergeRequestInput
+  ) => Promise<CloneMergeRequestResult>;
   readonly logWork: (
     issueKey: string,
     minutes: number,
@@ -43,6 +51,7 @@ interface IssueDetailPanelHandleOptions {
   readonly nonce: string;
   readonly issue: DashboardIssue;
   readonly isDisposed: () => boolean;
+  readonly onLoadedIssue: (issue: DashboardIssue) => void;
 }
 
 export function showIssueDetailPanel(
@@ -52,6 +61,7 @@ export function showIssueDetailPanel(
   const panel = createIssueDetailWebviewPanel(options.issue, assetsRoot);
   const nonce = createNonce();
   let disposed = false;
+  let allowedCloneMrUrls = toCloneMrUrlSet(options.issue);
   panel.webview.html =
     options.initialDetail === undefined
       ? buildIssueDetailLoadingHtml(panel.webview, assetsRoot, nonce, options.issue)
@@ -68,7 +78,8 @@ export function showIssueDetailPanel(
       options.outputChannel,
       panel.webview,
       options.actions,
-      options.issue.key
+      options.issue.key,
+      () => allowedCloneMrUrls
     );
   });
   panel.onDidDispose(() => {
@@ -82,6 +93,9 @@ export function showIssueDetailPanel(
     nonce,
     issue: options.issue,
     isDisposed: () => disposed,
+    onLoadedIssue: (issue) => {
+      allowedCloneMrUrls = toCloneMrUrlSet(issue);
+    },
   });
 }
 
@@ -110,6 +124,7 @@ function createIssueDetailPanelHandle(
         return;
       }
 
+      options.onLoadedIssue(issue);
       options.panel.webview.html = buildIssueDetailHtml(
         options.panel.webview,
         options.assetsRoot,
@@ -139,7 +154,8 @@ async function handleDetailMessage(
   outputChannel: vscode.OutputChannel,
   webview: vscode.Webview,
   actions: IssueDetailActionHandlers | undefined,
-  expectedIssueKey: string
+  expectedIssueKey: string,
+  allowedCloneMrUrls: () => ReadonlySet<string>
 ): Promise<void> {
   if (isOpenExternalLinkMessage(message)) {
     outputChannel.appendLine(`Opening Jira issue detail link on ${webLinkHost(message.url)}.`);
@@ -163,6 +179,25 @@ async function handleDetailMessage(
     }
     await runDetailAction(webview, () => {
       return actions?.logWork(message.issueKey, message.minutes, message.comment);
+    });
+    return;
+  }
+
+  if (isCloneMergeRequestMessage(message)) {
+    if (!isExpectedDetailIssue(message.issueKey, expectedIssueKey, webview)) {
+      return;
+    }
+    if (!allowedCloneMrUrls().has(message.sourceMrUrl)) {
+      await postCloneMergeRequestResult(webview, {
+        mergeRequestUrl: '',
+        message: 'Clone action did not match this issue detail panel.',
+        sourceMrUrl: message.sourceMrUrl,
+        success: false,
+      });
+      return;
+    }
+    await runCloneMergeRequestAction(webview, message.sourceMrUrl, () => {
+      return actions?.cloneMergeRequest(message);
     });
   }
 }
@@ -219,6 +254,51 @@ async function postDetailActionResult(
     type: 'jiraOps.detailActionResult',
     ...result,
   });
+}
+
+async function runCloneMergeRequestAction(
+  webview: vscode.Webview,
+  sourceMrUrl: string,
+  action: () => Promise<CloneMergeRequestResult> | undefined
+): Promise<void> {
+  try {
+    const result = await action();
+    if (result === undefined) {
+      throw new Error('Merge request could not be cloned.');
+    }
+    await postCloneMergeRequestResult(webview, {
+      mergeRequestUrl: result.mergeRequestUrl,
+      message: result.message,
+      sourceMrUrl,
+      success: true,
+    });
+  } catch (error) {
+    await postCloneMergeRequestResult(webview, {
+      mergeRequestUrl: '',
+      message: errorMessage(error, 'Merge request could not be cloned.'),
+      sourceMrUrl,
+      success: false,
+    });
+  }
+}
+
+async function postCloneMergeRequestResult(
+  webview: vscode.Webview,
+  result: {
+    readonly mergeRequestUrl: string;
+    readonly message: string;
+    readonly sourceMrUrl: string;
+    readonly success: boolean;
+  }
+): Promise<void> {
+  await webview.postMessage({
+    type: 'jiraOps.cloneMergeRequestResult',
+    ...result,
+  });
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message.length > 0 ? error.message : fallback;
 }
 
 function buildIssueDetailHtml(
@@ -326,6 +406,7 @@ function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): stri
       ${renderActivitySection(detail)}
       ${renderTechnicalNotesSection(detail)}
       ${renderAttachmentsSection(detail.attachments)}
+      ${renderCloneDialog(issue)}
       ${renderWorklogDialog(issue)}
     </main>
   `;
@@ -486,16 +567,6 @@ function renderMergeRequestSection(issue: DashboardIssue): string {
   return renderDetailSection('GitLab merge requests', count, content);
 }
 
-function renderCloneMergeRequestSection(issue: DashboardIssue): string {
-  const count = issue.cloneMergeRequests.length;
-  const content =
-    count === 0
-      ? '<p class="detail-muted">No GitLab merge requests were found on cloned Jira work items.</p>'
-      : `<div class="detail-grid">${issue.cloneMergeRequests.map(renderCloneMergeRequestLink).join('')}</div>`;
-
-  return renderDetailSection('Clone merge requests', count, content);
-}
-
 function renderWebLinksSection(issue: DashboardIssue): string {
   const count = issue.webLinks.length;
   const content =
@@ -516,27 +587,16 @@ function renderAttachmentsSection(attachments: readonly JiraIssueAttachment[]): 
 
 function renderMergeRequestLink(link: DashboardIssue['mergeRequests'][number]): string {
   return `
-    <a class="detail-link detail-link-primary" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer" data-url="${escapeAttribute(link.url)}">
+    <a class="detail-link detail-link-primary" href="${escapeAttribute(link.url)}" data-url="${escapeAttribute(link.url)}">
       <strong>${escapeHtml(link.title)}</strong>
       <span>${escapeHtml(link.projectPath)} !${escapeHtml(link.iid)}</span>
     </a>
   `;
 }
 
-function renderCloneMergeRequestLink(
-  link: DashboardIssue['cloneMergeRequests'][number]
-): string {
-  return `
-    <a class="detail-link detail-link-primary" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer" data-url="${escapeAttribute(link.url)}">
-      <strong>${escapeHtml(link.title)}</strong>
-      <span>Clone ticket ${escapeHtml(link.issueKey)} - ${escapeHtml(link.projectPath)} !${escapeHtml(link.iid)}</span>
-    </a>
-  `;
-}
-
 function renderWebLink(link: DashboardIssue['webLinks'][number]): string {
   return `
-    <a class="detail-link" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer" data-url="${escapeAttribute(link.url)}">
+    <a class="detail-link" href="${escapeAttribute(link.url)}" data-url="${escapeAttribute(link.url)}">
       <strong>${escapeHtml(link.title)}</strong>
       <span>${escapeHtml(link.relationship)} - ${escapeHtml(link.host)}</span>
     </a>
@@ -616,6 +676,10 @@ function formatUpdated(value: string): string {
 
 function isImageDataUri(value: string): boolean {
   return value.startsWith('data:image/');
+}
+
+function toCloneMrUrlSet(issue: DashboardIssue): ReadonlySet<string> {
+  return new Set(issue.cloneMergeRequests.map((link) => link.url));
 }
 
 function escapeHtml(value: string): string {

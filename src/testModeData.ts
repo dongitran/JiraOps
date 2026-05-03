@@ -91,7 +91,15 @@ export function resolveTestRemoteLinks(issueKey: string): RemoteWebLink[] {
   }
 
   if (issueKey === 'OPS-111') {
-    return [createMergeRequestLink(issueKey, '88', 'Backport alert window tuning')];
+    return [
+      {
+        id: `${issueKey}-mr-100`,
+        title: 'Merge request - TOR-45',
+        url: 'https://gitlab.dongtran.com/group-a/folder/main/repository-1/-/merge_requests/100',
+        relationship: 'Merge request',
+        host: 'gitlab.dongtran.com',
+      },
+    ];
   }
 
   if (issueKey === 'OPS-333') {

@@ -11,7 +11,14 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
       }
 
       function setDialogStatus(message) {
-        const dialogStatus = document.querySelector('.detail-dialog-status');
+        const dialogStatus = document.querySelector('.detail-worklog-dialog .detail-dialog-status');
+        if (dialogStatus instanceof HTMLElement) {
+          dialogStatus.textContent = message;
+        }
+      }
+
+      function setCloneDialogStatus(message) {
+        const dialogStatus = document.querySelector('.detail-clone-dialog .detail-dialog-status');
         if (dialogStatus instanceof HTMLElement) {
           dialogStatus.textContent = message;
         }
@@ -59,6 +66,112 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
           return;
         }
         setDialogStatus('');
+        if (typeof dialog.showModal === 'function') {
+          dialog.showModal();
+          return;
+        }
+        dialog.setAttribute('open', '');
+      }
+
+      function getCloneDialog() {
+        const dialog = document.querySelector('.detail-clone-dialog');
+        return dialog instanceof HTMLDialogElement ? dialog : null;
+      }
+
+      function closeCloneDialog() {
+        const dialog = getCloneDialog();
+        if (dialog !== null && dialog.open) {
+          dialog.close();
+        }
+      }
+
+      function getCloneCard(sourceMrUrl) {
+        for (const card of document.querySelectorAll('.detail-clone-mr-card')) {
+          if (card instanceof HTMLElement && card.dataset.sourceMrUrl === sourceMrUrl) {
+            return card;
+          }
+        }
+        return null;
+      }
+
+      function setCloneCardPending(sourceMrUrl, pending) {
+        const card = getCloneCard(sourceMrUrl);
+        const button = card?.querySelector('[data-clone-action="open"]');
+        const status = card?.querySelector('.detail-clone-status');
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = pending;
+          button.textContent = pending ? 'Cloning...' : 'Clone';
+        }
+        if (status instanceof HTMLElement) {
+          status.textContent = pending ? 'Cloning merge request...' : '';
+          status.dataset.tone = 'info';
+        }
+      }
+
+      function setCloneCardFailure(sourceMrUrl, message) {
+        setCloneCardPending(sourceMrUrl, false);
+        const status = getCloneCard(sourceMrUrl)?.querySelector('.detail-clone-status');
+        if (status instanceof HTMLElement) {
+          status.textContent = message;
+          status.dataset.tone = 'error';
+        }
+      }
+
+      function setCloneCardSuccess(sourceMrUrl, mergeRequestUrl, message) {
+        const card = getCloneCard(sourceMrUrl);
+        const button = card?.querySelector('[data-clone-action="open"]');
+        const status = card?.querySelector('.detail-clone-status');
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = true;
+          button.textContent = 'Cloned';
+        }
+        if (card instanceof HTMLElement) {
+          card.dataset.cloneState = 'cloned';
+        }
+        if (status instanceof HTMLElement) {
+          const link = document.createElement('a');
+          link.href = mergeRequestUrl;
+          link.textContent = message;
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            vscode.postMessage({ type: 'jiraOps.openExternalLink', url: link.href });
+          });
+          status.replaceChildren('Cloned as ', link);
+          status.dataset.tone = 'success';
+        }
+      }
+
+      function setCloneInputValue(form, name, value) {
+        const input = form.elements.namedItem(name);
+        if (input instanceof HTMLInputElement) {
+          input.value = value;
+        }
+      }
+
+      function getCloneInputValue(form, name) {
+        const input = form.elements.namedItem(name);
+        return input instanceof HTMLInputElement ? input.value.trim() : '';
+      }
+
+      function openCloneDialog(button) {
+        const dialog = getCloneDialog();
+        const form = document.querySelector('form[data-detail-action="clone"]');
+        if (dialog === null || !(form instanceof HTMLFormElement)) {
+          return;
+        }
+
+        form.dataset.sourceMrUrl = button.dataset.sourceMrUrl ?? '';
+        form.dataset.sourceMrTitle = button.dataset.sourceMrTitle ?? '';
+        setCloneDialogStatus('');
+        setCloneInputValue(form, 'destinationGroup', '');
+        setCloneInputValue(form, 'baseBranch', button.dataset.defaultBaseBranch ?? 'staging');
+        setCloneInputValue(form, 'portBranch', button.dataset.defaultPortBranch ?? '');
+        setCloneInputValue(form, 'title', button.dataset.defaultTitle ?? '');
+        const source = form.querySelector('[data-clone-source]');
+        if (source instanceof HTMLElement) {
+          source.textContent = button.dataset.sourceMrLabel ?? 'Selected merge request';
+        }
+
         if (typeof dialog.showModal === 'function') {
           dialog.showModal();
           return;
@@ -134,6 +247,50 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
         });
       }
 
+      function bindCloneDialog() {
+        for (const cloneButton of document.querySelectorAll('[data-clone-action="open"]')) {
+          if (cloneButton instanceof HTMLButtonElement) {
+            cloneButton.addEventListener('click', () => openCloneDialog(cloneButton));
+          }
+        }
+        for (const closeButton of document.querySelectorAll('[data-clone-action="close"]')) {
+          closeButton.addEventListener('click', closeCloneDialog);
+        }
+      }
+
+      function bindCloneForm() {
+        const form = document.querySelector('form[data-detail-action="clone"]');
+        if (!(form instanceof HTMLFormElement)) {
+          return;
+        }
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const sourceMrUrl = form.dataset.sourceMrUrl ?? '';
+          const sourceMrTitle = form.dataset.sourceMrTitle ?? '';
+          const destinationGroup = getCloneInputValue(form, 'destinationGroup');
+          const baseBranch = getCloneInputValue(form, 'baseBranch');
+          const portBranch = getCloneInputValue(form, 'portBranch');
+          const title = getCloneInputValue(form, 'title');
+          if ([sourceMrUrl, sourceMrTitle, destinationGroup, baseBranch, portBranch, title].some((value) => value.length === 0)) {
+            setCloneDialogStatus('Complete every clone field.');
+            return;
+          }
+
+          closeCloneDialog();
+          setCloneCardPending(sourceMrUrl, true);
+          vscode.postMessage({
+            type: 'jiraOps.cloneMergeRequest',
+            issueKey: form.dataset.issueKey,
+            sourceMrUrl,
+            sourceMrTitle,
+            destinationGroup,
+            baseBranch,
+            portBranch,
+            title,
+          });
+        });
+      }
+
       function handleStatusActionResult(data) {
         const select = getStatusSelect();
         if (select !== null) {
@@ -159,7 +316,18 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
       }
 
       window.addEventListener('message', (event) => {
-        if (!event.data || event.data.type !== 'jiraOps.detailActionResult') {
+        if (!event.data) {
+          return;
+        }
+        if (event.data.type === 'jiraOps.cloneMergeRequestResult') {
+          if (event.data.success === true && typeof event.data.mergeRequestUrl === 'string') {
+            setCloneCardSuccess(event.data.sourceMrUrl, event.data.mergeRequestUrl, event.data.message);
+            return;
+          }
+          setCloneCardFailure(event.data.sourceMrUrl, event.data.message ?? 'Merge request could not be cloned.');
+          return;
+        }
+        if (event.data.type !== 'jiraOps.detailActionResult') {
           return;
         }
         if (pendingDetailAction === 'status') {
@@ -177,4 +345,6 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
       bindStatusSelect();
       bindWorklogDialog();
       bindWorklogForm();
+      bindCloneDialog();
+      bindCloneForm();
 `;

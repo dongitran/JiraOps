@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.25 stable release notes', async () => {
+  test('User can review JiraOps 0.1.26 stable release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.25 Stable')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.26 Stable')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'Jira Actions'
+        'MR Clone'
       );
-      await expect(whatsNewFrame.getByText('0.1.24')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.25')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -104,6 +104,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
   test('User can read Jira tables and details without redundant section titles', async () => {
     const session = await launchExtensionHost();
+    const testInfo = test.info();
 
     try {
       const frame = await openLoadedDashboard(session.window);
@@ -149,11 +150,12 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       ).toBeVisible();
       await expect(
         detailFrame.getByLabel('Clone merge requests').getByRole('link', {
-          name: /Backport alert window tuning/u,
+          name: /Merge request - TOR-45/u,
         })
       ).toBeVisible();
       await expect(detailFrame.getByText(/Clone ticket OPS-111/u)).toBeVisible();
       await expect(detailFrame.getByText('https://')).toHaveCount(0);
+      await expectDetailLinksUseWebviewOpenPath(detailFrame);
       await expect(detailFrame.getByRole('combobox', { name: 'Issue status' })).toHaveValue('');
       await expect(
         detailFrame.getByRole('combobox', { name: 'Issue status' }).getByRole('option').first()
@@ -161,6 +163,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expectCompactDetailHeaderActions(detailFrame);
       await expectLongDetailTitleDoesNotOverlapStatus(detailFrame);
       await expectTechnicalNotesNearAttachments(detailFrame);
+      await captureDashboardScreenshot(
+        session.window,
+        testInfo,
+        'issue-detail-activity-order.png'
+      );
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -319,6 +326,71 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         detailFrame.getByLabel('Clone merge requests').getByRole('link')
       ).toHaveCount(2);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User can clone a clone-linked merge request from issue details', async () => {
+    const session = await launchExtensionHost({
+      env: {
+        JIRA_OPS_TEST_GITPORT_CLONE_DELAY_MS: '700',
+      },
+    });
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await clickWithFallback(
+        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
+          name: 'Details',
+        })
+      );
+
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      const cloneCard = detailFrame.getByLabel('Merge request - TOR-45 clone merge request');
+      const cloneButton = cloneCard.getByRole('button', {
+        name: 'Clone Merge request - TOR-45',
+      });
+      await expectCloneButtonHoverReveal(cloneCard, cloneButton);
+      await clickWithFallback(cloneButton);
+
+      const cloneDialog = detailFrame.getByRole('dialog', {
+        name: 'Clone merge request',
+      });
+      await expect(cloneDialog).toBeVisible();
+      await expect(cloneDialog.getByText('Merge request - TOR-45')).toBeVisible();
+      await expect(
+        cloneDialog.getByRole('textbox', { name: 'Destination group' })
+      ).toHaveValue('');
+      await expect(cloneDialog.getByRole('combobox', { name: 'Base branch' })).toHaveValue(
+        'staging'
+      );
+      await expect(cloneDialog.getByRole('textbox', { name: 'Port branch' })).toHaveValue(
+        'cherry-pick/OPS-123'
+      );
+      await expect(cloneDialog.getByRole('textbox', { name: 'Title' })).toHaveValue(
+        '[Clone] TOR-45 OPS-123'
+      );
+
+      await cloneDialog.getByRole('textbox', { name: 'Destination group' }).fill('group-b');
+      await clickWithFallback(cloneDialog.getByRole('button', { name: 'Clone MR' }));
+      await expect(cloneDialog).toBeHidden();
+      await expect(cloneButton).toBeDisabled();
+      await expect(cloneCard.getByRole('status')).toContainText(
+        'Cloning merge request...'
+      );
+
+      const clonedLink = cloneCard.getByRole('link', {
+        name: 'Cloned merge request !777.',
+      });
+      await expect(clonedLink).toBeVisible();
+      await expect(clonedLink).toHaveAttribute(
+        'href',
+        'https://gitlab.dongtran.com/group-b/folder/main/repository-1/-/merge_requests/777'
+      );
+      await expect(cloneButton).toHaveText('Cloned');
+      await expect(cloneCard.getByText('Merge request could not be cloned.')).toHaveCount(0);
+      await expect(cloneDialog.getByText('Complete every clone field.')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -718,11 +790,14 @@ async function expectLongDetailTitleDoesNotOverlapStatus(frame: Frame): Promise<
     title.setAttribute('title', longTitle);
     const titleBox = title.getBoundingClientRect();
     const actionsBox = actions.getBoundingClientRect();
+    const headerBox = header.getBoundingClientRect();
     const issueKeyBox = issueKey.getBoundingClientRect();
     const selectBox = select.getBoundingClientRect();
     const buttonBox = button.getBoundingClientRect();
     return {
       actionWidth: Math.round(actionsBox.width),
+      actionsFitHeader: actionsBox.right <= headerBox.right + 1,
+      actionsFollowIssueKey: actionsBox.left >= issueKeyBox.right + 8,
       headerDisplay: window.getComputedStyle(header).display,
       sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
       sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
@@ -738,13 +813,15 @@ async function expectLongDetailTitleDoesNotOverlapStatus(frame: Frame): Promise<
 
   expect(layout).toEqual({
     actionWidth: expect.any(Number),
+    actionsFitHeader: true,
+    actionsFollowIssueKey: true,
     headerDisplay: 'grid',
     sameActionRow: true,
     sameIssueKeyRow: true,
     statusDoesNotOverlapTitle: true,
     titleAboveActionRow: true,
   });
-  expect(layout?.actionWidth).toBeGreaterThanOrEqual(278);
+  expect(layout?.actionWidth).toBeGreaterThanOrEqual(250);
 }
 
 async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> {
@@ -788,6 +865,37 @@ async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> 
     maxHeight: '220px',
     scrollable: true,
   });
+}
+
+async function expectDetailLinksUseWebviewOpenPath(frame: Frame): Promise<void> {
+  const linkTargets = await frame.evaluate(() => {
+    return [...document.querySelectorAll('.detail-link, .detail-clone-mr-link')]
+      .filter((node): node is HTMLAnchorElement => node instanceof HTMLAnchorElement)
+      .map((link) => {
+        return {
+          href: link.href,
+          target: link.getAttribute('target'),
+        };
+      });
+  });
+
+  expect(linkTargets.length).toBeGreaterThan(0);
+  expect(linkTargets.every((link) => link.href.startsWith('https://'))).toBe(true);
+  expect(linkTargets.every((link) => link.target === null)).toBe(true);
+}
+
+async function expectCloneButtonHoverReveal(
+  cloneCard: Locator,
+  cloneButton: Locator
+): Promise<void> {
+  await expect(cloneCard).toBeVisible();
+  const beforeHover = await cloneButton.evaluate((button) => {
+    return window.getComputedStyle(button).opacity;
+  });
+  await cloneCard.hover();
+
+  expect(beforeHover).toBe('0');
+  await expect(cloneButton).toHaveCSS('opacity', '1');
 }
 
 async function expectSettingsDisconnectInset(frame: Frame): Promise<void> {

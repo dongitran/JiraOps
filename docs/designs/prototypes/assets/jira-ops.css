@@ -980,6 +980,65 @@ a:focus-visible {
   border-color: color-mix(in oklab, var(--accent-color) 45%, var(--border-color));
 }
 
+.detail-clone-mr-card {
+  position: relative;
+  align-content: start;
+}
+
+.detail-clone-mr-link {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding-right: 84px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.detail-clone-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--accent-color);
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+  white-space: nowrap;
+}
+
+.detail-clone-mr-card:hover .detail-clone-button,
+.detail-clone-mr-card:focus-within .detail-clone-button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.detail-clone-button:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.detail-clone-status {
+  min-height: 0;
+  margin: 4px 0 0;
+  color: var(--muted-color);
+  font-size: 12px;
+}
+
+.detail-clone-status:empty {
+  display: none;
+}
+
+.detail-clone-status a {
+  color: var(--accent-color);
+}
+
 .detail-link strong,
 .detail-link span {
   overflow: hidden;
@@ -1033,6 +1092,7 @@ a:focus-visible {
 }
 
 .detail-status-control span,
+.detail-clone-form label span,
 .detail-worklog-form label span,
 .detail-dialog-heading span {
   color: var(--muted-color);
@@ -1040,6 +1100,7 @@ a:focus-visible {
 }
 
 .detail-status-control select,
+.detail-clone-form input,
 .detail-worklog-form input,
 .detail-worklog-form textarea {
   width: 100%;
@@ -1058,7 +1119,9 @@ a:focus-visible {
 }
 
 .detail-status-control select:focus-visible,
+.detail-clone-button:focus-visible,
 .detail-log-work-button:focus-visible,
+.detail-clone-form input:focus-visible,
 .detail-worklog-form input:focus-visible,
 .detail-worklog-form textarea:focus-visible,
 .detail-dialog-close:focus-visible,
@@ -1117,6 +1180,7 @@ a:focus-visible {
   display: none;
 }
 
+.detail-clone-dialog,
 .detail-worklog-dialog {
   width: min(420px, calc(100vw - 32px));
   padding: 0;
@@ -1126,10 +1190,12 @@ a:focus-visible {
   color: var(--text-color);
 }
 
+.detail-clone-dialog::backdrop,
 .detail-worklog-dialog::backdrop {
   background: rgb(0 0 0 / 52%);
 }
 
+.detail-clone-form,
 .detail-worklog-form {
   display: grid;
   gap: 12px;
@@ -1156,6 +1222,15 @@ a:focus-visible {
   font-size: 18px;
 }
 
+.detail-clone-source {
+  margin: 0;
+  color: var(--muted-color);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.detail-clone-form label,
 .detail-worklog-form label {
   display: grid;
   gap: 4px;

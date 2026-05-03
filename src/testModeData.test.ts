@@ -96,11 +96,11 @@ describe('testModeData', () => {
     expect(resolveTestRemoteLinks('OPS-321')).toHaveLength(1);
     expect(resolveTestRemoteLinks('OPS-111')).toEqual([
       {
-        id: 'OPS-111-mr-88',
-        title: 'Backport alert window tuning',
-        url: 'https://gitlab.example.com/platform/observability/-/merge_requests/88',
+        id: 'OPS-111-mr-100',
+        title: 'Merge request - TOR-45',
+        url: 'https://gitlab.dongtran.com/group-a/folder/main/repository-1/-/merge_requests/100',
         relationship: 'Merge request',
-        host: 'gitlab.example.com',
+        host: 'gitlab.dongtran.com',
       },
     ]);
     expect(resolveTestRemoteLinks('OPS-333')).toEqual([

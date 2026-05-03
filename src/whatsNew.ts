@@ -1,6 +1,6 @@
 export const WHATS_NEW_LAST_SEEN_VERSION_KEY =
   'jiraOps.whatsNew.lastSeenVersion.v1';
-export const WHATS_NEW_RELEASE_VERSION = '0.1.25';
+export const WHATS_NEW_RELEASE_VERSION = '0.1.26';
 
 export interface WhatsNewSection {
   readonly title: string;
@@ -97,7 +97,7 @@ const WHATS_NEW_STYLE = `
     }
   `;
 
-const RELEASE_ICONS = ['📌', '🧾', '🔔', '✅'] as const;
+const RELEASE_ICONS = ['📌', '🧾', '🔁', '✅'] as const;
 
 export function shouldShowWhatsNew(options: ShouldShowWhatsNewOptions): boolean {
   if (options.suppress) {

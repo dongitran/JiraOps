@@ -10,6 +10,7 @@ export const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
 export const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
 export const TRANSITION_ISSUE_MESSAGE_TYPE = 'jiraOps.transitionIssue';
 export const LOG_WORK_MESSAGE_TYPE = 'jiraOps.logWork';
+export const CLONE_MERGE_REQUEST_MESSAGE_TYPE = 'jiraOps.cloneMergeRequest';
 export const DASHBOARD_LOADING_MESSAGE_TYPE = 'jiraOps.dashboardLoading';
 export const DASHBOARD_LOADED_MESSAGE_TYPE = 'jiraOps.dashboardLoaded';
 export const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
@@ -75,6 +76,17 @@ export interface LogWorkMessage {
   readonly type: typeof LOG_WORK_MESSAGE_TYPE;
 }
 
+export interface CloneMergeRequestMessage {
+  readonly baseBranch: string;
+  readonly destinationGroup: string;
+  readonly issueKey: string;
+  readonly portBranch: string;
+  readonly sourceMrTitle: string;
+  readonly sourceMrUrl: string;
+  readonly title: string;
+  readonly type: typeof CLONE_MERGE_REQUEST_MESSAGE_TYPE;
+}
+
 export type WebviewInboundMessage =
   | WebviewReadyMessage
   | RefreshDashboardMessage
@@ -87,7 +99,8 @@ export type WebviewInboundMessage =
   | UpdateSettingsMessage
   | ClearNotificationsMessage
   | TransitionIssueMessage
-  | LogWorkMessage;
+  | LogWorkMessage
+  | CloneMergeRequestMessage;
 
 export function isWebviewReadyMessage(
   message: unknown
@@ -195,6 +208,24 @@ export function isLogWorkMessage(message: unknown): message is LogWorkMessage {
   );
 }
 
+export function isCloneMergeRequestMessage(
+  message: unknown
+): message is CloneMergeRequestMessage {
+  if (!isRecord(message) || message['type'] !== CLONE_MERGE_REQUEST_MESSAGE_TYPE) {
+    return false;
+  }
+
+  return (
+    isNonEmptyString(message['issueKey']) &&
+    isWebUrlValue(message['sourceMrUrl']) &&
+    isNonEmptyString(message['sourceMrTitle']) &&
+    isNonEmptyString(message['destinationGroup']) &&
+    isNonEmptyString(message['baseBranch']) &&
+    isNonEmptyString(message['portBranch']) &&
+    isNonEmptyString(message['title'])
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -220,4 +251,8 @@ function isWebUrl(value: string): boolean {
   }
 
   return parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:';
+}
+
+function isWebUrlValue(value: unknown): value is string {
+  return typeof value === 'string' && isWebUrl(value);
 }

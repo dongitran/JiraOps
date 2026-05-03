@@ -24,12 +24,18 @@ import {
   type JiraIssueDetail,
   type JiraLinkedCloneIssue,
 } from './jiraIssueDetails';
+import {
+  runCloneMergeRequest,
+  type CloneMergeRequestInput,
+  type CloneMergeRequestResult,
+} from './gitportClone';
 import type { IssueDetailActionHandlers, IssueDetailActionResult } from './issueDetailPanel';
 import {
   JiraConnectionRequiredError,
   testIssueDetailLoader,
   testRemoteLinksLoader,
   toAssignedIssue,
+  webLinkHost,
 } from './jiraOpsPanelSupport';
 import type { RemoteWebLink } from './remoteLinks';
 import { isJiraOpsTestMode } from './testModeData';
@@ -79,6 +85,7 @@ export class JiraOpsIssueDetailController {
 
   public createActions(): IssueDetailActionHandlers {
     return {
+      cloneMergeRequest: (input) => this.cloneMergeRequest(input),
       logWork: (issueKey, minutes, comment) => this.logWork(issueKey, minutes, comment),
       transitionIssue: (issueKey, transitionId) =>
         this.transitionIssue(issueKey, transitionId),
@@ -238,6 +245,20 @@ export class JiraOpsIssueDetailController {
     this.issueDetailCache.delete(issueKey);
     await this.refreshDashboardAfterDetailAction();
     return { message: `Logged ${String(minutes)} minute${minutes === 1 ? '' : 's'}.` };
+  }
+
+  private async cloneMergeRequest(
+    input: CloneMergeRequestInput
+  ): Promise<CloneMergeRequestResult> {
+    this.options.outputChannel.appendLine(
+      `Preparing GitLab merge request clone for ${input.issueKey} from ${webLinkHost(input.sourceMrUrl)}.`
+    );
+    return runCloneMergeRequest(input, {
+      log: (message) => {
+        this.options.outputChannel.appendLine(message);
+      },
+      testMode: isJiraOpsTestMode(),
+    });
   }
 
   private async requireStoredTokens(): Promise<JiraTokens> {

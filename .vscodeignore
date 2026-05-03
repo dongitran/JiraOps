@@ -19,6 +19,7 @@ src/**
 test-results/**
 *.vsix
 jiraops-*.png
+prototype-*.png
 implementation_plan.md
 plan.md
 tsconfig.test.json

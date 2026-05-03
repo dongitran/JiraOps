@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import {
   CONNECT_JIRA_MESSAGE_TYPE,
+  CLONE_MERGE_REQUEST_MESSAGE_TYPE,
   DISCONNECT_JIRA_MESSAGE_TYPE,
   CLEAR_NOTIFICATIONS_MESSAGE_TYPE,
   LOG_WORK_MESSAGE_TYPE,
@@ -14,6 +15,7 @@ import {
   UPDATE_SETTINGS_MESSAGE_TYPE,
   WEBVIEW_READY_MESSAGE_TYPE,
   isClearNotificationsMessage,
+  isCloneMergeRequestMessage,
   isConnectJiraMessage,
   isDisconnectJiraMessage,
   isLogWorkMessage,
@@ -170,6 +172,19 @@ describe('webview message guards', () => {
         type: LOG_WORK_MESSAGE_TYPE,
       })
     ).toBe(true);
+    expect(
+      isCloneMergeRequestMessage({
+        baseBranch: 'staging',
+        destinationGroup: 'group-b',
+        issueKey: 'OPS-123',
+        portBranch: 'cherry-pick/OPS-123',
+        sourceMrTitle: 'Merge request - TOR-45',
+        sourceMrUrl:
+          'https://gitlab.dongtran.com/group-a/folder/main/repository-1/-/merge_requests/100',
+        title: '[Clone] TOR-45 OPS-123',
+        type: CLONE_MERGE_REQUEST_MESSAGE_TYPE,
+      })
+    ).toBe(true);
   });
 
   test('rejects malformed issue detail action messages', () => {
@@ -194,6 +209,31 @@ describe('webview message guards', () => {
         issueKey: 'OPS-123',
         minutes: 1,
         type: LOG_WORK_MESSAGE_TYPE,
+      })
+    ).toBe(false);
+    expect(
+      isCloneMergeRequestMessage({
+        baseBranch: 'staging',
+        destinationGroup: 'group-b',
+        issueKey: 'OPS-123',
+        portBranch: 'cherry-pick/OPS-123',
+        sourceMrTitle: 'Merge request - TOR-45',
+        sourceMrUrl: 'file:///tmp/repo',
+        title: '[Clone] TOR-45 OPS-123',
+        type: CLONE_MERGE_REQUEST_MESSAGE_TYPE,
+      })
+    ).toBe(false);
+    expect(
+      isCloneMergeRequestMessage({
+        baseBranch: '',
+        destinationGroup: 'group-b',
+        issueKey: 'OPS-123',
+        portBranch: 'cherry-pick/OPS-123',
+        sourceMrTitle: 'Merge request - TOR-45',
+        sourceMrUrl:
+          'https://gitlab.dongtran.com/group-a/folder/main/repository-1/-/merge_requests/100',
+        title: '[Clone] TOR-45 OPS-123',
+        type: CLONE_MERGE_REQUEST_MESSAGE_TYPE,
       })
     ).toBe(false);
   });

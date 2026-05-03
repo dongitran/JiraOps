@@ -9,6 +9,7 @@ const OPEN_SETTINGS_MESSAGE_TYPE = 'jiraOps.openSettings';
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
 const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
 const PROTOTYPE_CONNECTION_STATE_MESSAGE_TYPE = 'jiraOps.prototypeConnectionState';
+const BASE_BRANCH_OPTIONS = ['staging', 'main', 'develop', 'master', 'release'];
 
 const THEMES = [
   {
@@ -142,13 +143,13 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.25 Stable</span>
+        <span>JiraOps 0.1.26 Stable</span>
         <h1>What Is New</h1>
         <p>Cleaner triage, focused Details, visible updates, and safe actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable 0.1.25</strong>
+          <strong>Stable 0.1.26</strong>
           <p>Four core JiraOps workflows in one clean view.</p>
         </div>
         <span>🚀</span>
@@ -162,12 +163,12 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">🧾</span>
           <strong>Details</strong>
-          <p>Issue context, links, and activity.</p>
+          <p>Jira links, activity, and notes in order.</p>
         </article>
         <article>
-          <span aria-hidden="true">🔔</span>
-          <strong>Notifications</strong>
-          <p>Unread updates stay visible.</p>
+          <span aria-hidden="true">🔁</span>
+          <strong>MR Clone</strong>
+          <p>Port linked MRs to another GitLab group.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
@@ -247,6 +248,7 @@ function renderIssueDetail(issue) {
         </div>
         ${renderAttachments(issue.attachments)}
       </section>
+      ${renderCloneDialog(issue)}
       ${renderWorklogDialog(issue)}
     </article>
   `;
@@ -305,6 +307,47 @@ function renderWorklogDialog(issue) {
         <div class="detail-dialog-actions">
           <button type="button" class="detail-dialog-secondary" data-detail-action="close-worklog">Cancel</button>
           <button type="submit" class="detail-dialog-primary">Log Work</button>
+        </div>
+      </form>
+    </dialog>
+  `;
+}
+
+function renderCloneDialog(issue) {
+  return `
+    <dialog class="detail-clone-dialog" aria-label="Clone merge request">
+      <form class="detail-clone-form" data-detail-action="clone" data-issue-key="${escapeAttribute(issue.key)}">
+        <div class="detail-dialog-heading">
+          <div>
+            <span>${escapeHtml(issue.key)}</span>
+            <h2>Clone merge request</h2>
+          </div>
+          <button type="button" class="detail-dialog-close" data-clone-action="close" aria-label="Close Clone merge request">&times;</button>
+        </div>
+        <p class="detail-clone-source" data-clone-source>Choose a merge request to clone.</p>
+        <label>
+          <span>Destination group</span>
+          <input name="destinationGroup" type="text" autocomplete="off" placeholder="group-b" />
+        </label>
+        <label>
+          <span>Base branch</span>
+          <input name="baseBranch" type="text" list="clone-base-branches-${escapeAttribute(issue.key)}" autocomplete="off" value="staging" />
+        </label>
+        <datalist id="clone-base-branches-${escapeAttribute(issue.key)}">
+          ${BASE_BRANCH_OPTIONS.map((branch) => `<option value="${escapeAttribute(branch)}"></option>`).join('')}
+        </datalist>
+        <label>
+          <span>Port branch</span>
+          <input name="portBranch" type="text" autocomplete="off" value="cherry-pick/${escapeAttribute(issue.key)}" />
+        </label>
+        <label>
+          <span>Title</span>
+          <input name="title" type="text" autocomplete="off" />
+        </label>
+        <p class="detail-dialog-status" role="status" aria-live="polite"></p>
+        <div class="detail-dialog-actions">
+          <button type="button" class="detail-dialog-secondary" data-clone-action="close">Cancel</button>
+          <button type="submit" class="detail-dialog-primary">Clone MR</button>
         </div>
       </form>
     </dialog>
@@ -407,7 +450,7 @@ function renderMergeRequests(mergeRequests) {
       ${mergeRequests
         .map((mergeRequest) => {
           return `
-            <a class="detail-link detail-link-primary" href="${escapeAttribute(mergeRequest.url)}" target="_blank" rel="noreferrer">
+            <a class="detail-link detail-link-primary" href="${escapeAttribute(mergeRequest.url)}">
               <strong>${escapeHtml(mergeRequest.title)}</strong>
               <span>${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}</span>
             </a>
@@ -425,17 +468,21 @@ function renderCloneMergeRequests(mergeRequests) {
 
   return `
     <div class="detail-grid">
-      ${mergeRequests
-        .map((mergeRequest) => {
-          return `
-            <a class="detail-link detail-link-primary" href="${escapeAttribute(mergeRequest.url)}" target="_blank" rel="noreferrer">
-              <strong>${escapeHtml(mergeRequest.title)}</strong>
-              <span>Clone ticket ${escapeHtml(mergeRequest.issueKey)} - ${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}</span>
-            </a>
-          `;
-        })
-        .join('')}
+      ${mergeRequests.map(renderCloneMergeRequestCard).join('')}
     </div>
+  `;
+}
+
+function renderCloneMergeRequestCard(mergeRequest) {
+  return `
+    <article class="detail-link detail-link-primary detail-clone-mr-card" aria-label="${escapeAttribute(`${mergeRequest.title} clone merge request`)}" data-source-mr-url="${escapeAttribute(mergeRequest.url)}">
+      <a class="detail-clone-mr-link" href="${escapeAttribute(mergeRequest.url)}">
+        <strong>${escapeHtml(mergeRequest.title)}</strong>
+        <span>Clone ticket ${escapeHtml(mergeRequest.issueKey)} - ${escapeHtml(mergeRequest.projectPath)} !${escapeHtml(mergeRequest.iid)}</span>
+      </a>
+      <button class="detail-clone-button" type="button" data-clone-action="open" data-source-mr-url="${escapeAttribute(mergeRequest.url)}" aria-label="Clone ${escapeAttribute(mergeRequest.title)}">Clone</button>
+      <p class="detail-clone-status" role="status" aria-live="polite"></p>
+    </article>
   `;
 }
 
@@ -449,7 +496,7 @@ function renderWebLinks(webLinks) {
       ${webLinks
         .map((webLink) => {
           return `
-            <a class="detail-link" href="${escapeAttribute(webLink.url)}" target="_blank" rel="noreferrer">
+            <a class="detail-link" href="${escapeAttribute(webLink.url)}">
               <strong>${escapeHtml(webLink.title)}</strong>
               <span>${escapeHtml(webLink.relationship)} - ${escapeHtml(webLink.host)}</span>
             </a>
@@ -512,6 +559,90 @@ function bindDetailActions(issue) {
       applyPrototypeWorkLog(workForm);
     });
   }
+
+  bindCloneMergeRequestActions(issue);
+}
+
+function bindCloneMergeRequestActions(issue) {
+  for (const cloneButton of editorSurface.querySelectorAll('[data-clone-action="open"]')) {
+    cloneButton.addEventListener('click', () => {
+      if (cloneButton instanceof HTMLButtonElement) {
+        openPrototypeCloneDialog(cloneButton, issue);
+      }
+    });
+  }
+
+  for (const closeButton of editorSurface.querySelectorAll('[data-clone-action="close"]')) {
+    closeButton.addEventListener('click', closePrototypeCloneDialog);
+  }
+
+  const cloneForm = editorSurface.querySelector('form[data-detail-action="clone"]');
+  if (cloneForm instanceof HTMLFormElement) {
+    cloneForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      applyPrototypeCloneMergeRequest(cloneForm, issue);
+    });
+  }
+}
+
+function openPrototypeCloneDialog(button, issue) {
+  const mergeRequest = issue.cloneMergeRequests.find((item) => item.url === button.dataset.sourceMrUrl);
+  const dialog = editorSurface.querySelector('.detail-clone-dialog');
+  const form = editorSurface.querySelector('form[data-detail-action="clone"]');
+  if (!(dialog instanceof HTMLDialogElement) || !(form instanceof HTMLFormElement) || mergeRequest === undefined) {
+    return;
+  }
+
+  form.dataset.sourceMrUrl = mergeRequest.url;
+  setCloneDialogStatus('');
+  setInputValue(form, 'destinationGroup', '');
+  setInputValue(form, 'baseBranch', 'staging');
+  setInputValue(form, 'portBranch', `cherry-pick/${issue.key}`);
+  setInputValue(form, 'title', buildPrototypeCloneTitle(mergeRequest.title, issue.key));
+  const source = form.querySelector('[data-clone-source]');
+  if (source instanceof HTMLElement) {
+    source.textContent = `${mergeRequest.title} - ${mergeRequest.projectPath} !${mergeRequest.iid}`;
+  }
+
+  if (typeof dialog.showModal === 'function') {
+    dialog.showModal();
+    return;
+  }
+  dialog.setAttribute('open', '');
+}
+
+function closePrototypeCloneDialog() {
+  const dialog = editorSurface.querySelector('.detail-clone-dialog');
+  if (dialog instanceof HTMLDialogElement) {
+    dialog.close();
+  }
+}
+
+function applyPrototypeCloneMergeRequest(form, issue) {
+  const sourceMrUrl = form.dataset.sourceMrUrl ?? '';
+  const mergeRequest = issue.cloneMergeRequests.find((item) => item.url === sourceMrUrl);
+  const destinationGroup = getInputValue(form, 'destinationGroup').trim();
+  const baseBranch = getInputValue(form, 'baseBranch').trim();
+  const portBranch = getInputValue(form, 'portBranch').trim();
+  const title = getInputValue(form, 'title').trim();
+  if (mergeRequest === undefined || destinationGroup.length === 0 || baseBranch.length === 0 || portBranch.length === 0 || title.length === 0) {
+    setCloneDialogStatus('Complete every clone field.');
+    return;
+  }
+
+  let clonedUrl = '';
+  try {
+    clonedUrl = buildPrototypeDestinationMergeRequestUrl(mergeRequest.url, destinationGroup);
+  } catch {
+    setCloneDialogStatus('Enter a valid destination group.');
+    return;
+  }
+
+  closePrototypeCloneDialog();
+  setCloneCardLoading(sourceMrUrl, true);
+  window.setTimeout(() => {
+    setCloneCardSuccess(sourceMrUrl, clonedUrl, title);
+  }, 650);
 }
 
 function applyPrototypeStatusTransition(select, issue) {
@@ -584,10 +715,102 @@ function setDetailActionStatus(message) {
 }
 
 function setWorklogDialogStatus(message) {
-  const status = editorSurface.querySelector('.detail-dialog-status');
+  const status = editorSurface.querySelector('.detail-worklog-dialog .detail-dialog-status');
   if (status instanceof HTMLElement) {
     status.textContent = message;
   }
+}
+
+function setCloneDialogStatus(message) {
+  const status = editorSurface.querySelector('.detail-clone-dialog .detail-dialog-status');
+  if (status instanceof HTMLElement) {
+    status.textContent = message;
+  }
+}
+
+function setCloneCardLoading(sourceMrUrl, loading) {
+  const card = findCloneCard(sourceMrUrl);
+  const button = card?.querySelector('[data-clone-action="open"]');
+  const status = card?.querySelector('.detail-clone-status');
+  if (button instanceof HTMLButtonElement) {
+    button.disabled = loading;
+    button.textContent = loading ? 'Cloning...' : 'Clone';
+  }
+  if (status instanceof HTMLElement) {
+    status.textContent = loading ? 'Cloning merge request...' : '';
+  }
+}
+
+function setCloneCardSuccess(sourceMrUrl, clonedUrl, title) {
+  const card = findCloneCard(sourceMrUrl);
+  const button = card?.querySelector('[data-clone-action="open"]');
+  const status = card?.querySelector('.detail-clone-status');
+  if (button instanceof HTMLButtonElement) {
+    button.disabled = true;
+    button.textContent = 'Cloned';
+  }
+  if (status instanceof HTMLElement) {
+    status.innerHTML = `Cloned as <a href="${escapeAttribute(clonedUrl)}" aria-label="Open cloned merge request">${escapeHtml(title)}</a>`;
+  }
+  if (card instanceof HTMLElement) {
+    card.dataset.cloneState = 'cloned';
+  }
+}
+
+function findCloneCard(sourceMrUrl) {
+  return editorSurface.querySelector(`.detail-clone-mr-card[data-source-mr-url="${cssEscape(sourceMrUrl)}"]`);
+}
+
+function getInputValue(form, name) {
+  const input = form.elements.namedItem(name);
+  return input instanceof HTMLInputElement ? input.value : '';
+}
+
+function setInputValue(form, name, value) {
+  const input = form.elements.namedItem(name);
+  if (input instanceof HTMLInputElement) {
+    input.value = value;
+  }
+}
+
+function buildPrototypeCloneTitle(sourceTitle, issueKey) {
+  const sourceKey = extractIssueKeyFromTitle(sourceTitle);
+  return `[Clone] ${sourceKey.length > 0 ? sourceKey : sourceTitle} ${issueKey}`;
+}
+
+function extractIssueKeyFromTitle(title) {
+  const afterDash = /merge request\s*-\s*([A-Z][A-Z0-9]+-\d+)/iu.exec(title)?.[1];
+  if (afterDash !== undefined) {
+    return afterDash.toUpperCase();
+  }
+
+  return /\b([A-Z][A-Z0-9]+-\d+)\b/u.exec(title)?.[1] ?? '';
+}
+
+function buildPrototypeDestinationMergeRequestUrl(sourceMrUrl, destinationGroup) {
+  const source = new URL(sourceMrUrl);
+  const marker = '/-/merge_requests/';
+  const markerIndex = source.pathname.indexOf(marker);
+  if (markerIndex < 0) {
+    throw new Error('Invalid merge request URL.');
+  }
+  const repoParts = source.pathname.slice(1, markerIndex).split('/').filter(Boolean);
+  const groupParts = destinationGroup.split('/').filter(Boolean);
+  if (repoParts.length < 2 || groupParts.length === 0 || groupParts.some((part) => part === '.' || part === '..')) {
+    throw new Error('Invalid destination group.');
+  }
+  source.pathname = `/${[...groupParts, ...repoParts.slice(1)].join('/')}/-/merge_requests/777`;
+  source.search = '';
+  source.hash = '';
+  return source.toString();
+}
+
+function cssEscape(value) {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+
+  return String(value).replaceAll('"', '\\"');
 }
 
 function isIssueDetail(value) {
