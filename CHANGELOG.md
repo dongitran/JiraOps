@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.21
+
+- Move the Details title above the Jira key/status action row while keeping the compact header spacing.
+
 ## 0.1.20
 
 - Keep Details status actions on the Jira key row while tightening top and bottom header spacing in the prototype and extension views.

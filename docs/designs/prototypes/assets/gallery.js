@@ -218,11 +218,11 @@ function renderIssueDetail(issue) {
   editorSurface.innerHTML = `
     <article class="editor-detail" aria-label="${escapeAttribute(issue.key)} details">
       <header class="editor-detail-header">
+        <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
         <div class="editor-detail-meta-row">
           <span class="detail-key">${escapeHtml(issue.key)}</span>
           ${renderDetailHeaderActions(issue)}
         </div>
-        <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
       </header>
       <section class="detail-section detail-content-section" aria-label="Description and comments">
         ${renderIssueContent(issue)}

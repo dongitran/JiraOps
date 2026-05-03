@@ -598,7 +598,6 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
       selectBox.top < titleBox.bottom &&
       titleBox.top < selectBox.bottom;
     return {
-      actionAboveTitle: actionsBox.bottom <= titleBox.top,
       actionMarginBottom: actionStyle.marginBottom,
       buttonDoesNotWrap: button.scrollHeight <= button.clientHeight + 1,
       headerDisplay: window.getComputedStyle(header).display,
@@ -610,7 +609,8 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
       sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
       sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
       statusDoesNotOverlapTitle: !overlapsTitle,
-      titleGap: Math.round(titleBox.top - actionsBox.bottom),
+      titleAboveActionRow: titleBox.bottom <= actionsBox.top,
+      titleGap: Math.round(actionsBox.top - titleBox.bottom),
       whiteSpace: window.getComputedStyle(button).whiteSpace,
     };
   });
@@ -620,7 +620,6 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
   }
 
   expect(layout).toMatchObject({
-    actionAboveTitle: true,
     actionMarginBottom: '0px',
     buttonDoesNotWrap: true,
     headerDisplay: 'grid',
@@ -628,6 +627,7 @@ async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {
     sameActionRow: true,
     sameIssueKeyRow: true,
     statusDoesNotOverlapTitle: true,
+    titleAboveActionRow: true,
     whiteSpace: 'nowrap',
   });
   expect(layout.titleGap).toBeGreaterThanOrEqual(0);
@@ -667,25 +667,25 @@ async function expectNarrowDetailHeaderActionsOnIssueKeyRow(frame: Frame): Promi
       selectBox.top < titleBox.bottom &&
       titleBox.top < selectBox.bottom;
     return {
-      actionAboveTitle: actionsBox.bottom <= titleBox.top,
       actionMarginBottom: window.getComputedStyle(actions).marginBottom,
       headerDisplay: window.getComputedStyle(header).display,
       sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
       sameIssueKeyRow: Math.abs(selectBox.top - issueKeyBox.top) < 12,
       shellWidth: Math.round(shell.getBoundingClientRect().width),
       statusDoesNotOverlapTitle: !overlapsTitle,
-      titleGap: Math.round(titleBox.top - actionsBox.bottom),
+      titleAboveActionRow: titleBox.bottom <= actionsBox.top,
+      titleGap: Math.round(actionsBox.top - titleBox.bottom),
     };
   });
 
   expect(layout).toEqual({
-    actionAboveTitle: true,
     actionMarginBottom: '0px',
     headerDisplay: 'grid',
     sameActionRow: true,
     sameIssueKeyRow: true,
     shellWidth: expect.any(Number),
     statusDoesNotOverlapTitle: true,
+    titleAboveActionRow: true,
     titleGap: expect.any(Number),
   });
   expect(layout?.shellWidth).toBeGreaterThan(340);
@@ -722,7 +722,6 @@ async function expectLongDetailTitleDoesNotOverlapStatus(frame: Frame): Promise<
     const selectBox = select.getBoundingClientRect();
     const buttonBox = button.getBoundingClientRect();
     return {
-      actionAboveTitle: actionsBox.bottom <= titleBox.top,
       actionWidth: Math.round(actionsBox.width),
       headerDisplay: window.getComputedStyle(header).display,
       sameActionRow: Math.abs(selectBox.top - buttonBox.top) < 3,
@@ -733,16 +732,17 @@ async function expectLongDetailTitleDoesNotOverlapStatus(frame: Frame): Promise<
         selectBox.top < titleBox.bottom &&
         titleBox.top < selectBox.bottom
       ),
+      titleAboveActionRow: titleBox.bottom <= actionsBox.top,
     };
   });
 
   expect(layout).toEqual({
-    actionAboveTitle: true,
     actionWidth: expect.any(Number),
     headerDisplay: 'grid',
     sameActionRow: true,
     sameIssueKeyRow: true,
     statusDoesNotOverlapTitle: true,
+    titleAboveActionRow: true,
   });
   expect(layout?.actionWidth).toBeGreaterThanOrEqual(278);
 }

@@ -334,12 +334,12 @@ function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): stri
 function renderIssueDetailHeader(issue: DashboardIssue, detail: JiraIssueDetail): string {
   return `
     <header class="detail-page-header">
+      <div class="detail-page-title">
+        <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
+      </div>
       <div class="detail-page-meta-row">
         <span class="issue-key">${escapeHtml(issue.key)}</span>
         ${renderHeaderActions(issue, detail)}
-      </div>
-      <div class="detail-page-title">
-        <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
       </div>
     </header>
   `;
