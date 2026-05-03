@@ -188,4 +188,51 @@ describe('jiraAdfRenderer', () => {
       technicalNotesHtml: '<p>Keep retry budget in place.</p>',
     });
   });
+
+  test('splits paragraph-style technical note markers after test strategy', () => {
+    const sections = renderAdfHtmlSections({
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Test Strategy' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Run checkout and reconciliation regression.' }],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Technical Note:',
+              marks: [{ type: 'strong' }],
+            },
+          ],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Keep the rollback query pinned.' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Rollout' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Ship after QA sign-off.' }],
+        },
+      ],
+    });
+
+    expect(sections).toEqual({
+      mainHtml:
+        '<h3>Test Strategy</h3><p>Run checkout and reconciliation regression.</p><h3>Rollout</h3><p>Ship after QA sign-off.</p>',
+      technicalNotesHtml: '<p>Keep the rollback query pinned.</p>',
+    });
+  });
 });

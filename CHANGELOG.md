@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.18
+
+- Move paragraph-style Jira `Technical Note` markers out of Description and into the bottom Technical notes section below All Jira web links.
+
 ## 0.1.17
 
 - Keep Activity Bar icon rendering theme-compatible by using a transparent single-color SVG glyph.

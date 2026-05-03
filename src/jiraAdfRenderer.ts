@@ -11,6 +11,12 @@ interface AdfMark {
   readonly attrs: AdfNode | null;
 }
 
+interface TechnicalNotesSection {
+  readonly end: number;
+  readonly notesContent: readonly unknown[];
+  readonly start: number;
+}
+
 const NODE_RENDERERS: Record<string, NodeRenderer> = {
   blockquote: renderBlockquote,
   bulletList: renderBulletList,
@@ -60,7 +66,7 @@ export function renderAdfHtmlSections(value: unknown): RenderedAdfHtmlSections {
       type: 'doc',
     }),
     technicalNotesHtml: renderChildren({
-      content: content.slice(section.start + 1, section.end),
+      content: section.notesContent,
       type: 'doc',
     }),
   };
@@ -186,17 +192,26 @@ function getTopLevelContent(value: unknown): readonly unknown[] | null {
 
 function findTechnicalNotesSection(
   content: readonly unknown[]
-): { readonly end: number; readonly start: number } | null {
+): TechnicalNotesSection | null {
   for (let index = 0; index < content.length; index += 1) {
     const node = content[index];
-    if (!isTechnicalNotesHeading(node)) {
-      continue;
+    if (isTechnicalNotesHeading(node)) {
+      const end = findSectionEnd(content, index, headingLevel(node));
+      return {
+        start: index,
+        end,
+        notesContent: content.slice(index + 1, end),
+      };
     }
 
-    return {
-      start: index,
-      end: findSectionEnd(content, index, headingLevel(node)),
-    };
+    if (isTechnicalNotesParagraphMarker(node)) {
+      const end = findParagraphSectionEnd(content, index);
+      return {
+        start: index,
+        end,
+        notesContent: content.slice(index + 1, end),
+      };
+    }
   }
   return null;
 }
@@ -215,6 +230,15 @@ function findSectionEnd(
   return content.length;
 }
 
+function findParagraphSectionEnd(content: readonly unknown[], startIndex: number): number {
+  for (let index = startIndex + 1; index < content.length; index += 1) {
+    if (isHeading(content[index])) {
+      return index;
+    }
+  }
+  return content.length;
+}
+
 function isTechnicalNotesHeading(value: unknown): boolean {
   if (!isHeading(value)) {
     return false;
@@ -224,8 +248,21 @@ function isTechnicalNotesHeading(value: unknown): boolean {
   return heading === 'technical note' || heading === 'technical notes';
 }
 
+function isTechnicalNotesParagraphMarker(value: unknown): boolean {
+  if (!isParagraph(value)) {
+    return false;
+  }
+
+  const text = normalizeHeadingText(extractTextFromAdf(value));
+  return text === 'technical note' || text === 'technical notes';
+}
+
 function isHeading(value: unknown): value is AdfNode {
   return isRecord(value) && getString(value, 'type') === 'heading';
+}
+
+function isParagraph(value: unknown): value is AdfNode {
+  return isRecord(value) && getString(value, 'type') === 'paragraph';
 }
 
 function headingLevel(value: unknown): number {

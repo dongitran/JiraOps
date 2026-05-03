@@ -415,6 +415,80 @@ describe('jira issue details', () => {
     });
   });
 
+  test('splits paragraph-style technical note markers from fetched Jira descriptions', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            key: 'OPS-123',
+            fields: {
+              summary: 'Stabilize payment reconciliation alerts',
+              status: {
+                name: 'In Progress',
+                statusCategory: { name: 'In Progress' },
+              },
+              updated: '2026-05-01T08:20:00.000+0000',
+              description: {
+                type: 'doc',
+                version: 1,
+                content: [
+                  {
+                    type: 'heading',
+                    attrs: { level: 3 },
+                    content: [{ type: 'text', text: 'Test Strategy' }],
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [
+                      { type: 'text', text: 'Run checkout and reconciliation regression.' },
+                    ],
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [
+                      {
+                        type: 'text',
+                        text: 'Technical Note:',
+                        marks: [{ type: 'strong' }],
+                      },
+                    ],
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Keep the rollback query pinned.' }],
+                  },
+                  {
+                    type: 'heading',
+                    attrs: { level: 3 },
+                    content: [{ type: 'text', text: 'Rollout' }],
+                  },
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: 'Ship after QA sign-off.' }],
+                  },
+                ],
+              },
+            },
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchJiraIssueDetail({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toMatchObject({
+      descriptionHtml:
+        '<h3>Test Strategy</h3><p>Run checkout and reconciliation regression.</p><h3>Rollout</h3><p>Ship after QA sign-off.</p>',
+      technicalNotesHtml: '<p>Keep the rollback query pinned.</p>',
+    });
+  });
+
   test('keeps only Jira linked work items under the clones relationship', async () => {
     const fetchMock = vi.fn(() => {
       return Promise.resolve(
