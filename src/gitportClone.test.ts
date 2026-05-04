@@ -98,15 +98,57 @@ describe('gitport clone helpers', () => {
         }
       )
     ).resolves.toEqual({
+      mergeRequestCreated: true,
       mergeRequestIid: 777,
       mergeRequestUrl:
         'https://gitlab.dongtran.com/group-b/folder/main/repository-1/-/merge_requests/777',
       message: 'Cloned merge request !777.',
+      portBranch: 'cherry-pick/POR-10',
     });
     expect(importGitport).not.toHaveBeenCalled();
     expect(log.mock.calls.map((call) => call[0])).toEqual([
       expect.stringContaining('gitport --source-mr-url'),
       expect.stringContaining('Gitport clone simulated for POR-10'),
+    ]);
+  });
+
+  test('returns branch update success when gitport reuses an existing port branch', async () => {
+    const importGitport = vi.fn(() => Promise.resolve({
+      maskGitportError: (error: unknown): string => error instanceof Error ? error.message : String(error),
+      portGitLabMergeRequest: vi.fn(() => Promise.resolve({
+        mergeRequestCreated: false,
+        portBranch: 'cherry-pick/POR-10',
+        portBranchExisted: true,
+      })),
+    }));
+    const log = vi.fn<(message: string) => void>();
+
+    await expect(
+      runCloneMergeRequest(
+        {
+          baseBranch: 'staging',
+          destinationGroup: 'group-b',
+          issueKey: 'POR-10',
+          portBranch: 'cherry-pick/POR-10',
+          sourceMrTitle: 'Merge request - TOR-45',
+          sourceMrUrl,
+          title: '[Clone] TOR-45 POR-10',
+        },
+        {
+          env: { [GITPORT_GITLAB_TOKEN_ENV]: 'token-1' },
+          importGitport,
+          log,
+          testMode: false,
+        }
+      )
+    ).resolves.toEqual({
+      mergeRequestCreated: false,
+      message: 'Updated existing port branch cherry-pick/POR-10.',
+      portBranch: 'cherry-pick/POR-10',
+    });
+    expect(log.mock.calls.map((call) => call[0])).toEqual([
+      expect.stringContaining('gitport --source-mr-url'),
+      'Gitport clone completed; updated existing port branch cherry-pick/POR-10.',
     ]);
   });
 

@@ -9,7 +9,7 @@ import {
 
 const CHANGELOG = `# Changelog
 
-## 0.1.26
+## 0.1.27
 
 ### Dashboard
 
@@ -17,15 +17,19 @@ const CHANGELOG = `# Changelog
 
 ### Details
 
-- Jira links, activity, and notes in order.
+- Jira links, activity, and clone results.
 
 ### MR Clone
 
-- Port linked MRs to another GitLab group.
+- Clone linked MRs and reuse port branches.
 
 ### Jira Actions
 
 - Change status and log work safely.
+
+## 0.1.26
+
+- Stable build with cleaner notes.
 
 ## 0.1.23
 
@@ -95,11 +99,11 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.26')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.27')).toEqual({
       bullets: [
         'Assigned tickets, compact and scannable.',
-        'Jira links, activity, and notes in order.',
-        'Port linked MRs to another GitLab group.',
+        'Jira links, activity, and clone results.',
+        'Clone linked MRs and reuse port branches.',
         'Change status and log work safely.',
       ],
       sections: [
@@ -109,18 +113,18 @@ describe('What Is New', () => {
         },
         {
           title: 'Details',
-          bullets: ['Jira links, activity, and notes in order.'],
+          bullets: ['Jira links, activity, and clone results.'],
         },
         {
           title: 'MR Clone',
-          bullets: ['Port linked MRs to another GitLab group.'],
+          bullets: ['Clone linked MRs and reuse port branches.'],
         },
         {
           title: 'Jira Actions',
           bullets: ['Change status and log work safely.'],
         },
       ],
-      version: '0.1.26',
+      version: '0.1.27',
     });
   });
 
@@ -133,10 +137,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.26',
+      version: '0.1.27',
     });
 
-    expect(html).toContain('JiraOps 0.1.26 Stable');
+    expect(html).toContain('JiraOps 0.1.27 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

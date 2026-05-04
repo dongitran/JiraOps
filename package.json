@@ -2,7 +2,7 @@
   "name": "jira-ops",
   "displayName": "JiraOps",
   "description": "Assigned Jira tickets and GitLab merge request context in VS Code.",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "publisher": "dongtran",
   "license": "MIT",
   "icon": "resources/jira-ops.png",
@@ -118,7 +118,7 @@
     "prepare": "node ./scripts/setup-husky.cjs"
   },
   "dependencies": {
-    "@saptools/gitport": "^0.1.9",
+    "@saptools/gitport": "^0.1.10",
     "jira-oauth-client": "^0.1.2",
     "zod": "^4.1.12"
   },

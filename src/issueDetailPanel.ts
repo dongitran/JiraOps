@@ -189,7 +189,7 @@ async function handleDetailMessage(
     }
     if (!allowedCloneMrUrls().has(message.sourceMrUrl)) {
       await postCloneMergeRequestResult(webview, {
-        mergeRequestUrl: '',
+        mergeRequestCreated: false,
         message: 'Clone action did not match this issue detail panel.',
         sourceMrUrl: message.sourceMrUrl,
         success: false,
@@ -267,6 +267,7 @@ async function runCloneMergeRequestAction(
       throw new Error('Merge request could not be cloned.');
     }
     await postCloneMergeRequestResult(webview, {
+      mergeRequestCreated: result.mergeRequestCreated,
       mergeRequestUrl: result.mergeRequestUrl,
       message: result.message,
       sourceMrUrl,
@@ -274,7 +275,7 @@ async function runCloneMergeRequestAction(
     });
   } catch (error) {
     await postCloneMergeRequestResult(webview, {
-      mergeRequestUrl: '',
+      mergeRequestCreated: false,
       message: errorMessage(error, 'Merge request could not be cloned.'),
       sourceMrUrl,
       success: false,
@@ -285,7 +286,8 @@ async function runCloneMergeRequestAction(
 async function postCloneMergeRequestResult(
   webview: vscode.Webview,
   result: {
-    readonly mergeRequestUrl: string;
+    readonly mergeRequestCreated: boolean;
+    readonly mergeRequestUrl?: string | undefined;
     readonly message: string;
     readonly sourceMrUrl: string;
     readonly success: boolean;

@@ -35,9 +35,11 @@ export interface CloneMergeRequestCommand {
 }
 
 export interface CloneMergeRequestResult {
-  readonly mergeRequestIid: number;
-  readonly mergeRequestUrl: string;
+  readonly mergeRequestCreated: boolean;
+  readonly mergeRequestIid?: number | undefined;
+  readonly mergeRequestUrl?: string | undefined;
   readonly message: string;
+  readonly portBranch: string;
 }
 
 export interface RunCloneMergeRequestOptions {
@@ -65,8 +67,11 @@ interface GitportPortOptions {
 }
 
 interface GitportPortResult {
-  readonly mergeRequestIid: number;
-  readonly mergeRequestUrl: string;
+  readonly mergeRequestCreated: boolean;
+  readonly mergeRequestIid?: number | undefined;
+  readonly mergeRequestUrl?: string | undefined;
+  readonly portBranch: string;
+  readonly portBranchExisted: boolean;
 }
 
 interface ParsedMergeRequestUrl {
@@ -140,7 +145,7 @@ export async function runCloneMergeRequest(
   if (options.testMode) {
     await waitForTestCloneDelay(options.env ?? process.env);
     const result = simulateCloneMergeRequest(command);
-    options.log(`Gitport clone simulated for ${input.issueKey}; created ${result.mergeRequestUrl}.`);
+    options.log(`Gitport clone simulated for ${input.issueKey}; created ${result.mergeRequestUrl ?? result.portBranch}.`);
     return result;
   }
 
@@ -194,8 +199,13 @@ async function runRealCloneMergeRequest(
       title: command.title,
       token,
     });
-    options.log(`Gitport clone completed; created ${result.mergeRequestUrl}.`);
-    return toCloneResult(result.mergeRequestUrl, result.mergeRequestIid);
+    const cloneResult = toCloneResult(result);
+    options.log(
+      cloneResult.mergeRequestCreated
+        ? `Gitport clone completed; created ${cloneResult.mergeRequestUrl ?? cloneResult.portBranch}.`
+        : `Gitport clone completed; updated existing port branch ${cloneResult.portBranch}.`
+    );
+    return cloneResult;
   } catch (error: unknown) {
     throw new Error(gitport.maskGitportError(error, [token]));
   }
@@ -206,14 +216,33 @@ async function importGitport(): Promise<GitportModule> {
 }
 
 function simulateCloneMergeRequest(command: CloneMergeRequestCommand): CloneMergeRequestResult {
-  return toCloneResult(`${command.destinationRepoUrl}/-/merge_requests/777`, 777);
+  return toCloneResult({
+    mergeRequestCreated: true,
+    mergeRequestIid: 777,
+    mergeRequestUrl: `${command.destinationRepoUrl}/-/merge_requests/777`,
+    portBranch: command.portBranch,
+    portBranchExisted: false,
+  });
 }
 
-function toCloneResult(mergeRequestUrl: string, mergeRequestIid: number): CloneMergeRequestResult {
+function toCloneResult(result: GitportPortResult): CloneMergeRequestResult {
+  if (!result.mergeRequestCreated) {
+    return {
+      mergeRequestCreated: false,
+      message: `Updated existing port branch ${result.portBranch}.`,
+      portBranch: result.portBranch,
+    };
+  }
+  if (result.mergeRequestUrl === undefined || result.mergeRequestIid === undefined) {
+    throw new Error('Gitport did not return the created merge request link.');
+  }
+
   return {
-    mergeRequestIid,
-    mergeRequestUrl,
-    message: `Cloned merge request !${String(mergeRequestIid)}.`,
+    mergeRequestCreated: true,
+    mergeRequestIid: result.mergeRequestIid,
+    mergeRequestUrl: result.mergeRequestUrl,
+    message: `Cloned merge request !${String(result.mergeRequestIid)}.`,
+    portBranch: result.portBranch,
   };
 }
 

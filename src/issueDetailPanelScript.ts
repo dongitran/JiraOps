@@ -117,18 +117,23 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
         }
       }
 
-      function setCloneCardSuccess(sourceMrUrl, mergeRequestUrl, message) {
+      function setCloneCardSuccess(sourceMrUrl, mergeRequestUrl, message, mergeRequestCreated) {
         const card = getCloneCard(sourceMrUrl);
         const button = card?.querySelector('[data-clone-action="open"]');
         const status = card?.querySelector('.detail-clone-status');
         if (button instanceof HTMLButtonElement) {
           button.disabled = true;
-          button.textContent = 'Cloned';
+          button.textContent = mergeRequestCreated ? 'Cloned' : 'Updated';
         }
         if (card instanceof HTMLElement) {
           card.dataset.cloneState = 'cloned';
         }
         if (status instanceof HTMLElement) {
+          if (typeof mergeRequestUrl !== 'string' || mergeRequestUrl.length === 0) {
+            status.textContent = message;
+            status.dataset.tone = 'success';
+            return;
+          }
           const link = document.createElement('a');
           link.href = mergeRequestUrl;
           link.textContent = message;
@@ -320,8 +325,13 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
           return;
         }
         if (event.data.type === 'jiraOps.cloneMergeRequestResult') {
-          if (event.data.success === true && typeof event.data.mergeRequestUrl === 'string') {
-            setCloneCardSuccess(event.data.sourceMrUrl, event.data.mergeRequestUrl, event.data.message);
+          if (event.data.success === true) {
+            setCloneCardSuccess(
+              event.data.sourceMrUrl,
+              event.data.mergeRequestUrl,
+              event.data.message,
+              event.data.mergeRequestCreated === true
+            );
             return;
           }
           setCloneCardFailure(event.data.sourceMrUrl, event.data.message ?? 'Merge request could not be cloned.');
