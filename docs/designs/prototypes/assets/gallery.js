@@ -143,13 +143,13 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.27 Stable</span>
+        <span>JiraOps 0.1.28 Stable</span>
         <h1>What Is New</h1>
         <p>Cleaner triage, focused Details, visible updates, and safe actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable 0.1.27</strong>
+          <strong>Stable 0.1.28</strong>
           <p>Four core JiraOps workflows in one clean view.</p>
         </div>
         <span>🚀</span>
@@ -168,7 +168,7 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">🔁</span>
           <strong>MR Clone</strong>
-          <p>Clone linked MRs and reuse port branches.</p>
+          <p>Clone stale GitLab MRs safely.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>

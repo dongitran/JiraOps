@@ -9,7 +9,7 @@ import {
 
 const CHANGELOG = `# Changelog
 
-## 0.1.27
+## 0.1.28
 
 ### Dashboard
 
@@ -21,11 +21,15 @@ const CHANGELOG = `# Changelog
 
 ### MR Clone
 
-- Clone linked MRs and reuse port branches.
+- Clone stale GitLab MRs safely.
 
 ### Jira Actions
 
 - Change status and log work safely.
+
+## 0.1.27
+
+- Stable build with cleaner notes.
 
 ## 0.1.26
 
@@ -99,11 +103,11 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.27')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.28')).toEqual({
       bullets: [
         'Assigned tickets, compact and scannable.',
         'Jira links, activity, and clone results.',
-        'Clone linked MRs and reuse port branches.',
+        'Clone stale GitLab MRs safely.',
         'Change status and log work safely.',
       ],
       sections: [
@@ -117,14 +121,14 @@ describe('What Is New', () => {
         },
         {
           title: 'MR Clone',
-          bullets: ['Clone linked MRs and reuse port branches.'],
+          bullets: ['Clone stale GitLab MRs safely.'],
         },
         {
           title: 'Jira Actions',
           bullets: ['Change status and log work safely.'],
         },
       ],
-      version: '0.1.27',
+      version: '0.1.28',
     });
   });
 
@@ -137,10 +141,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.27',
+      version: '0.1.28',
     });
 
-    expect(html).toContain('JiraOps 0.1.27 Stable');
+    expect(html).toContain('JiraOps 0.1.28 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

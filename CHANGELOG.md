@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.28
+
+### Dashboard
+
+- Assigned tickets, compact and scannable.
+
+### Details
+
+- Jira links, activity, and clone results.
+
+### MR Clone
+
+- Clone stale GitLab MRs safely.
+
+### Jira Actions
+
+- Change status and log work safely.
+
 ## 0.1.27
 
 ### Dashboard
