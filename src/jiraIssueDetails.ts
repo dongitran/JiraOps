@@ -2,7 +2,13 @@ import { Buffer } from 'node:buffer';
 
 import { z } from 'zod';
 
-import { extractTextFromAdf, renderAdfHtml, renderAdfHtmlSections } from './jiraAdfRenderer';
+import { isAdfImageDataUri } from './jiraAdfMedia';
+import {
+  extractTextFromAdf,
+  renderAdfHtml,
+  renderAdfHtmlSections,
+  type AdfMediaImage,
+} from './jiraAdfRenderer';
 
 export { extractTextFromAdf } from './jiraAdfRenderer';
 
@@ -59,6 +65,7 @@ export interface JiraIssueDetail {
   readonly statusCategory: string;
   readonly priority: string | null;
   readonly updated: string;
+  readonly descriptionAdf?: unknown;
   readonly descriptionText: string;
   readonly descriptionHtml: string;
   readonly technicalNotesHtml: string;
@@ -228,7 +235,15 @@ export async function hydrateIssueAttachmentImages(
     attachments.push({ ...attachment, imageDataUri });
   }
 
-  return { ...detail, attachments };
+  return renderIssueDescriptionWithHydratedMedia({ ...detail, attachments });
+}
+
+export function countInlineIssueDescriptionImages(detail: JiraIssueDetail): number {
+  return (
+    countInlineImageMarkup(detail.descriptionHtml) +
+    countInlineImageMarkup(detail.activityHtml) +
+    countInlineImageMarkup(detail.technicalNotesHtml)
+  );
 }
 
 function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
@@ -247,6 +262,7 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
     statusCategory: fields.status.statusCategory.name,
     priority: fields.priority?.name ?? null,
     updated: fields.updated,
+    descriptionAdf: fields.description ?? null,
     descriptionText: extractTextFromAdf(fields.description),
     descriptionHtml: descriptionSections.mainHtml,
     technicalNotesHtml: descriptionSections.technicalNotesHtml,
@@ -255,6 +271,52 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
     linkedCloneIssues: mapCloneIssueLinks(fields.issuelinks ?? []),
     transitions: [],
   };
+}
+
+function renderIssueDescriptionWithHydratedMedia(
+  detail: JiraIssueDetail
+): JiraIssueDetail {
+  if (!('descriptionAdf' in detail)) {
+    return detail;
+  }
+
+  const mediaImages = toAdfMediaImages(detail.attachments);
+  const descriptionSections = renderAdfHtmlSections(detail.descriptionAdf, {
+    mediaImages,
+  });
+  return {
+    ...detail,
+    activityHtml: descriptionSections.activityHtml,
+    descriptionHtml: descriptionSections.mainHtml,
+    technicalNotesHtml: descriptionSections.technicalNotesHtml,
+  };
+}
+
+function toAdfMediaImages(
+  attachments: readonly JiraIssueAttachment[]
+): AdfMediaImage[] {
+  return attachments.flatMap((attachment) => {
+    if (attachment.imageDataUri === null || !isImageAttachment(attachment)) {
+      return [];
+    }
+
+    if (!isAdfImageDataUri(attachment.imageDataUri)) {
+      return [];
+    }
+
+    return [
+      {
+        filename: attachment.filename,
+        id: attachment.id,
+        imageDataUri: attachment.imageDataUri,
+        mimeType: attachment.mimeType,
+      },
+    ];
+  });
+}
+
+function countInlineImageMarkup(value: string): number {
+  return value.match(/<img\s[^>]*src="data:image\//gu)?.length ?? 0;
 }
 
 function mapComments(commentField: z.infer<typeof JiraIssueDetailResponseSchema>['fields']['comment']): JiraIssueComment[] {

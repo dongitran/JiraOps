@@ -1288,6 +1288,7 @@ a:focus-visible {
 .jira-adf-content ul,
 .jira-adf-content ol,
 .jira-adf-content blockquote,
+.jira-adf-content figure,
 .jira-adf-content pre {
   margin: 0;
 }
@@ -1331,6 +1332,61 @@ a:focus-visible {
   padding-left: 10px;
   border-left: 3px solid var(--accent-color);
   color: var(--muted-color);
+}
+
+.jira-adf-media {
+  display: grid;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.jira-adf-media[data-layout='center'],
+.jira-adf-media[data-layout='wide'],
+.jira-adf-media[data-layout='full-width'] {
+  justify-self: center;
+}
+
+.jira-adf-media[data-layout='align-end'],
+.jira-adf-media[data-layout='wrap-right'] {
+  justify-self: end;
+}
+
+.jira-adf-media[data-layout='full-width'] {
+  width: 100%;
+}
+
+.jira-adf-media img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 520px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--surface-2);
+  object-fit: contain;
+}
+
+.jira-adf-media[data-layout='full-width'] img {
+  width: 100%;
+}
+
+.jira-adf-media-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.jira-adf-media-placeholder {
+  display: block;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+  color: var(--muted-color);
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .jira-adf-content table {

@@ -120,6 +120,127 @@ describe('jiraAdfRenderer', () => {
     );
   });
 
+  test('renders Jira media nodes as safe inline description images', () => {
+    const html = renderAdfHtml(
+      {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Before image.' }],
+          },
+          {
+            type: 'mediaSingle',
+            attrs: { layout: 'center' },
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  alt: 'system-diagram.png',
+                  height: 360,
+                  id: 'jira-media-id',
+                  type: 'file',
+                  width: 640,
+                },
+              },
+            ],
+          },
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'After image.' }],
+          },
+        ],
+      },
+      {
+        mediaImages: [
+          {
+            filename: 'system-diagram.png',
+            id: '10001',
+            imageDataUri: 'data:image/png;base64,AQID',
+            mimeType: 'image/png',
+          },
+        ],
+      }
+    );
+
+    expect(html).toBe(
+      '<p>Before image.</p><figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,AQID" alt="system-diagram.png" width="640" height="360" loading="lazy" /></figure><p>After image.</p>'
+    );
+  });
+
+  test('renders a neutral placeholder for Jira media without a safe image data URI', () => {
+    const html = renderAdfHtml(
+      {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  alt: 'unsafe-preview.png',
+                  id: '10001',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        mediaImages: [
+          {
+            filename: 'unsafe-preview.png',
+            id: '10001',
+            imageDataUri: 'data:text/html;base64,PGgxPk5vdCBhbiBpbWFnZTwvaDE+',
+            mimeType: 'text/html',
+          },
+        ],
+      }
+    );
+
+    expect(html).toBe(
+      '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><span class="jira-adf-media-placeholder" role="img" aria-label="unsafe-preview.png">Image preview unavailable</span></figure>'
+    );
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('data:text/html');
+  });
+
+  test('does not reuse one unmatched hydrated image across multiple Jira media nodes', () => {
+    const html = renderAdfHtml(
+      {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [{ type: 'media', attrs: { id: 'jira-media-1', type: 'file' } }],
+          },
+          {
+            type: 'mediaSingle',
+            content: [{ type: 'media', attrs: { id: 'jira-media-2', type: 'file' } }],
+          },
+        ],
+      },
+      {
+        mediaImages: [
+          {
+            filename: 'only-safe-preview.png',
+            id: '10001',
+            imageDataUri: 'data:image/png;base64,AQID',
+            mimeType: 'image/png',
+          },
+        ],
+      }
+    );
+
+    expect(html).not.toContain('<img');
+    expect(html.match(/Image preview unavailable/gu)).toHaveLength(2);
+  });
+
   test('splits top-level technical notes from the main Jira description', () => {
     const sections = renderAdfHtmlSections({
       type: 'doc',

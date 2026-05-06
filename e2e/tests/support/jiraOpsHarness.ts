@@ -174,7 +174,8 @@ export async function resolveIssueDetailFrame(
     throw new Error(`JiraOps detail frame was not found for ${issueKey}.`);
   }
 
-  return frame;
+  await activateIssueDetailTab(window, issueKey);
+  return (await findIssueDetailFrame(window, issueKey)) ?? frame;
 }
 
 export async function resolveLoadedIssueDetailFrame(
@@ -196,7 +197,8 @@ export async function resolveLoadedIssueDetailFrame(
     throw new Error(`Loaded JiraOps detail frame was not found for ${issueKey}.`);
   }
 
-  return frame;
+  await activateIssueDetailTab(window, issueKey);
+  return (await findLoadedIssueDetailFrame(window, issueKey)) ?? frame;
 }
 
 export async function findIssueDetailFrame(
@@ -219,6 +221,7 @@ export async function findIssueDetailFrame(
 }
 
 export async function closeActiveEditor(window: Page, issueKey: string): Promise<void> {
+  await activateIssueDetailTab(window, issueKey);
   await window.keyboard.press(process.platform === 'darwin' ? 'Meta+W' : 'Control+W');
   await expect
     .poll(
@@ -228,6 +231,21 @@ export async function closeActiveEditor(window: Page, issueKey: string): Promise
       { timeout: 10_000 }
     )
     .toBe(true);
+}
+
+async function activateIssueDetailTab(window: Page, issueKey: string): Promise<void> {
+  const tab = window.getByRole('tab', { name: `${issueKey} Details` }).first();
+  const visible = await tab.isVisible().catch(() => false);
+  if (!visible) {
+    return;
+  }
+
+  const selected = await tab.getAttribute('aria-selected').catch(() => null);
+  if (selected === 'true') {
+    return;
+  }
+
+  await clickWithFallback(tab);
 }
 
 export async function resolveWhatsNewFrame(window: Page): Promise<Frame> {

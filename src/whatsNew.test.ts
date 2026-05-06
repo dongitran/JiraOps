@@ -9,6 +9,17 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.29
+
+### Details
+
+- Render Jira description images inline in their original position.
+- Log sanitized Jira image hydration counts.
+
+### Testing
+
+- Add unit and e2e coverage for inline Jira description images.
+
 ## 0.1.28
 
 ### Dashboard
@@ -103,32 +114,26 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.28')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.29')).toEqual({
       bullets: [
-        'Assigned tickets, compact and scannable.',
-        'Jira links, activity, and clone results.',
-        'Clone stale GitLab MRs safely.',
-        'Change status and log work safely.',
+        'Render Jira description images inline in their original position.',
+        'Log sanitized Jira image hydration counts.',
+        'Add unit and e2e coverage for inline Jira description images.',
       ],
       sections: [
         {
-          title: 'Dashboard',
-          bullets: ['Assigned tickets, compact and scannable.'],
-        },
-        {
           title: 'Details',
-          bullets: ['Jira links, activity, and clone results.'],
+          bullets: [
+            'Render Jira description images inline in their original position.',
+            'Log sanitized Jira image hydration counts.',
+          ],
         },
         {
-          title: 'MR Clone',
-          bullets: ['Clone stale GitLab MRs safely.'],
-        },
-        {
-          title: 'Jira Actions',
-          bullets: ['Change status and log work safely.'],
+          title: 'Testing',
+          bullets: ['Add unit and e2e coverage for inline Jira description images.'],
         },
       ],
-      version: '0.1.28',
+      version: '0.1.29',
     });
   });
 
@@ -141,10 +146,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.28',
+      version: '0.1.29',
     });
 
-    expect(html).toContain('JiraOps 0.1.28 Stable');
+    expect(html).toContain('JiraOps 0.1.29 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

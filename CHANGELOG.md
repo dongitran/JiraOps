@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.29
+
+### Details
+
+- Render Jira description images inline in their original position after safe thumbnail hydration.
+- Keep image attachments visible in Attachments while logging sanitized image hydration counts.
+
+### Testing
+
+- Add unit and e2e coverage for inline Jira description images in Details.
+
 ## 0.1.28
 
 ### Dashboard

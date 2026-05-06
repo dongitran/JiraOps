@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.28 stable release notes', async () => {
+  test('User can review JiraOps 0.1.29 stable release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.28 Stable')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.29 Stable')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'MR Clone'
+        'inline Jira description images'
       );
-      await expect(whatsNewFrame.getByText('0.1.27')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.28')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -136,12 +136,15 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(issueContent.getByRole('columnheader', { name: 'Signal' })).toBeVisible();
       await expect(issueContent.getByRole('cell', { name: '8 minutes' })).toBeVisible();
       await expectTableBordersAreVisible(issueContent.getByRole('table'));
+      await expectDescriptionInlineImage(issueContent);
       await expect(issueContent.getByText('Current User', { exact: true })).toBeVisible();
       await expect(
         detailFrame.getByLabel('Activity').getByText('Current User moved the ticket')
       ).toBeVisible();
       await expect(
-        detailFrame.getByRole('img', { name: 'reconciliation-alert-preview.png' })
+        detailFrame.getByLabel('Attachments').getByRole('img', {
+          name: 'reconciliation-alert-preview.png',
+        })
       ).toBeVisible();
       await expect(
         detailFrame.getByLabel('GitLab merge requests').getByRole('link', {
@@ -163,6 +166,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expectCompactDetailHeaderActions(detailFrame);
       await expectLongDetailTitleDoesNotOverlapStatus(detailFrame);
       await expectTechnicalNotesNearAttachments(detailFrame);
+      await expectNoVisibleDetailMessages(detailFrame);
       await captureDashboardScreenshot(
         session.window,
         testInfo,
@@ -822,6 +826,86 @@ async function expectLongDetailTitleDoesNotOverlapStatus(frame: Frame): Promise<
     titleAboveActionRow: true,
   });
   expect(layout?.actionWidth).toBeGreaterThanOrEqual(250);
+}
+
+async function expectDescriptionInlineImage(issueContent: Locator): Promise<void> {
+  const image = issueContent.getByRole('img', {
+    name: 'reconciliation-alert-preview.png',
+  });
+  await expect(image).toBeVisible();
+  await expect(image).toHaveAttribute('src', /^data:image\//u);
+
+  const imageState = await image.evaluate((node) => {
+    if (!(node instanceof HTMLImageElement)) {
+      return null;
+    }
+
+    const description = node.closest('[aria-label="Description and comments"]');
+    const figure = node.closest('figure');
+    if (!(description instanceof HTMLElement) || !(figure instanceof HTMLElement)) {
+      return null;
+    }
+
+    const descriptionBox = description.getBoundingClientRect();
+    const imageBox = node.getBoundingClientRect();
+    return {
+      alt: node.alt,
+      figureDisplay: window.getComputedStyle(figure).display,
+      figureHasMediaClass: figure.classList.contains('jira-adf-media'),
+      naturalHeight: node.naturalHeight,
+      naturalWidth: node.naturalWidth,
+      srcStartsWithImageData: node.currentSrc.startsWith('data:image/'),
+      visible: imageBox.width > 0 && imageBox.height > 0,
+      withinDescription:
+        imageBox.left >= descriptionBox.left &&
+        imageBox.right <= descriptionBox.right + 1 &&
+        imageBox.top >= descriptionBox.top &&
+        imageBox.bottom <= descriptionBox.bottom + 1,
+    };
+  });
+
+  expect(imageState).toEqual({
+    alt: 'reconciliation-alert-preview.png',
+    figureDisplay: 'grid',
+    figureHasMediaClass: true,
+    naturalHeight: expect.any(Number),
+    naturalWidth: expect.any(Number),
+    srcStartsWithImageData: true,
+    visible: true,
+    withinDescription: true,
+  });
+  expect(imageState?.naturalHeight).toBeGreaterThan(0);
+  expect(imageState?.naturalWidth).toBeGreaterThan(0);
+}
+
+async function expectNoVisibleDetailMessages(frame: Frame): Promise<void> {
+  const visibleMessages = await frame.evaluate(() => {
+    return [
+      ...document.querySelectorAll(
+        '.detail-action-status, .detail-dialog-status, [role="alert"]'
+      ),
+    ]
+      .filter((node): node is HTMLElement => {
+        return node instanceof HTMLElement;
+      })
+      .filter((node) => {
+        const text = node.textContent.trim();
+        const box = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        return (
+          text.length > 0 &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          box.width > 0 &&
+          box.height > 0
+        );
+      })
+      .map((node) => {
+        return node.textContent.trim();
+      });
+  });
+
+  expect(visibleMessages).toEqual([]);
 }
 
 async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> {

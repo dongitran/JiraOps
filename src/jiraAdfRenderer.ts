@@ -1,5 +1,17 @@
+import {
+  countAdfMediaNodes,
+  findSingleRenderableAdfMediaImage,
+  getPositiveAdfInteger,
+  resolveAdfMediaAlt,
+  resolveAdfMediaImage,
+  resolveAdfMediaLabel,
+  resolveAdfMediaLayout,
+  type AdfMediaContext,
+  type AdfMediaImage,
+} from './jiraAdfMedia';
+
 type AdfNode = Record<string, unknown>;
-type NodeRenderer = (node: AdfNode) => string;
+type NodeRenderer = (node: AdfNode, context: AdfRenderContext) => string;
 
 export interface RenderedAdfHtmlSections {
   readonly activityHtml: string;
@@ -7,10 +19,18 @@ export interface RenderedAdfHtmlSections {
   readonly technicalNotesHtml: string;
 }
 
+export interface RenderAdfHtmlOptions {
+  readonly mediaImages?: readonly AdfMediaImage[];
+}
+
 interface AdfMark {
   readonly type: string;
   readonly attrs: AdfNode | null;
 }
+
+type AdfRenderContext = AdfMediaContext;
+
+export type { AdfMediaImage } from './jiraAdfMedia';
 
 interface ExtractedAdfSections {
   readonly activityContent: readonly unknown[];
@@ -34,6 +54,9 @@ const NODE_RENDERERS: Record<string, NodeRenderer> = {
   heading: renderHeading,
   inlineCard: renderInlineCard,
   listItem: renderListItem,
+  media: renderMedia,
+  mediaGroup: renderMediaGroup,
+  mediaSingle: renderMediaSingle,
   mention: renderMention,
   orderedList: renderOrderedList,
   panel: renderChildren,
@@ -46,16 +69,23 @@ const NODE_RENDERERS: Record<string, NodeRenderer> = {
   text: renderText,
 };
 
-export function renderAdfHtml(value: unknown): string {
-  return renderNode(value);
+export function renderAdfHtml(
+  value: unknown,
+  options: RenderAdfHtmlOptions = {}
+): string {
+  return renderNode(value, createRenderContext(options, value));
 }
 
-export function renderAdfHtmlSections(value: unknown): RenderedAdfHtmlSections {
+export function renderAdfHtmlSections(
+  value: unknown,
+  options: RenderAdfHtmlOptions = {}
+): RenderedAdfHtmlSections {
+  const context = createRenderContext(options, value);
   const content = getTopLevelContent(value);
   if (content === null) {
     return {
       activityHtml: '',
-      mainHtml: renderAdfHtml(value),
+      mainHtml: renderNode(value, context),
       technicalNotesHtml: '',
     };
   }
@@ -63,9 +93,12 @@ export function renderAdfHtmlSections(value: unknown): RenderedAdfHtmlSections {
   const sections = splitExtractableSections(content);
 
   return {
-    activityHtml: renderChildren({ content: sections.activityContent, type: 'doc' }),
-    mainHtml: renderChildren({ content: sections.mainContent, type: 'doc' }),
-    technicalNotesHtml: renderChildren({ content: sections.technicalNotesContent, type: 'doc' }),
+    activityHtml: renderChildren({ content: sections.activityContent, type: 'doc' }, context),
+    mainHtml: renderChildren({ content: sections.mainContent, type: 'doc' }, context),
+    technicalNotesHtml: renderChildren(
+      { content: sections.technicalNotesContent, type: 'doc' },
+      context
+    ),
   };
 }
 
@@ -75,50 +108,62 @@ export function extractTextFromAdf(value: unknown): string {
   return normalizeExtractedText(parts.join(''));
 }
 
-function renderNode(value: unknown): string {
+function createRenderContext(
+  options: RenderAdfHtmlOptions,
+  value: unknown
+): AdfRenderContext {
+  const mediaImages = options.mediaImages ?? [];
+  return {
+    mediaImages,
+    singleFallbackMediaImage:
+      countAdfMediaNodes(value) === 1 ? findSingleRenderableAdfMediaImage(mediaImages) : null,
+  };
+}
+
+function renderNode(value: unknown, context: AdfRenderContext): string {
   if (!isRecord(value)) {
     return '';
   }
 
   const type = getString(value, 'type');
   const renderer = NODE_RENDERERS[type];
-  return renderer === undefined ? renderChildren(value) : renderer(value);
+  return renderer === undefined ? renderChildren(value, context) : renderer(value, context);
 }
 
-function renderChildren(node: AdfNode): string {
+function renderChildren(node: AdfNode, context: AdfRenderContext): string {
   const content = node['content'];
   if (!Array.isArray(content)) {
     return '';
   }
 
-  return content.map(renderNode).join('');
+  return content.map((child) => renderNode(child, context)).join('');
 }
 
-function renderParagraph(node: AdfNode): string {
-  const content = renderChildren(node);
+function renderParagraph(node: AdfNode, context: AdfRenderContext): string {
+  const content = renderChildren(node, context);
   return content.length === 0 ? '' : `<p>${content}</p>`;
 }
 
-function renderHeading(node: AdfNode): string {
+function renderHeading(node: AdfNode, context: AdfRenderContext): string {
   const level = resolveHeadingLevel(node);
-  const content = renderChildren(node);
+  const content = renderChildren(node, context);
   return content.length === 0 ? '' : `<h${String(level)}>${content}</h${String(level)}>`;
 }
 
-function renderBulletList(node: AdfNode): string {
-  return renderWrappedChildren('ul', node);
+function renderBulletList(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('ul', node, context);
 }
 
-function renderOrderedList(node: AdfNode): string {
-  return renderWrappedChildren('ol', node);
+function renderOrderedList(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('ol', node, context);
 }
 
-function renderListItem(node: AdfNode): string {
-  return renderWrappedChildren('li', node);
+function renderListItem(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('li', node, context);
 }
 
-function renderBlockquote(node: AdfNode): string {
-  return renderWrappedChildren('blockquote', node);
+function renderBlockquote(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('blockquote', node, context);
 }
 
 function renderCodeBlock(node: AdfNode): string {
@@ -134,20 +179,20 @@ function renderHardBreak(): string {
   return '<br />';
 }
 
-function renderTable(node: AdfNode): string {
-  return renderWrappedChildren('table', node);
+function renderTable(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('table', node, context);
 }
 
-function renderTableRow(node: AdfNode): string {
-  return renderWrappedChildren('tr', node);
+function renderTableRow(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('tr', node, context);
 }
 
-function renderTableCell(node: AdfNode): string {
-  return renderWrappedChildren('td', node);
+function renderTableCell(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('td', node, context);
 }
 
-function renderTableHeader(node: AdfNode): string {
-  return renderWrappedChildren('th', node);
+function renderTableHeader(node: AdfNode, context: AdfRenderContext): string {
+  return renderWrappedChildren('th', node, context);
 }
 
 function renderMention(node: AdfNode): string {
@@ -168,14 +213,84 @@ function renderInlineCard(node: AdfNode): string {
   return url === null ? '' : `<a href="${escapeAttribute(url)}">${escapeHtml(url)}</a>`;
 }
 
+function renderMediaSingle(node: AdfNode, context: AdfRenderContext): string {
+  const content = renderChildren(node, context);
+  if (content.length === 0) {
+    return '';
+  }
+
+  const layout = resolveAdfMediaLayout(getAttrs(node));
+  return `<figure class="jira-adf-media jira-adf-media-single" data-layout="${escapeAttribute(layout)}">${content}</figure>`;
+}
+
+function renderMediaGroup(node: AdfNode, context: AdfRenderContext): string {
+  const content = node['content'];
+  if (!Array.isArray(content)) {
+    return '';
+  }
+
+  const renderedItems = content.map((child) => renderMediaGroupItem(child, context)).join('');
+  return renderedItems.length === 0
+    ? ''
+    : `<div class="jira-adf-media-group">${renderedItems}</div>`;
+}
+
+function renderMediaGroupItem(value: unknown, context: AdfRenderContext): string {
+  if (!isRecord(value)) {
+    return '';
+  }
+
+  if (getString(value, 'type') !== 'media') {
+    return renderNode(value, context);
+  }
+
+  const content = renderMedia(value, context);
+  return content.length === 0
+    ? ''
+    : `<figure class="jira-adf-media jira-adf-media-group-item" data-layout="center">${content}</figure>`;
+}
+
+function renderMedia(node: AdfNode, context: AdfRenderContext): string {
+  const attrs = getAttrs(node);
+  const image = resolveAdfMediaImage(attrs, context);
+  return image === null
+    ? renderMediaPlaceholder(attrs)
+    : renderResolvedMediaImage(attrs, image);
+}
+
 function renderText(node: AdfNode): string {
   const text = escapeHtml(getString(node, 'text'));
   return applyMarks(text, getMarks(node));
 }
 
-function renderWrappedChildren(tag: string, node: AdfNode): string {
-  const content = renderChildren(node);
+function renderWrappedChildren(
+  tag: string,
+  node: AdfNode,
+  context: AdfRenderContext
+): string {
+  const content = renderChildren(node, context);
   return content.length === 0 ? '' : `<${tag}>${content}</${tag}>`;
+}
+
+function renderResolvedMediaImage(
+  attrs: AdfNode | null,
+  image: AdfMediaImage
+): string {
+  const alt = resolveAdfMediaAlt(attrs, image);
+  return `<img src="${escapeAttribute(image.imageDataUri)}" alt="${escapeAttribute(alt)}"${renderImageDimensions(attrs)} loading="lazy" />`;
+}
+
+function renderImageDimensions(attrs: AdfNode | null): string {
+  const width = getPositiveAdfInteger(attrs, 'width');
+  const height = getPositiveAdfInteger(attrs, 'height');
+  const widthAttribute = width === null ? '' : ` width="${String(width)}"`;
+  const heightAttribute = height === null ? '' : ` height="${String(height)}"`;
+  return `${widthAttribute}${heightAttribute}`;
+}
+
+function renderMediaPlaceholder(attrs: AdfNode | null): string {
+  const label = resolveAdfMediaLabel(attrs);
+  return `<span class="jira-adf-media-placeholder" role="img" aria-label="${escapeAttribute(label)}">Image preview unavailable</span>`;
 }
 
 function getTopLevelContent(value: unknown): readonly unknown[] | null {
@@ -430,6 +545,7 @@ function isAdfBlockNode(type: string): boolean {
     'blockquote',
     'codeBlock',
     'heading',
+    'mediaGroup',
     'listItem',
     'mediaSingle',
     'paragraph',

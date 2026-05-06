@@ -143,37 +143,37 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.28 Stable</span>
+        <span>JiraOps 0.1.29 Stable</span>
         <h1>What Is New</h1>
-        <p>Cleaner triage, focused Details, visible updates, and safe actions.</p>
+        <p>Inline Jira media, focused Details, visible updates, and safe actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable 0.1.28</strong>
-          <p>Four core JiraOps workflows in one clean view.</p>
+          <strong>Stable 0.1.29</strong>
+          <p>Description images now stay in their Jira positions.</p>
         </div>
         <span>🚀</span>
       </section>
       <section class="whats-new-grid" aria-label="Release highlights">
         <article>
           <span aria-hidden="true">📌</span>
-          <strong>Dashboard</strong>
-          <p>Assigned tickets, compact and scannable.</p>
+          <strong>Details</strong>
+          <p>Jira description images render inline from safe thumbnails.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Details</strong>
-          <p>Jira links, activity, and clone results.</p>
+          <strong>Attachments</strong>
+          <p>Attachment previews remain visible below issue context.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>MR Clone</strong>
-          <p>Clone stale GitLab MRs safely.</p>
+          <strong>Output</strong>
+          <p>Image hydration counts are logged without credential payloads.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
-          <strong>Jira Actions</strong>
-          <p>Change status and log work safely.</p>
+          <strong>Testing</strong>
+          <p>Unit and e2e coverage check inline media in Details.</p>
         </article>
       </section>
     </article>

@@ -126,6 +126,11 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: 'High',
       updated: '2026-05-01T08:20:00.000+0000',
+      descriptionAdf: {
+        type: 'doc',
+        version: 1,
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Main ticket content.' }] }],
+      },
       descriptionText: 'Main ticket content.',
       descriptionHtml: '<p>Main ticket content.</p>',
       activityHtml: '',
@@ -612,6 +617,78 @@ describe('jira issue details', () => {
     expect(result.attachments[0]?.imageDataUri).toBe('data:image/png;base64,AQID');
     expect(result.attachments[1]?.imageDataUri).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('hydrates inline media in the Jira description from image attachments', async () => {
+    const detail: JiraIssueDetail = {
+      key: 'OPS-123',
+      summary: 'Summary',
+      status: 'In Progress',
+      statusCategory: 'In Progress',
+      priority: null,
+      updated: '2026-05-01T08:20:00.000+0000',
+      descriptionAdf: {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Before image.' }],
+          },
+          {
+            type: 'mediaSingle',
+            attrs: { layout: 'center' },
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  alt: 'preview.png',
+                  height: 360,
+                  id: 'jira-media-id',
+                  type: 'file',
+                  width: 640,
+                },
+              },
+            ],
+          },
+        ],
+      },
+      descriptionText: 'Before image.',
+      descriptionHtml: '<p>Before image.</p>',
+      comments: [],
+      attachments: [
+        {
+          id: '10001',
+          filename: 'preview.png',
+          mimeType: 'image/png',
+          size: 100,
+          imageDataUri: null,
+        },
+      ],
+      linkedCloneIssues: [],
+      activityHtml: '',
+      technicalNotesHtml: '',
+      transitions: [],
+    };
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: { 'Content-Type': 'image/png' },
+        })
+      );
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.descriptionHtml).toContain(
+      '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,AQID" alt="preview.png" width="640" height="360" loading="lazy" /></figure>'
+    );
+    expect(result.attachments[0]?.imageDataUri).toBe('data:image/png;base64,AQID');
   });
 
   test('throws neutral errors for unsuccessful or malformed issue detail responses', async () => {

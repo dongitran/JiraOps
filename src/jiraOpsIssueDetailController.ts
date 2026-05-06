@@ -19,6 +19,7 @@ import {
   type DashboardIssue,
 } from './dashboardItems';
 import {
+  countInlineIssueDescriptionImages,
   fetchJiraIssueDetail,
   hydrateIssueAttachmentImages,
   type JiraIssueDetail,
@@ -144,7 +145,7 @@ export class JiraOpsIssueDetailController {
     const detail = await loadDetail(issueKey);
     this.issueDetailCache.set(issueKey, detail);
     this.options.outputChannel.appendLine(
-      `Loaded Jira issue detail for ${issueKey} with ${String(detail.comments.length)} comments and ${String(detail.attachments.length)} attachments.`
+      `Loaded Jira issue detail for ${issueKey} with ${String(detail.comments.length)} comment(s), ${String(detail.attachments.length)} attachment(s), and ${String(countInlineIssueDescriptionImages(detail))} inline description image(s).`
     );
     return detail;
   }
@@ -181,10 +182,14 @@ export class JiraOpsIssueDetailController {
       issueKey,
     });
     const transitions = await this.loadIssueTransitionsWithTokens(tokens, issueKey);
+    this.options.outputChannel.appendLine(`Hydrating Jira issue detail image previews for ${issueKey}.`);
     const hydrated = await hydrateIssueAttachmentImages(detail, {
       accessToken: tokens.accessToken,
       cloudId: tokens.cloudId,
     });
+    this.options.outputChannel.appendLine(
+      `Hydrated ${String(countInlineIssueDescriptionImages(hydrated))} inline Jira description image(s) for ${issueKey}.`
+    );
     return { ...hydrated, transitions };
   }
 
