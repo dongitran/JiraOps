@@ -368,6 +368,41 @@ describe('jiraAdfRenderer', () => {
     expect(sections.technicalNotesHtml).toBe('');
   });
 
+  test('resolves a hydrated ordered media image without blocking unavailable neighbors', () => {
+    const html = renderAdfHtml(
+      {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [{ type: 'media', attrs: { id: 'first-media-id', type: 'file' } }],
+          },
+          {
+            type: 'mediaSingle',
+            content: [{ type: 'media', attrs: { id: 'second-media-id', type: 'file' } }],
+          },
+        ],
+      },
+      {
+        mediaImages: [
+          {
+            filename: 'second-preview.png',
+            id: '10002',
+            imageDataUri: 'data:image/png;base64,Ag==',
+            mediaNodeIndex: 1,
+            mimeType: 'image/png',
+          },
+        ],
+      }
+    );
+
+    expect(html).toContain('Image preview unavailable');
+    expect(html).toContain(
+      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" />'
+    );
+  });
+
   test('splits top-level technical notes from the main Jira description', () => {
     const sections = renderAdfHtmlSections({
       type: 'doc',

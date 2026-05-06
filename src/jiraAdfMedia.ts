@@ -4,6 +4,7 @@ export interface AdfMediaImage {
   readonly filename: string;
   readonly id: string;
   readonly imageDataUri: string;
+  readonly mediaNodeIndex?: number;
   readonly mimeType: string;
 }
 
@@ -127,8 +128,13 @@ function resolveMediaAssignments(
   images: readonly AdfMediaImage[]
 ): (AdfMediaImage | null)[] {
   const usedImageIndexes = new Set<number>();
-  const assignments = references.map((reference) => {
-    const imageIndex = findExactImageIndex(images, reference, usedImageIndexes);
+  const assignments = references.map((reference, mediaNodeIndex) => {
+    const imageIndex = findExactImageIndex(
+      images,
+      reference,
+      mediaNodeIndex,
+      usedImageIndexes
+    );
     if (imageIndex === null) {
       return null;
     }
@@ -167,10 +173,31 @@ function collectUnresolvedIndexes(
 function findExactImageIndex(
   images: readonly AdfMediaImage[],
   reference: AdfMediaReference,
+  mediaNodeIndex: number,
   usedImageIndexes: ReadonlySet<number>
 ): number | null {
+  const orderedMatch = findImageIndexByMediaNodeIndex(
+    images,
+    mediaNodeIndex,
+    usedImageIndexes
+  );
+  if (orderedMatch !== null) {
+    return orderedMatch;
+  }
+
   const idMatch = findImageIndexById(images, reference.id, usedImageIndexes);
   return idMatch ?? findImageIndexByFilename(images, reference.filename, usedImageIndexes);
+}
+
+function findImageIndexByMediaNodeIndex(
+  images: readonly AdfMediaImage[],
+  mediaNodeIndex: number,
+  usedImageIndexes: ReadonlySet<number>
+): number | null {
+  const foundIndex = images.findIndex((image, imageIndex) => {
+    return image.mediaNodeIndex === mediaNodeIndex && !usedImageIndexes.has(imageIndex);
+  });
+  return foundIndex < 0 ? null : foundIndex;
 }
 
 function findImageIndexById(

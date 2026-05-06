@@ -66,6 +66,7 @@ export interface JiraIssueDetail {
   readonly priority: string | null;
   readonly updated: string;
   readonly descriptionAdf?: unknown;
+  readonly descriptionMediaAttachmentIds?: readonly string[];
   readonly descriptionText: string;
   readonly descriptionHtml: string;
   readonly technicalNotesHtml: string;
@@ -94,6 +95,11 @@ const ISSUE_DETAIL_FIELDS = [
 ] as const;
 const DEFAULT_ATTACHMENT_IMAGE_MAX_BYTES = 1_500_000;
 const DEFAULT_ATTACHMENT_IMAGE_LIMIT = 6;
+const IMAGE_TAG_PATTERN = /<img\b[^>]*>/giu;
+const DATA_ATTACHMENT_ID_PATTERN =
+  /\bdata-(?:attachment-id|linked-resource-id)=["']?(\d+)/iu;
+const ATTACHMENT_URL_ID_PATTERN =
+  /\/(?:rest\/api\/[23]\/attachment\/(?:content|thumbnail)|secure\/(?:attachment|thumbnail))\/(\d+)(?=[/?#"' >]|$)/iu;
 
 const LinkedIssueSchema = z.object({
   key: z.string().min(1),
@@ -140,6 +146,11 @@ const AttachmentSchema = z.object({
 
 const JiraIssueDetailResponseSchema = z.object({
   key: z.string().min(1),
+  renderedFields: z
+    .object({
+      description: z.string().nullable().optional(),
+    })
+    .optional(),
   fields: z.object({
     summary: z.string().min(1),
     status: z.object({
@@ -166,7 +177,7 @@ export function buildJiraIssueDetailUrl(cloudId: string, issueKey: string): stri
   const encodedCloudId = encodeURIComponent(cloudId);
   const encodedIssueKey = encodeURIComponent(issueKey);
   const fields = encodeURIComponent(ISSUE_DETAIL_FIELDS.join(','));
-  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/issue/${encodedIssueKey}?fields=${fields}`;
+  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/issue/${encodedIssueKey}?fields=${fields}&expand=renderedFields`;
 }
 
 export function buildJiraAttachmentThumbnailUrl(
@@ -222,9 +233,13 @@ export async function hydrateIssueAttachmentImages(
   options: HydrateIssueAttachmentImagesOptions
 ): Promise<JiraIssueDetail> {
   let remainingImages = options.maxImages ?? DEFAULT_ATTACHMENT_IMAGE_LIMIT;
-  const attachments: JiraIssueAttachment[] = [];
+  const imageDataByAttachmentId = new Map<string, string | null>();
+  const hydrationQueue = orderAttachmentsForHydration(
+    detail.attachments,
+    detail.descriptionMediaAttachmentIds ?? []
+  );
 
-  for (const attachment of detail.attachments) {
+  for (const attachment of hydrationQueue) {
     const imageDataUri =
       remainingImages > 0 && isImageAttachment(attachment)
         ? await fetchImageDataUriForAttachment(attachment, options)
@@ -232,8 +247,14 @@ export async function hydrateIssueAttachmentImages(
     if (imageDataUri !== null) {
       remainingImages -= 1;
     }
-    attachments.push({ ...attachment, imageDataUri });
+    imageDataByAttachmentId.set(attachment.id, imageDataUri);
   }
+
+  const attachments = detail.attachments.map((attachment) => {
+    return imageDataByAttachmentId.has(attachment.id)
+      ? { ...attachment, imageDataUri: imageDataByAttachmentId.get(attachment.id) ?? null }
+      : attachment;
+  });
 
   return renderIssueDescriptionWithHydratedMedia({ ...detail, attachments });
 }
@@ -256,6 +277,12 @@ export function countUnavailableInlineIssueDescriptionImages(
   );
 }
 
+export function countRenderedInlineIssueDescriptionImageHints(
+  detail: JiraIssueDetail
+): number {
+  return detail.descriptionMediaAttachmentIds?.length ?? 0;
+}
+
 function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
   const parseResult = JiraIssueDetailResponseSchema.safeParse(responseBody);
   if (!parseResult.success) {
@@ -264,7 +291,10 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
 
   const fields = parseResult.data.fields;
   const descriptionSections = renderAdfHtmlSections(fields.description);
-  return {
+  const mediaAttachmentIds = extractRenderedDescriptionImageAttachmentIds(
+    parseResult.data.renderedFields?.description ?? ''
+  );
+  const detail = {
     key: parseResult.data.key,
     activityHtml: descriptionSections.activityHtml,
     summary: fields.summary,
@@ -281,6 +311,9 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
     linkedCloneIssues: mapCloneIssueLinks(fields.issuelinks ?? []),
     transitions: [],
   };
+  return mediaAttachmentIds.length === 0
+    ? detail
+    : { ...detail, descriptionMediaAttachmentIds: mediaAttachmentIds };
 }
 
 function renderIssueDescriptionWithHydratedMedia(
@@ -290,7 +323,13 @@ function renderIssueDescriptionWithHydratedMedia(
     return detail;
   }
 
-  const mediaImages = toAdfMediaImages(detail.attachments);
+  const inlineAttachmentIds = detail.descriptionMediaAttachmentIds ?? [];
+  const inlineMediaImages = toOrderedAdfMediaImages(
+    detail.attachments,
+    inlineAttachmentIds
+  );
+  const mediaImages =
+    inlineAttachmentIds.length === 0 ? toAdfMediaImages(detail.attachments) : inlineMediaImages;
   const descriptionSections = renderAdfHtmlSections(detail.descriptionAdf, {
     mediaImages,
   });
@@ -302,27 +341,74 @@ function renderIssueDescriptionWithHydratedMedia(
   };
 }
 
+function orderAttachmentsForHydration(
+  attachments: readonly JiraIssueAttachment[],
+  preferredAttachmentIds: readonly string[]
+): JiraIssueAttachment[] {
+  const attachmentsById = new Map(attachments.map((attachment) => [attachment.id, attachment]));
+  const queuedIds = new Set<string>();
+  const queue: JiraIssueAttachment[] = [];
+  for (const attachmentId of preferredAttachmentIds) {
+    const attachment = attachmentsById.get(attachmentId);
+    if (attachment !== undefined && !queuedIds.has(attachment.id)) {
+      queue.push(attachment);
+      queuedIds.add(attachment.id);
+    }
+  }
+
+  for (const attachment of attachments) {
+    if (!queuedIds.has(attachment.id)) {
+      queue.push(attachment);
+      queuedIds.add(attachment.id);
+    }
+  }
+  return queue;
+}
+
 function toAdfMediaImages(
   attachments: readonly JiraIssueAttachment[]
 ): AdfMediaImage[] {
   return attachments.flatMap((attachment) => {
-    if (attachment.imageDataUri === null || !isImageAttachment(attachment)) {
-      return [];
-    }
-
-    if (!isAdfImageDataUri(attachment.imageDataUri)) {
-      return [];
-    }
-
-    return [
-      {
-        filename: attachment.filename,
-        id: attachment.id,
-        imageDataUri: attachment.imageDataUri,
-        mimeType: attachment.mimeType,
-      },
-    ];
+    const mediaImage = toAdfMediaImage(attachment);
+    return mediaImage === null ? [] : [mediaImage];
   });
+}
+
+function toOrderedAdfMediaImages(
+  attachments: readonly JiraIssueAttachment[],
+  attachmentIds: readonly string[]
+): AdfMediaImage[] {
+  const attachmentsById = new Map(attachments.map((attachment) => [attachment.id, attachment]));
+  return attachmentIds.flatMap((attachmentId, mediaNodeIndex) => {
+    const attachment = attachmentsById.get(attachmentId);
+    if (attachment === undefined) {
+      return [];
+    }
+
+    const mediaImage = toAdfMediaImage(attachment, mediaNodeIndex);
+    return mediaImage === null ? [] : [mediaImage];
+  });
+}
+
+function toAdfMediaImage(
+  attachment: JiraIssueAttachment,
+  mediaNodeIndex?: number
+): AdfMediaImage | null {
+  if (attachment.imageDataUri === null || !isImageAttachment(attachment)) {
+    return null;
+  }
+
+  if (!isAdfImageDataUri(attachment.imageDataUri)) {
+    return null;
+  }
+
+  const mediaImage = {
+    filename: attachment.filename,
+    id: attachment.id,
+    imageDataUri: attachment.imageDataUri,
+    mimeType: attachment.mimeType,
+  };
+  return mediaNodeIndex === undefined ? mediaImage : { ...mediaImage, mediaNodeIndex };
 }
 
 function countInlineImageMarkup(value: string): number {
@@ -331,6 +417,27 @@ function countInlineImageMarkup(value: string): number {
 
 function countInlinePlaceholderMarkup(value: string): number {
   return value.match(/jira-adf-media-placeholder/gu)?.length ?? 0;
+}
+
+function extractRenderedDescriptionImageAttachmentIds(value: string): string[] {
+  const attachmentIds: string[] = [];
+  for (const match of value.matchAll(IMAGE_TAG_PATTERN)) {
+    const attachmentId = extractAttachmentIdFromHtml(match[0]);
+    if (attachmentId !== null) {
+      attachmentIds.push(attachmentId);
+    }
+  }
+  return attachmentIds;
+}
+
+function extractAttachmentIdFromHtml(value: string): string | null {
+  const dataMatch = DATA_ATTACHMENT_ID_PATTERN.exec(value);
+  if (dataMatch?.[1] !== undefined) {
+    return dataMatch[1];
+  }
+
+  const urlMatch = ATTACHMENT_URL_ID_PATTERN.exec(value);
+  return urlMatch?.[1] ?? null;
 }
 
 function mapComments(commentField: z.infer<typeof JiraIssueDetailResponseSchema>['fields']['comment']): JiraIssueComment[] {

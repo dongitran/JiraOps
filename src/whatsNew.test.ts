@@ -9,6 +9,14 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.31
+
+### Details
+
+- Resolve inline Jira description images through renderedFields attachment IDs.
+- Hydrate rendered inline image attachments before unrelated image attachments.
+- Log rendered inline image hint counts without attachment URLs.
+
 ## 0.1.30
 
 ### Details
@@ -121,21 +129,23 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.30')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.31')).toEqual({
       bullets: [
-        'Resolve Jira description images when ADF media IDs differ from attachment IDs.',
-        'Log unavailable inline image placeholder counts.',
+        'Resolve inline Jira description images through renderedFields attachment IDs.',
+        'Hydrate rendered inline image attachments before unrelated image attachments.',
+        'Log rendered inline image hint counts without attachment URLs.',
       ],
       sections: [
         {
           title: 'Details',
           bullets: [
-            'Resolve Jira description images when ADF media IDs differ from attachment IDs.',
-            'Log unavailable inline image placeholder counts.',
+            'Resolve inline Jira description images through renderedFields attachment IDs.',
+            'Hydrate rendered inline image attachments before unrelated image attachments.',
+            'Log rendered inline image hint counts without attachment URLs.',
           ],
         },
       ],
-      version: '0.1.30',
+      version: '0.1.31',
     });
   });
 
@@ -148,10 +158,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.30',
+      version: '0.1.31',
     });
 
-    expect(html).toContain('JiraOps 0.1.30 Stable');
+    expect(html).toContain('JiraOps 0.1.31 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

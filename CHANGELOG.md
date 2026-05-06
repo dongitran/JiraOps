@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.31
+
+### Details
+
+- Resolve inline Jira description images through renderedFields attachment IDs when ADF media IDs do not match attachments.
+- Hydrate rendered inline image attachments before unrelated image attachments.
+- Log rendered inline image hint counts without attachment URLs or credential payloads.
+
 ## 0.1.30
 
 ### Details
