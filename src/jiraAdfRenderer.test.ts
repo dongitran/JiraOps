@@ -241,6 +241,133 @@ describe('jiraAdfRenderer', () => {
     expect(html.match(/Image preview unavailable/gu)).toHaveLength(2);
   });
 
+  test('maps unresolved Jira media service IDs to hydrated images by one-to-one order', () => {
+    const html = renderAdfHtml(
+      {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: '4478e39c-cf9b-41d1-ba92-68589487cd75',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: '5be450d6-f635-45f2-905b-714d71765c6a',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        mediaImages: [
+          {
+            filename: 'first-preview.png',
+            id: '10001',
+            imageDataUri: 'data:image/png;base64,AQID',
+            mimeType: 'image/png',
+          },
+          {
+            filename: 'second-preview.png',
+            id: '10002',
+            imageDataUri: 'data:image/png;base64,Ag==',
+            mimeType: 'image/png',
+          },
+        ],
+      }
+    );
+
+    expect(html).toContain(
+      '<img src="data:image/png;base64,AQID" alt="first-preview.png" loading="lazy" />'
+    );
+    expect(html).toContain(
+      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" />'
+    );
+    expect(html).not.toContain('Image preview unavailable');
+  });
+
+  test('resolves ordered media assignments after extracting activity sections', () => {
+    const sections = renderAdfHtmlSections(
+      {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: '4478e39c-cf9b-41d1-ba92-68589487cd75',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+          {
+            type: 'heading',
+            attrs: { level: 3 },
+            content: [{ type: 'text', text: 'Activity' }],
+          },
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: '5be450d6-f635-45f2-905b-714d71765c6a',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        mediaImages: [
+          {
+            filename: 'description-preview.png',
+            id: '10001',
+            imageDataUri: 'data:image/png;base64,AQID',
+            mimeType: 'image/png',
+          },
+          {
+            filename: 'activity-preview.png',
+            id: '10002',
+            imageDataUri: 'data:image/png;base64,Ag==',
+            mimeType: 'image/png',
+          },
+        ],
+      }
+    );
+
+    expect(sections.mainHtml).toContain(
+      '<img src="data:image/png;base64,AQID" alt="description-preview.png" loading="lazy" />'
+    );
+    expect(sections.activityHtml).toContain(
+      '<img src="data:image/png;base64,Ag==" alt="activity-preview.png" loading="lazy" />'
+    );
+    expect(sections.technicalNotesHtml).toBe('');
+  });
+
   test('splits top-level technical notes from the main Jira description', () => {
     const sections = renderAdfHtmlSections({
       type: 'doc',

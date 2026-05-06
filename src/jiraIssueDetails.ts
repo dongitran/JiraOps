@@ -246,6 +246,16 @@ export function countInlineIssueDescriptionImages(detail: JiraIssueDetail): numb
   );
 }
 
+export function countUnavailableInlineIssueDescriptionImages(
+  detail: JiraIssueDetail
+): number {
+  return (
+    countInlinePlaceholderMarkup(detail.descriptionHtml) +
+    countInlinePlaceholderMarkup(detail.activityHtml) +
+    countInlinePlaceholderMarkup(detail.technicalNotesHtml)
+  );
+}
+
 function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
   const parseResult = JiraIssueDetailResponseSchema.safeParse(responseBody);
   if (!parseResult.success) {
@@ -317,6 +327,10 @@ function toAdfMediaImages(
 
 function countInlineImageMarkup(value: string): number {
   return value.match(/<img\s[^>]*src="data:image\//gu)?.length ?? 0;
+}
+
+function countInlinePlaceholderMarkup(value: string): number {
+  return value.match(/jira-adf-media-placeholder/gu)?.length ?? 0;
 }
 
 function mapComments(commentField: z.infer<typeof JiraIssueDetailResponseSchema>['fields']['comment']): JiraIssueComment[] {

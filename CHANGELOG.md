@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.30
+
+### Details
+
+- Resolve Jira description images when ADF media IDs differ from attachment IDs.
+- Keep ambiguous inline media as placeholders and log unavailable placeholder counts.
+
 ## 0.1.29
 
 ### Details

@@ -9,6 +9,13 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.30
+
+### Details
+
+- Resolve Jira description images when ADF media IDs differ from attachment IDs.
+- Log unavailable inline image placeholder counts.
+
 ## 0.1.29
 
 ### Details
@@ -114,26 +121,21 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.29')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.30')).toEqual({
       bullets: [
-        'Render Jira description images inline in their original position.',
-        'Log sanitized Jira image hydration counts.',
-        'Add unit and e2e coverage for inline Jira description images.',
+        'Resolve Jira description images when ADF media IDs differ from attachment IDs.',
+        'Log unavailable inline image placeholder counts.',
       ],
       sections: [
         {
           title: 'Details',
           bullets: [
-            'Render Jira description images inline in their original position.',
-            'Log sanitized Jira image hydration counts.',
+            'Resolve Jira description images when ADF media IDs differ from attachment IDs.',
+            'Log unavailable inline image placeholder counts.',
           ],
         },
-        {
-          title: 'Testing',
-          bullets: ['Add unit and e2e coverage for inline Jira description images.'],
-        },
       ],
-      version: '0.1.29',
+      version: '0.1.30',
     });
   });
 
@@ -146,10 +148,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.29',
+      version: '0.1.30',
     });
 
-    expect(html).toContain('JiraOps 0.1.29 Stable');
+    expect(html).toContain('JiraOps 0.1.30 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

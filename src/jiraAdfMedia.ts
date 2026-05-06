@@ -8,8 +8,14 @@ export interface AdfMediaImage {
 }
 
 export interface AdfMediaContext {
-  readonly mediaImages: readonly AdfMediaImage[];
-  readonly singleFallbackMediaImage: AdfMediaImage | null;
+  readonly mediaAssignments: readonly (AdfMediaImage | null)[];
+  readonly mediaNodeIndexes: WeakMap<AdfMediaNode, number>;
+}
+
+interface AdfMediaReference {
+  readonly filename: string;
+  readonly id: string;
+  readonly node: AdfMediaNode;
 }
 
 const MEDIA_LAYOUTS = new Set([
@@ -22,41 +28,24 @@ const MEDIA_LAYOUTS = new Set([
   'wrap-right',
 ]);
 
-export function countAdfMediaNodes(value: unknown): number {
-  if (!isRecord(value)) {
-    return 0;
-  }
-
-  const currentCount = getString(value, 'type') === 'media' ? 1 : 0;
-  const content = value['content'];
-  if (!Array.isArray(content)) {
-    return currentCount;
-  }
-
-  let total = currentCount;
-  const children: readonly unknown[] = content;
-  for (const child of children) {
-    total += countAdfMediaNodes(child);
-  }
-  return total;
-}
-
-export function findSingleRenderableAdfMediaImage(
-  images: readonly AdfMediaImage[]
-): AdfMediaImage | null {
-  const renderableImages = images.filter(isRenderableAdfMediaImage);
-  return renderableImages.length === 1 ? renderableImages[0] ?? null : null;
+export function createAdfMediaContext(
+  value: unknown,
+  mediaImages: readonly AdfMediaImage[]
+): AdfMediaContext {
+  const renderableImages = mediaImages.filter(isRenderableAdfMediaImage);
+  const references = collectAdfMediaReferences(value);
+  return {
+    mediaAssignments: resolveMediaAssignments(references, renderableImages),
+    mediaNodeIndexes: createMediaNodeIndexes(references),
+  };
 }
 
 export function resolveAdfMediaImage(
-  attrs: AdfMediaNode | null,
+  node: AdfMediaNode,
   context: AdfMediaContext
 ): AdfMediaImage | null {
-  return (
-    findMediaImageById(context.mediaImages, getString(attrs, 'id')) ??
-    findMediaImageByFilename(context.mediaImages, getString(attrs, 'alt')) ??
-    context.singleFallbackMediaImage
-  );
+  const mediaIndex = context.mediaNodeIndexes.get(node);
+  return mediaIndex === undefined ? null : context.mediaAssignments[mediaIndex] ?? null;
 }
 
 export function resolveAdfMediaAlt(
@@ -95,33 +84,124 @@ export function isAdfImageDataUri(value: string): boolean {
   return value.slice(0, 11).toLowerCase() === 'data:image/';
 }
 
-function findMediaImageById(
+function collectAdfMediaReferences(value: unknown): AdfMediaReference[] {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const current =
+    getString(value, 'type') === 'media' ? [toAdfMediaReference(value)] : [];
+  const content = value['content'];
+  if (!Array.isArray(content)) {
+    return current;
+  }
+
+  const children: readonly unknown[] = content;
+  return children.reduce<AdfMediaReference[]>((references, child) => {
+    references.push(...collectAdfMediaReferences(child));
+    return references;
+  }, current);
+}
+
+function toAdfMediaReference(node: AdfMediaNode): AdfMediaReference {
+  const attrs = getAttrs(node);
+  return {
+    filename: getString(attrs, 'alt'),
+    id: getString(attrs, 'id'),
+    node,
+  };
+}
+
+function createMediaNodeIndexes(
+  references: readonly AdfMediaReference[]
+): WeakMap<AdfMediaNode, number> {
+  const indexes = new WeakMap<AdfMediaNode, number>();
+  references.forEach((reference, index) => {
+    indexes.set(reference.node, index);
+  });
+  return indexes;
+}
+
+function resolveMediaAssignments(
+  references: readonly AdfMediaReference[],
+  images: readonly AdfMediaImage[]
+): (AdfMediaImage | null)[] {
+  const usedImageIndexes = new Set<number>();
+  const assignments = references.map((reference) => {
+    const imageIndex = findExactImageIndex(images, reference, usedImageIndexes);
+    if (imageIndex === null) {
+      return null;
+    }
+
+    usedImageIndexes.add(imageIndex);
+    return images[imageIndex] ?? null;
+  });
+  assignUnmatchedImagesByOrder(assignments, images, usedImageIndexes);
+  return assignments;
+}
+
+function assignUnmatchedImagesByOrder(
+  assignments: (AdfMediaImage | null)[],
   images: readonly AdfMediaImage[],
-  id: string
-): AdfMediaImage | null {
+  usedImageIndexes: ReadonlySet<number>
+): void {
+  const unresolvedIndexes = collectUnresolvedIndexes(assignments);
+  const unusedImages = images.filter((_, index) => !usedImageIndexes.has(index));
+  if (unresolvedIndexes.length !== unusedImages.length) {
+    return;
+  }
+
+  unresolvedIndexes.forEach((assignmentIndex, imageIndex) => {
+    assignments[assignmentIndex] = unusedImages[imageIndex] ?? null;
+  });
+}
+
+function collectUnresolvedIndexes(
+  assignments: readonly (AdfMediaImage | null)[]
+): number[] {
+  return assignments.flatMap((assignment, index) => {
+    return assignment === null ? [index] : [];
+  });
+}
+
+function findExactImageIndex(
+  images: readonly AdfMediaImage[],
+  reference: AdfMediaReference,
+  usedImageIndexes: ReadonlySet<number>
+): number | null {
+  const idMatch = findImageIndexById(images, reference.id, usedImageIndexes);
+  return idMatch ?? findImageIndexByFilename(images, reference.filename, usedImageIndexes);
+}
+
+function findImageIndexById(
+  images: readonly AdfMediaImage[],
+  id: string,
+  usedImageIndexes: ReadonlySet<number>
+): number | null {
   if (id.length === 0) {
     return null;
   }
 
-  const found = images.find((image) => {
-    return image.id === id && isRenderableAdfMediaImage(image);
+  const foundIndex = images.findIndex((image, index) => {
+    return image.id === id && !usedImageIndexes.has(index);
   });
-  return found ?? null;
+  return foundIndex < 0 ? null : foundIndex;
 }
 
-function findMediaImageByFilename(
+function findImageIndexByFilename(
   images: readonly AdfMediaImage[],
-  filename: string
-): AdfMediaImage | null {
+  filename: string,
+  usedImageIndexes: ReadonlySet<number>
+): number | null {
   const normalizedFilename = normalizeMediaFilename(filename);
   if (normalizedFilename.length === 0) {
     return null;
   }
 
-  const found = images.find((image) => {
-    return normalizeMediaFilename(image.filename) === normalizedFilename && isRenderableAdfMediaImage(image);
+  const foundIndex = images.findIndex((image, index) => {
+    return normalizeMediaFilename(image.filename) === normalizedFilename && !usedImageIndexes.has(index);
   });
-  return found ?? null;
+  return foundIndex < 0 ? null : foundIndex;
 }
 
 function isRenderableAdfMediaImage(image: AdfMediaImage): boolean {
@@ -139,6 +219,11 @@ function getString(node: AdfMediaNode | null, key: string): string {
 
   const value = node[key];
   return typeof value === 'string' ? value : '';
+}
+
+function getAttrs(node: AdfMediaNode): AdfMediaNode | null {
+  const attrs = node['attrs'];
+  return isRecord(attrs) ? attrs : null;
 }
 
 function isRecord(value: unknown): value is AdfMediaNode {

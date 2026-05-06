@@ -20,6 +20,7 @@ import {
 } from './dashboardItems';
 import {
   countInlineIssueDescriptionImages,
+  countUnavailableInlineIssueDescriptionImages,
   fetchJiraIssueDetail,
   hydrateIssueAttachmentImages,
   type JiraIssueDetail,
@@ -145,7 +146,7 @@ export class JiraOpsIssueDetailController {
     const detail = await loadDetail(issueKey);
     this.issueDetailCache.set(issueKey, detail);
     this.options.outputChannel.appendLine(
-      `Loaded Jira issue detail for ${issueKey} with ${String(detail.comments.length)} comment(s), ${String(detail.attachments.length)} attachment(s), and ${String(countInlineIssueDescriptionImages(detail))} inline description image(s).`
+      `Loaded Jira issue detail for ${issueKey} with ${String(detail.comments.length)} comment(s), ${String(detail.attachments.length)} attachment(s), ${String(countInlineIssueDescriptionImages(detail))} inline description image(s), and ${String(countUnavailableInlineIssueDescriptionImages(detail))} unavailable inline image placeholder(s).`
     );
     return detail;
   }
@@ -188,7 +189,7 @@ export class JiraOpsIssueDetailController {
       cloudId: tokens.cloudId,
     });
     this.options.outputChannel.appendLine(
-      `Hydrated ${String(countInlineIssueDescriptionImages(hydrated))} inline Jira description image(s) for ${issueKey}.`
+      `Hydrated ${String(countInlineIssueDescriptionImages(hydrated))} inline Jira description image(s) for ${issueKey}; ${String(countUnavailableInlineIssueDescriptionImages(hydrated))} inline image placeholder(s) remain unavailable.`
     );
     return { ...hydrated, transitions };
   }

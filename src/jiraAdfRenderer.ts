@@ -1,6 +1,5 @@
 import {
-  countAdfMediaNodes,
-  findSingleRenderableAdfMediaImage,
+  createAdfMediaContext,
   getPositiveAdfInteger,
   resolveAdfMediaAlt,
   resolveAdfMediaImage,
@@ -112,12 +111,7 @@ function createRenderContext(
   options: RenderAdfHtmlOptions,
   value: unknown
 ): AdfRenderContext {
-  const mediaImages = options.mediaImages ?? [];
-  return {
-    mediaImages,
-    singleFallbackMediaImage:
-      countAdfMediaNodes(value) === 1 ? findSingleRenderableAdfMediaImage(mediaImages) : null,
-  };
+  return createAdfMediaContext(value, options.mediaImages ?? []);
 }
 
 function renderNode(value: unknown, context: AdfRenderContext): string {
@@ -252,7 +246,7 @@ function renderMediaGroupItem(value: unknown, context: AdfRenderContext): string
 
 function renderMedia(node: AdfNode, context: AdfRenderContext): string {
   const attrs = getAttrs(node);
-  const image = resolveAdfMediaImage(attrs, context);
+  const image = resolveAdfMediaImage(node, context);
   return image === null
     ? renderMediaPlaceholder(attrs)
     : renderResolvedMediaImage(attrs, image);

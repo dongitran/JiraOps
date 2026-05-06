@@ -691,6 +691,101 @@ describe('jira issue details', () => {
     expect(result.attachments[0]?.imageDataUri).toBe('data:image/png;base64,AQID');
   });
 
+  test('hydrates inline media by image attachment order when Jira media IDs differ from attachment IDs', async () => {
+    const detail: JiraIssueDetail = {
+      key: 'OPS-123',
+      summary: 'Summary',
+      status: 'In Progress',
+      statusCategory: 'In Progress',
+      priority: null,
+      updated: '2026-05-01T08:20:00.000+0000',
+      descriptionAdf: {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: '4478e39c-cf9b-41d1-ba92-68589487cd75',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: '5be450d6-f635-45f2-905b-714d71765c6a',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      descriptionText: '',
+      descriptionHtml: '',
+      comments: [],
+      attachments: [
+        {
+          id: '10001',
+          filename: 'first-preview.png',
+          mimeType: 'image/png',
+          size: 100,
+          imageDataUri: null,
+        },
+        {
+          id: '10002',
+          filename: 'second-preview.png',
+          mimeType: 'image/png',
+          size: 100,
+          imageDataUri: null,
+        },
+      ],
+      linkedCloneIssues: [],
+      activityHtml: '',
+      technicalNotesHtml: '',
+      transitions: [],
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      const bytes = url.includes('/10002?') ? new Uint8Array([2]) : new Uint8Array([1]);
+      return Promise.resolve(
+        new Response(bytes, {
+          status: 200,
+          headers: { 'Content-Type': 'image/png' },
+        })
+      );
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.descriptionHtml).toContain(
+      '<img src="data:image/png;base64,AQ==" alt="first-preview.png" loading="lazy" />'
+    );
+    expect(result.descriptionHtml).toContain(
+      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" />'
+    );
+    expect(result.descriptionHtml).not.toContain('Image preview unavailable');
+  });
+
   test('throws neutral errors for unsuccessful or malformed issue detail responses', async () => {
     const failedFetch = vi.fn(() => {
       return Promise.resolve(new Response('denied', { status: 403 }));

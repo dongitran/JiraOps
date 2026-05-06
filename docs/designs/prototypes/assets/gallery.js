@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.29 Stable</span>
+        <span>JiraOps 0.1.30 Stable</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media, focused Details, visible updates, and safe actions.</p>
+        <p>Inline Jira media, safer mapping, visible updates, and safe actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable 0.1.29</strong>
-          <p>Description images now stay in their Jira positions.</p>
+          <strong>Stable 0.1.30</strong>
+          <p>Description images resolve when Jira media IDs differ from attachments.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,17 +158,17 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Details</strong>
-          <p>Jira description images render inline from safe thumbnails.</p>
+          <p>ADF media IDs can now map to hydrated image attachments by order.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Attachments</strong>
-          <p>Attachment previews remain visible below issue context.</p>
+          <strong>Fallbacks</strong>
+          <p>Ambiguous inline media stays as a placeholder instead of the wrong image.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
           <strong>Output</strong>
-          <p>Image hydration counts are logged without credential payloads.</p>
+          <p>Unavailable inline image placeholder counts are logged safely.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
