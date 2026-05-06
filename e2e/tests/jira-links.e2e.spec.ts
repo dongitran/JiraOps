@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.32 stable release notes', async () => {
+  test('User can review JiraOps 0.1.33 stable release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,9 +34,9 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.32 Stable')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.33 Stable')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'attachment thumbnails through redirects'
+        'Media Platform file IDs'
       );
       await expect(whatsNewFrame.getByText('0.1.31')).toHaveCount(0);
     } finally {
@@ -834,6 +834,10 @@ async function expectDescriptionInlineImage(issueContent: Locator): Promise<void
   });
   await expect(image).toBeVisible();
   await expect(image).toHaveAttribute('src', /^data:image\//u);
+  await expect(issueContent.getByText('Image preview unavailable')).toHaveCount(0);
+  await expect(
+    issueContent.getByRole('img', { name: /preview unavailable/iu })
+  ).toHaveCount(0);
 
   const imageState = await image.evaluate((node) => {
     if (!(node instanceof HTMLImageElement)) {

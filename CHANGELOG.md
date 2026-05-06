@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.33
+
+### Details
+
+- Match Jira ADF media nodes with Media Platform file IDs captured from attachment redirects.
+- Fetch signed Atlassian media URLs without Authorization headers while keeping attachment image byte limits.
+- Log sanitized media diagnostics for ADF media nodes, image attachments, captured media ID hints, hydrated images, and remaining placeholders.
+
+### Testing
+
+- Add unit coverage for inline description media that only matches through redirect-derived Jira media IDs.
+
 ## 0.1.32
 
 ### Details

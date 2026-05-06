@@ -4,6 +4,7 @@ export interface AdfMediaImage {
   readonly filename: string;
   readonly id: string;
   readonly imageDataUri: string;
+  readonly mediaId?: string;
   readonly mediaNodeIndex?: number;
   readonly mimeType: string;
 }
@@ -210,7 +211,10 @@ function findImageIndexById(
   }
 
   const foundIndex = images.findIndex((image, index) => {
-    return image.id === id && !usedImageIndexes.has(index);
+    return (
+      (image.id === id || image.mediaId === id) &&
+      !usedImageIndexes.has(index)
+    );
   });
   return foundIndex < 0 ? null : foundIndex;
 }

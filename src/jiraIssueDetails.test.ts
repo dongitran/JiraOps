@@ -259,7 +259,7 @@ describe('jira issue details', () => {
           Accept: 'image/*',
           Authorization: 'Bearer sample-access-value',
         },
-        redirect: 'follow',
+        redirect: 'manual',
       }
     );
   });
@@ -309,7 +309,7 @@ describe('jira issue details', () => {
           Accept: 'image/*',
           Authorization: 'Bearer sample-access-value',
         },
-        redirect: 'follow',
+        redirect: 'manual',
       }
     );
   });
@@ -928,6 +928,95 @@ describe('jira issue details', () => {
       '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" />'
     );
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
+  });
+
+  test('hydrates inline media by matching Jira media IDs from attachment redirects', async () => {
+    const mediaId = '4478e39c-cf9b-41d1-ba92-68589487cd75';
+    const detail: JiraIssueDetail = {
+      key: 'OPS-123',
+      summary: 'Summary',
+      status: 'In Progress',
+      statusCategory: 'In Progress',
+      priority: null,
+      updated: '2026-05-01T08:20:00.000+0000',
+      descriptionAdf: {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: mediaId,
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      descriptionText: '',
+      descriptionHtml: '',
+      comments: [],
+      attachments: [
+        {
+          id: '10001',
+          filename: 'inline-diagram.png',
+          mimeType: 'image/png',
+          size: 100,
+          imageDataUri: null,
+        },
+      ],
+      linkedCloneIssues: [],
+      activityHtml: '',
+      technicalNotesHtml: '',
+      transitions: [],
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      if (url.includes('/attachment/thumbnail/10001')) {
+        return Promise.resolve(
+          new Response(null, {
+            status: 303,
+            headers: {
+              Location: `https://api.media.atlassian.com/file/${mediaId}/binary?token=redacted`,
+            },
+          })
+        );
+      }
+
+      if (url.includes('/file/')) {
+        expect(init?.headers).toEqual({ Accept: 'image/*' });
+        return Promise.resolve(
+          new Response(new Uint8Array([2]), {
+            status: 200,
+            headers: { 'Content-Type': 'image/png' },
+          })
+        );
+      }
+
+      return Promise.resolve(new Response('not found', { status: 404 }));
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.descriptionHtml).toContain(
+      '<img src="data:image/png;base64,Ag==" alt="inline-diagram.png" loading="lazy" />'
+    );
+    expect(result.descriptionHtml).not.toContain('Image preview unavailable');
+    expect(result.attachments[0]?.mediaId).toBe(mediaId);
   });
 
   test('hydrates rendered description media before unrelated image attachments', async () => {

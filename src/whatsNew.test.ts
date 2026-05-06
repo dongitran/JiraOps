@@ -9,6 +9,18 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.33
+
+### Details
+
+- Match Jira ADF media nodes with Media Platform file IDs captured from attachment redirects.
+- Fetch signed Atlassian media URLs without Authorization headers while keeping attachment image byte limits.
+- Log sanitized media diagnostics for captured media ID hints and remaining placeholders.
+
+### Testing
+
+- Add unit coverage for inline description media that only matches through redirect-derived Jira media IDs.
+
 ## 0.1.32
 
 ### Details
@@ -137,23 +149,30 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.32')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.33')).toEqual({
       bullets: [
-        'Fetch Jira attachment thumbnails through redirects.',
-        'Fall back to bounded attachment content when thumbnail responses are not images.',
-        'Keep attachment image byte limits and avoid logging signed image URLs.',
+        'Match Jira ADF media nodes with Media Platform file IDs captured from attachment redirects.',
+        'Fetch signed Atlassian media URLs without Authorization headers while keeping attachment image byte limits.',
+        'Log sanitized media diagnostics for captured media ID hints and remaining placeholders.',
+        'Add unit coverage for inline description media that only matches through redirect-derived Jira media IDs.',
       ],
       sections: [
         {
           title: 'Details',
           bullets: [
-            'Fetch Jira attachment thumbnails through redirects.',
-            'Fall back to bounded attachment content when thumbnail responses are not images.',
-            'Keep attachment image byte limits and avoid logging signed image URLs.',
+            'Match Jira ADF media nodes with Media Platform file IDs captured from attachment redirects.',
+            'Fetch signed Atlassian media URLs without Authorization headers while keeping attachment image byte limits.',
+            'Log sanitized media diagnostics for captured media ID hints and remaining placeholders.',
+          ],
+        },
+        {
+          title: 'Testing',
+          bullets: [
+            'Add unit coverage for inline description media that only matches through redirect-derived Jira media IDs.',
           ],
         },
       ],
-      version: '0.1.32',
+      version: '0.1.33',
     });
   });
 
@@ -166,10 +185,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.32',
+      version: '0.1.33',
     });
 
-    expect(html).toContain('JiraOps 0.1.32 Stable');
+    expect(html).toContain('JiraOps 0.1.33 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

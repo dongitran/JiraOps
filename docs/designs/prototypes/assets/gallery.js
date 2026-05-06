@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.32 Stable</span>
+        <span>JiraOps 0.1.33 Stable</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media, redirect-safe hydration, visible updates, and safe actions.</p>
+        <p>Inline Jira media now maps through Media Platform redirects with safer diagnostics.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable 0.1.32</strong>
-          <p>Description images hydrate through Jira thumbnail redirects.</p>
+          <strong>Stable 0.1.33</strong>
+          <p>Description images hydrate when ADF media IDs only appear in Jira attachment redirects.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,22 +158,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Details</strong>
-          <p>Attachment thumbnails now follow Jira redirects to image binaries.</p>
+          <p>Inline description media can match captured Media Platform file IDs.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
           <strong>Hydration</strong>
-          <p>Attachment content is a bounded fallback when thumbnails return JSON.</p>
+          <p>Signed Atlassian media URLs load without extension Authorization headers.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
           <strong>Output</strong>
-          <p>Signed image URLs stay out of logs while counts remain visible.</p>
+          <p>Output shows media node, image attachment, media ID hint, and placeholder counts.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Unit and e2e coverage check inline media in Details.</p>
+          <p>Coverage checks redirect-derived Jira media IDs in Details.</p>
         </article>
       </section>
     </article>

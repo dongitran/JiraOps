@@ -1,6 +1,6 @@
 export const WHATS_NEW_LAST_SEEN_VERSION_KEY =
   'jiraOps.whatsNew.lastSeenVersion.v1';
-export const WHATS_NEW_RELEASE_VERSION = '0.1.32';
+export const WHATS_NEW_RELEASE_VERSION = '0.1.33';
 
 export interface WhatsNewSection {
   readonly title: string;

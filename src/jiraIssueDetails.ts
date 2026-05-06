@@ -1,7 +1,10 @@
-import { Buffer } from 'node:buffer';
-
 import { z } from 'zod';
 
+import {
+  fetchJiraAttachmentImageData,
+  type FetchJiraAttachmentImageDataUriOptions,
+  type JiraAttachmentImageData,
+} from './jiraAttachmentImages';
 import { isAdfImageDataUri } from './jiraAdfMedia';
 import {
   extractTextFromAdf,
@@ -11,19 +14,17 @@ import {
 } from './jiraAdfRenderer';
 
 export { extractTextFromAdf } from './jiraAdfRenderer';
+export {
+  buildJiraAttachmentContentUrl,
+  buildJiraAttachmentThumbnailUrl,
+  fetchJiraAttachmentImageDataUri,
+  type FetchJiraAttachmentImageDataUriOptions,
+} from './jiraAttachmentImages';
 
 export interface FetchJiraIssueDetailOptions {
   readonly accessToken: string;
   readonly cloudId: string;
   readonly issueKey: string;
-  readonly fetchImpl?: typeof fetch;
-}
-
-export interface FetchJiraAttachmentImageDataUriOptions {
-  readonly accessToken: string;
-  readonly cloudId: string;
-  readonly attachmentId: string;
-  readonly maxBytes?: number;
   readonly fetchImpl?: typeof fetch;
 }
 
@@ -49,6 +50,7 @@ export interface JiraIssueAttachment {
   readonly mimeType: string;
   readonly size: number;
   readonly imageDataUri: string | null;
+  readonly mediaId?: string;
 }
 
 export interface JiraLinkedCloneIssue {
@@ -93,7 +95,6 @@ const ISSUE_DETAIL_FIELDS = [
   'attachment',
   'issuelinks',
 ] as const;
-const DEFAULT_ATTACHMENT_IMAGE_MAX_BYTES = 1_500_000;
 const DEFAULT_ATTACHMENT_IMAGE_LIMIT = 6;
 const IMAGE_TAG_PATTERN = /<img\b[^>]*>/giu;
 const DATA_ATTACHMENT_ID_PATTERN =
@@ -180,24 +181,6 @@ export function buildJiraIssueDetailUrl(cloudId: string, issueKey: string): stri
   return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/issue/${encodedIssueKey}?fields=${fields}&expand=renderedFields`;
 }
 
-export function buildJiraAttachmentThumbnailUrl(
-  cloudId: string,
-  attachmentId: string
-): string {
-  const encodedCloudId = encodeURIComponent(cloudId);
-  const encodedAttachmentId = encodeURIComponent(attachmentId);
-  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/attachment/thumbnail/${encodedAttachmentId}`;
-}
-
-export function buildJiraAttachmentContentUrl(
-  cloudId: string,
-  attachmentId: string
-): string {
-  const encodedCloudId = encodeURIComponent(cloudId);
-  const encodedAttachmentId = encodeURIComponent(attachmentId);
-  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/attachment/content/${encodedAttachmentId}`;
-}
-
 export async function fetchJiraIssueDetail(
   options: FetchJiraIssueDetailOptions
 ): Promise<JiraIssueDetail> {
@@ -220,55 +203,32 @@ export async function fetchJiraIssueDetail(
   return parseJiraIssueDetail(responseBody);
 }
 
-export async function fetchJiraAttachmentImageDataUri(
-  options: FetchJiraAttachmentImageDataUriOptions
-): Promise<string | null> {
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const thumbnailResponse = await fetchImpl(
-    buildJiraAttachmentThumbnailUrl(options.cloudId, options.attachmentId),
-    jiraImageRequestOptions(options.accessToken)
-  );
-  const thumbnailDataUri = thumbnailResponse.ok
-    ? await responseToImageDataUri(thumbnailResponse, options.maxBytes)
-    : null;
-  if (thumbnailDataUri !== null) {
-    return thumbnailDataUri;
-  }
-
-  const contentResponse = await fetchImpl(
-    buildJiraAttachmentContentUrl(options.cloudId, options.attachmentId),
-    jiraImageRequestOptions(options.accessToken)
-  );
-  return contentResponse.ok
-    ? responseToImageDataUri(contentResponse, options.maxBytes)
-    : null;
-}
-
 export async function hydrateIssueAttachmentImages(
   detail: JiraIssueDetail,
   options: HydrateIssueAttachmentImagesOptions
 ): Promise<JiraIssueDetail> {
   let remainingImages = options.maxImages ?? DEFAULT_ATTACHMENT_IMAGE_LIMIT;
-  const imageDataByAttachmentId = new Map<string, string | null>();
+  const imageDataByAttachmentId = new Map<string, JiraAttachmentImageData | null>();
   const hydrationQueue = orderAttachmentsForHydration(
     detail.attachments,
     detail.descriptionMediaAttachmentIds ?? []
   );
 
   for (const attachment of hydrationQueue) {
-    const imageDataUri =
+    const fetchedImageData =
       remainingImages > 0 && isImageAttachment(attachment)
-        ? await fetchImageDataUriForAttachment(attachment, options)
-        : attachment.imageDataUri;
-    if (imageDataUri !== null) {
+        ? await fetchImageDataForAttachment(attachment, options)
+        : null;
+    const imageData = fetchedImageData ?? toExistingAttachmentImageData(attachment);
+    if (imageData !== null) {
       remainingImages -= 1;
     }
-    imageDataByAttachmentId.set(attachment.id, imageDataUri);
+    imageDataByAttachmentId.set(attachment.id, imageData);
   }
 
   const attachments = detail.attachments.map((attachment) => {
     return imageDataByAttachmentId.has(attachment.id)
-      ? { ...attachment, imageDataUri: imageDataByAttachmentId.get(attachment.id) ?? null }
+      ? withAttachmentImageData(attachment, imageDataByAttachmentId.get(attachment.id) ?? null)
       : attachment;
   });
 
@@ -297,6 +257,26 @@ export function countRenderedInlineIssueDescriptionImageHints(
   detail: JiraIssueDetail
 ): number {
   return detail.descriptionMediaAttachmentIds?.length ?? 0;
+}
+
+export function countIssueDescriptionAdfMediaNodes(detail: JiraIssueDetail): number {
+  return countAdfMediaNodes(detail.descriptionAdf);
+}
+
+export function countIssueImageAttachments(detail: JiraIssueDetail): number {
+  return detail.attachments.filter(isImageAttachment).length;
+}
+
+export function countHydratedIssueAttachmentImages(detail: JiraIssueDetail): number {
+  return detail.attachments.filter((attachment) => {
+    return attachment.imageDataUri !== null && isAdfImageDataUri(attachment.imageDataUri);
+  }).length;
+}
+
+export function countCapturedIssueAttachmentMediaIds(detail: JiraIssueDetail): number {
+  return detail.attachments.filter((attachment) => {
+    return typeof attachment.mediaId === 'string' && attachment.mediaId.length > 0;
+  }).length;
 }
 
 function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
@@ -424,7 +404,25 @@ function toAdfMediaImage(
     imageDataUri: attachment.imageDataUri,
     mimeType: attachment.mimeType,
   };
-  return mediaNodeIndex === undefined ? mediaImage : { ...mediaImage, mediaNodeIndex };
+  const withMediaId =
+    attachment.mediaId === undefined ? mediaImage : { ...mediaImage, mediaId: attachment.mediaId };
+  return mediaNodeIndex === undefined ? withMediaId : { ...withMediaId, mediaNodeIndex };
+}
+
+function countAdfMediaNodes(value: unknown): number {
+  if (!isUnknownRecord(value)) {
+    return 0;
+  }
+
+  const current = value['type'] === 'media' ? 1 : 0;
+  const content = value['content'];
+  if (!Array.isArray(content)) {
+    return current;
+  }
+
+  return content.reduce((total: number, child: unknown) => {
+    return total + countAdfMediaNodes(child);
+  }, current);
 }
 
 function countInlineImageMarkup(value: string): number {
@@ -543,51 +541,10 @@ function isClonesRelationship(relationship: string): boolean {
   return relationship.trim().toLowerCase() === 'clones';
 }
 
-async function responseToImageDataUri(
-  response: Response,
-  maxBytes = DEFAULT_ATTACHMENT_IMAGE_MAX_BYTES
-): Promise<string | null> {
-  const contentType = response.headers.get('content-type')?.split(';')[0]?.trim() ?? '';
-  if (!contentType.startsWith('image/')) {
-    return null;
-  }
-
-  if (isResponseLargerThan(response, maxBytes)) {
-    return null;
-  }
-
-  const buffer = await response.arrayBuffer();
-  if (buffer.byteLength > maxBytes) {
-    return null;
-  }
-
-  return `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
-}
-
-function jiraImageRequestOptions(accessToken: string): RequestInit {
-  return {
-    headers: {
-      Accept: 'image/*',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    redirect: 'follow',
-  };
-}
-
-function isResponseLargerThan(response: Response, maxBytes: number): boolean {
-  const contentLength = response.headers.get('content-length');
-  if (contentLength === null) {
-    return false;
-  }
-
-  const byteLength = Number.parseInt(contentLength, 10);
-  return Number.isFinite(byteLength) && byteLength > maxBytes;
-}
-
-async function fetchImageDataUriForAttachment(
+async function fetchImageDataForAttachment(
   attachment: JiraIssueAttachment,
   options: HydrateIssueAttachmentImagesOptions
-): Promise<string | null> {
+): Promise<JiraAttachmentImageData | null> {
   const requestOptions: FetchJiraAttachmentImageDataUriOptions = {
     accessToken: options.accessToken,
     cloudId: options.cloudId,
@@ -599,7 +556,24 @@ async function fetchImageDataUriForAttachment(
       : { ...requestOptions, maxBytes: options.maxBytes };
   const withFetch =
     options.fetchImpl === undefined ? withMaxBytes : { ...withMaxBytes, fetchImpl: options.fetchImpl };
-  return fetchJiraAttachmentImageDataUri(withFetch);
+  return fetchJiraAttachmentImageData(withFetch);
+}
+
+function toExistingAttachmentImageData(
+  attachment: JiraIssueAttachment
+): JiraAttachmentImageData | null {
+  return attachment.imageDataUri === null
+    ? null
+    : { imageDataUri: attachment.imageDataUri, mediaId: attachment.mediaId ?? null };
+}
+
+function withAttachmentImageData(
+  attachment: JiraIssueAttachment,
+  imageData: JiraAttachmentImageData | null
+): JiraIssueAttachment {
+  const mediaId = imageData?.mediaId ?? attachment.mediaId;
+  const withImageData = { ...attachment, imageDataUri: imageData?.imageDataUri ?? null };
+  return mediaId === undefined ? withImageData : { ...withImageData, mediaId };
 }
 
 function isImageAttachment(attachment: JiraIssueAttachment): boolean {
@@ -616,4 +590,8 @@ function normalizeId(id: string | number | undefined, index: number, prefix: str
   }
 
   return `${prefix}-${String(index + 1)}`;
+}
+
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
