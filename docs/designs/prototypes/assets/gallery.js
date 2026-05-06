@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.31 Stable</span>
+        <span>JiraOps 0.1.32 Stable</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media, rendered-field mapping, visible updates, and safe actions.</p>
+        <p>Inline Jira media, redirect-safe hydration, visible updates, and safe actions.</p>
       </header>
       <section class="whats-new-hero" aria-label="Stable release summary">
         <div>
-          <strong>Stable 0.1.31</strong>
-          <p>Description images resolve through Jira rendered attachment IDs.</p>
+          <strong>Stable 0.1.32</strong>
+          <p>Description images hydrate through Jira thumbnail redirects.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,17 +158,17 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Details</strong>
-          <p>renderedFields hints connect inline media to real attachment IDs.</p>
+          <p>Attachment thumbnails now follow Jira redirects to image binaries.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
           <strong>Hydration</strong>
-          <p>Inline description images hydrate before unrelated image attachments.</p>
+          <p>Attachment content is a bounded fallback when thumbnails return JSON.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
           <strong>Output</strong>
-          <p>Rendered image hint counts are logged without attachment URLs.</p>
+          <p>Signed image URLs stay out of logs while counts remain visible.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>

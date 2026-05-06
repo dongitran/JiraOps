@@ -186,7 +186,16 @@ export function buildJiraAttachmentThumbnailUrl(
 ): string {
   const encodedCloudId = encodeURIComponent(cloudId);
   const encodedAttachmentId = encodeURIComponent(attachmentId);
-  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/attachment/thumbnail/${encodedAttachmentId}?redirect=false`;
+  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/attachment/thumbnail/${encodedAttachmentId}`;
+}
+
+export function buildJiraAttachmentContentUrl(
+  cloudId: string,
+  attachmentId: string
+): string {
+  const encodedCloudId = encodeURIComponent(cloudId);
+  const encodedAttachmentId = encodeURIComponent(attachmentId);
+  return `${ATLASSIAN_API_ROOT}/${encodedCloudId}/rest/api/3/attachment/content/${encodedAttachmentId}`;
 }
 
 export async function fetchJiraIssueDetail(
@@ -215,17 +224,24 @@ export async function fetchJiraAttachmentImageDataUri(
   options: FetchJiraAttachmentImageDataUriOptions
 ): Promise<string | null> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const response = await fetchImpl(
+  const thumbnailResponse = await fetchImpl(
     buildJiraAttachmentThumbnailUrl(options.cloudId, options.attachmentId),
-    {
-      headers: {
-        Accept: 'image/*',
-        Authorization: `Bearer ${options.accessToken}`,
-      },
-    }
+    jiraImageRequestOptions(options.accessToken)
   );
+  const thumbnailDataUri = thumbnailResponse.ok
+    ? await responseToImageDataUri(thumbnailResponse, options.maxBytes)
+    : null;
+  if (thumbnailDataUri !== null) {
+    return thumbnailDataUri;
+  }
 
-  return response.ok ? responseToImageDataUri(response, options.maxBytes) : null;
+  const contentResponse = await fetchImpl(
+    buildJiraAttachmentContentUrl(options.cloudId, options.attachmentId),
+    jiraImageRequestOptions(options.accessToken)
+  );
+  return contentResponse.ok
+    ? responseToImageDataUri(contentResponse, options.maxBytes)
+    : null;
 }
 
 export async function hydrateIssueAttachmentImages(
@@ -536,12 +552,36 @@ async function responseToImageDataUri(
     return null;
   }
 
+  if (isResponseLargerThan(response, maxBytes)) {
+    return null;
+  }
+
   const buffer = await response.arrayBuffer();
   if (buffer.byteLength > maxBytes) {
     return null;
   }
 
   return `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
+}
+
+function jiraImageRequestOptions(accessToken: string): RequestInit {
+  return {
+    headers: {
+      Accept: 'image/*',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    redirect: 'follow',
+  };
+}
+
+function isResponseLargerThan(response: Response, maxBytes: number): boolean {
+  const contentLength = response.headers.get('content-length');
+  if (contentLength === null) {
+    return false;
+  }
+
+  const byteLength = Number.parseInt(contentLength, 10);
+  return Number.isFinite(byteLength) && byteLength > maxBytes;
 }
 
 async function fetchImageDataUriForAttachment(

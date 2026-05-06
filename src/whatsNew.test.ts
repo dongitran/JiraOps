@@ -9,6 +9,14 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.32
+
+### Details
+
+- Fetch Jira attachment thumbnails through redirects.
+- Fall back to bounded attachment content when thumbnail responses are not images.
+- Keep attachment image byte limits and avoid logging signed image URLs.
+
 ## 0.1.31
 
 ### Details
@@ -129,23 +137,23 @@ describe('What Is New', () => {
   });
 
   test('parses the stable What Is New changelog section', () => {
-    expect(parseChangelogSection(CHANGELOG, '0.1.31')).toEqual({
+    expect(parseChangelogSection(CHANGELOG, '0.1.32')).toEqual({
       bullets: [
-        'Resolve inline Jira description images through renderedFields attachment IDs.',
-        'Hydrate rendered inline image attachments before unrelated image attachments.',
-        'Log rendered inline image hint counts without attachment URLs.',
+        'Fetch Jira attachment thumbnails through redirects.',
+        'Fall back to bounded attachment content when thumbnail responses are not images.',
+        'Keep attachment image byte limits and avoid logging signed image URLs.',
       ],
       sections: [
         {
           title: 'Details',
           bullets: [
-            'Resolve inline Jira description images through renderedFields attachment IDs.',
-            'Hydrate rendered inline image attachments before unrelated image attachments.',
-            'Log rendered inline image hint counts without attachment URLs.',
+            'Fetch Jira attachment thumbnails through redirects.',
+            'Fall back to bounded attachment content when thumbnail responses are not images.',
+            'Keep attachment image byte limits and avoid logging signed image URLs.',
           ],
         },
       ],
-      version: '0.1.31',
+      version: '0.1.32',
     });
   });
 
@@ -158,10 +166,10 @@ describe('What Is New', () => {
           bullets: ['Fix <script>alert("x")</script> in release notes.'],
         },
       ],
-      version: '0.1.31',
+      version: '0.1.32',
     });
 
-    expect(html).toContain('JiraOps 0.1.31 Stable');
+    expect(html).toContain('JiraOps 0.1.32 Stable');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

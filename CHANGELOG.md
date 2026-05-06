@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.32
+
+### Details
+
+- Fetch Jira attachment thumbnails through redirects so inline image previews receive image binary responses.
+- Fall back to bounded attachment content when Jira thumbnail responses are not image binaries.
+- Keep attachment image byte limits and avoid logging signed image URLs.
+
 ## 0.1.31
 
 ### Details

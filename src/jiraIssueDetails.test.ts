@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import {
+  buildJiraAttachmentContentUrl,
   buildJiraAttachmentThumbnailUrl,
   buildJiraIssueDetailUrl,
   extractTextFromAdf,
@@ -16,7 +17,10 @@ describe('jira issue details', () => {
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary%2Cstatus%2Cpriority%2Cupdated%2Cdescription%2Ccomment%2Cattachment%2Cissuelinks&expand=renderedFields'
     );
     expect(buildJiraAttachmentThumbnailUrl('cloud-123', '10001')).toBe(
-      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/thumbnail/10001?redirect=false'
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/thumbnail/10001'
+    );
+    expect(buildJiraAttachmentContentUrl('cloud-123', '10001')).toBe(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/content/10001'
     );
   });
 
@@ -248,6 +252,66 @@ describe('jira issue details', () => {
     });
 
     expect(result).toBe('data:image/png;base64,AQID');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/thumbnail/10001',
+      {
+        headers: {
+          Accept: 'image/*',
+          Authorization: 'Bearer sample-access-value',
+        },
+        redirect: 'follow',
+      }
+    );
+  });
+
+  test('falls back to bounded attachment content when the thumbnail response is not image binary', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      if (url.includes('/thumbnail/')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ self: 'https://example.invalid/thumb' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
+
+      return Promise.resolve(
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: {
+            'Content-Length': '3',
+            'Content-Type': 'image/png',
+          },
+        })
+      );
+    });
+
+    const result = await fetchJiraAttachmentImageDataUri({
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      attachmentId: '10001',
+      maxBytes: 64,
+      fetchImpl: fetchMock,
+    });
+
+    expect(result).toBe('data:image/png;base64,AQID');
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/content/10001',
+      {
+        headers: {
+          Accept: 'image/*',
+          Authorization: 'Bearer sample-access-value',
+        },
+        redirect: 'follow',
+      }
+    );
   });
 
   test('does not return a data URI for non-image or oversized attachment responses', async () => {
@@ -276,6 +340,30 @@ describe('jira issue details', () => {
         fetchImpl: nonImageFetch,
       })
     ).resolves.toBeNull();
+    await expect(
+      fetchJiraAttachmentImageDataUri({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        attachmentId: '10001',
+        maxBytes: 3,
+        fetchImpl: oversizedFetch,
+      })
+    ).resolves.toBeNull();
+  });
+
+  test('does not read oversized attachment bodies when content length exceeds the byte limit', async () => {
+    const oversizedFetch = vi.fn(() => {
+      return Promise.resolve(
+        new Response(new Uint8Array([1, 2, 3, 4]), {
+          status: 200,
+          headers: {
+            'Content-Length': '4',
+            'Content-Type': 'image/png',
+          },
+        })
+      );
+    });
+
     await expect(
       fetchJiraAttachmentImageDataUri({
         accessToken: 'sample-access-value',
@@ -818,7 +906,7 @@ describe('jira issue details', () => {
           : input instanceof URL
             ? input.toString()
             : input.url;
-      const bytes = url.includes('/10002?') ? new Uint8Array([2]) : new Uint8Array([1]);
+      const bytes = url.includes('/10002') ? new Uint8Array([2]) : new Uint8Array([1]);
       return Promise.resolve(
         new Response(bytes, {
           status: 200,
@@ -908,7 +996,7 @@ describe('jira issue details', () => {
           : input instanceof URL
             ? input.toString()
             : input.url;
-      const bytes = url.includes('/10002?') ? new Uint8Array([2]) : new Uint8Array([1]);
+      const bytes = url.includes('/10002') ? new Uint8Array([2]) : new Uint8Array([1]);
       return Promise.resolve(
         new Response(bytes, {
           status: 200,
@@ -992,7 +1080,7 @@ describe('jira issue details', () => {
           : input instanceof URL
             ? input.toString()
             : input.url;
-      if (url.includes('/10002?')) {
+      if (url.includes('/10002')) {
         return Promise.resolve(new Response('not found', { status: 404 }));
       }
 
