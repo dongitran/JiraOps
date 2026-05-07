@@ -236,7 +236,7 @@ function findImageIndexByFilename(
 }
 
 function isRenderableAdfMediaImage(image: AdfMediaImage): boolean {
-  return image.mimeType.toLowerCase().startsWith('image/') && isAdfImageDataUri(image.imageDataUri);
+  return isAdfImageDataUri(image.imageDataUri);
 }
 
 function normalizeMediaFilename(value: string): string {

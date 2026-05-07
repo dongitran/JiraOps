@@ -211,12 +211,13 @@ export async function hydrateIssueAttachmentImages(
   const imageDataByAttachmentId = new Map<string, JiraAttachmentImageData | null>();
   const hydrationQueue = orderAttachmentsForHydration(
     detail.attachments,
-    detail.descriptionMediaAttachmentIds ?? []
+    detail.descriptionMediaAttachmentIds ?? [],
+    collectDescriptionMediaFilenames(detail.descriptionAdf)
   );
 
   for (const attachment of hydrationQueue) {
     const fetchedImageData =
-      remainingImages > 0 && isImageAttachment(attachment)
+      remainingImages > 0 && isLikelyImageAttachment(attachment)
         ? await fetchImageDataForAttachment(attachment, options)
         : null;
     const imageData = fetchedImageData ?? toExistingAttachmentImageData(attachment);
@@ -264,7 +265,7 @@ export function countIssueDescriptionAdfMediaNodes(detail: JiraIssueDetail): num
 }
 
 export function countIssueImageAttachments(detail: JiraIssueDetail): number {
-  return detail.attachments.filter(isImageAttachment).length;
+  return detail.attachments.filter(isLikelyImageAttachment).length;
 }
 
 export function countHydratedIssueAttachmentImages(detail: JiraIssueDetail): number {
@@ -339,7 +340,8 @@ function renderIssueDescriptionWithHydratedMedia(
 
 function orderAttachmentsForHydration(
   attachments: readonly JiraIssueAttachment[],
-  preferredAttachmentIds: readonly string[]
+  preferredAttachmentIds: readonly string[],
+  preferredFilenames: readonly string[]
 ): JiraIssueAttachment[] {
   const attachmentsById = new Map(attachments.map((attachment) => [attachment.id, attachment]));
   const queuedIds = new Set<string>();
@@ -347,6 +349,14 @@ function orderAttachmentsForHydration(
   for (const attachmentId of preferredAttachmentIds) {
     const attachment = attachmentsById.get(attachmentId);
     if (attachment !== undefined && !queuedIds.has(attachment.id)) {
+      queue.push(attachment);
+      queuedIds.add(attachment.id);
+    }
+  }
+
+  const preferredFilenameSet = new Set(preferredFilenames.map(normalizeFilename));
+  for (const attachment of attachments) {
+    if (preferredFilenameSet.has(normalizeFilename(attachment.filename)) && !queuedIds.has(attachment.id)) {
       queue.push(attachment);
       queuedIds.add(attachment.id);
     }
@@ -390,7 +400,7 @@ function toAdfMediaImage(
   attachment: JiraIssueAttachment,
   mediaNodeIndex?: number
 ): AdfMediaImage | null {
-  if (attachment.imageDataUri === null || !isImageAttachment(attachment)) {
+  if (attachment.imageDataUri === null) {
     return null;
   }
 
@@ -422,6 +432,27 @@ function countAdfMediaNodes(value: unknown): number {
 
   return content.reduce((total: number, child: unknown) => {
     return total + countAdfMediaNodes(child);
+  }, current);
+}
+
+function collectDescriptionMediaFilenames(value: unknown): string[] {
+  if (!isUnknownRecord(value)) {
+    return [];
+  }
+
+  const attrs = isUnknownRecord(value['attrs']) ? value['attrs'] : null;
+  const current =
+    value['type'] === 'media' && typeof attrs?.['alt'] === 'string'
+      ? [attrs['alt']]
+      : [];
+  const content = value['content'];
+  if (!Array.isArray(content)) {
+    return current;
+  }
+
+  return content.reduce<string[]>((filenames, child: unknown) => {
+    filenames.push(...collectDescriptionMediaFilenames(child));
+    return filenames;
   }, current);
 }
 
@@ -549,6 +580,8 @@ async function fetchImageDataForAttachment(
     accessToken: options.accessToken,
     cloudId: options.cloudId,
     attachmentId: attachment.id,
+    filename: attachment.filename,
+    mimeType: attachment.mimeType,
   };
   const withMaxBytes =
     options.maxBytes === undefined
@@ -578,6 +611,35 @@ function withAttachmentImageData(
 
 function isImageAttachment(attachment: JiraIssueAttachment): boolean {
   return attachment.mimeType.toLowerCase().startsWith('image/');
+}
+
+function isLikelyImageAttachment(attachment: JiraIssueAttachment): boolean {
+  return isImageAttachment(attachment) || imageContentTypeFromFilename(attachment.filename) !== null;
+}
+
+function imageContentTypeFromFilename(filename: string): string | null {
+  const normalizedFilename = normalizeFilename(filename);
+  if (normalizedFilename.endsWith('.png')) {
+    return 'image/png';
+  }
+
+  if (normalizedFilename.endsWith('.jpg') || normalizedFilename.endsWith('.jpeg')) {
+    return 'image/jpeg';
+  }
+
+  if (normalizedFilename.endsWith('.gif')) {
+    return 'image/gif';
+  }
+
+  if (normalizedFilename.endsWith('.webp')) {
+    return 'image/webp';
+  }
+
+  return null;
+}
+
+function normalizeFilename(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function normalizeId(id: string | number | undefined, index: number, prefix: string): string {

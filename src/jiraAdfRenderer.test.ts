@@ -209,6 +209,44 @@ describe('jiraAdfRenderer', () => {
     expect(html).not.toContain('data:text/html');
   });
 
+  test('renders image data URIs when Jira attachment metadata uses a generic MIME type', () => {
+    const html = renderAdfHtml(
+      {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  alt: 'generic-preview.png',
+                  id: '10001',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        mediaImages: [
+          {
+            filename: 'generic-preview.png',
+            id: '10001',
+            imageDataUri: 'data:image/png;base64,Ag==',
+            mimeType: 'application/octet-stream',
+          },
+        ],
+      }
+    );
+
+    expect(html).toBe(
+      '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,Ag==" alt="generic-preview.png" loading="lazy" /></figure>'
+    );
+  });
+
   test('does not reuse one unmatched hydrated image across multiple Jira media nodes', () => {
     const html = renderAdfHtml(
       {

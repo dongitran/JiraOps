@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.34
+
+### Details
+
+- Render inline Jira description images when Jira attachment metadata reports a generic MIME type but the fetched media bytes are a verified image.
+- Sniff bounded Jira media binary responses for PNG, JPEG, GIF, and WebP before falling back to declared metadata or filename hints.
+- Prioritize ADF media filenames during attachment hydration so inline description images are fetched before unrelated attachments.
+
+### Testing
+
+- Add unit coverage for generic Jira media binaries, filename-prioritized hydration, and renderer handling of generic attachment MIME metadata.
+- Keep e2e coverage checking that Details shows inline images and no unavailable image placeholder in the normal issue-detail flow.
+
 ## 0.1.33
 
 ### Details

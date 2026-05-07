@@ -147,7 +147,7 @@ describe('testModeData', () => {
         {
           id: 'OPS-123-image-1',
           filename: 'reconciliation-alert-preview.png',
-          mimeType: 'image/png',
+          mimeType: 'application/octet-stream',
         },
       ],
       linkedCloneIssues: [

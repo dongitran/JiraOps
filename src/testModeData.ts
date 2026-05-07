@@ -247,7 +247,7 @@ function createOps123IssueDetail(): JiraIssueDetail {
       {
         id: 'OPS-123-image-1',
         filename: 'reconciliation-alert-preview.png',
-        mimeType: 'image/png',
+        mimeType: 'application/octet-stream',
         size: 28420,
         imageDataUri: TEST_ATTACHMENT_IMAGE_DATA_URI,
       },

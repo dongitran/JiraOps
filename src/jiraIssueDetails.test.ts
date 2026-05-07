@@ -1019,6 +1019,179 @@ describe('jira issue details', () => {
     expect(result.attachments[0]?.mediaId).toBe(mediaId);
   });
 
+  test('hydrates inline media from generic Jira media binary responses', async () => {
+    const mediaId = '4478e39c-cf9b-41d1-ba92-68589487cd75';
+    const pngSignature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const detail: JiraIssueDetail = {
+      key: 'OPS-123',
+      summary: 'Summary',
+      status: 'In Progress',
+      statusCategory: 'In Progress',
+      priority: null,
+      updated: '2026-05-01T08:20:00.000+0000',
+      descriptionAdf: {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  collection: 'jira-10000-field-description',
+                  id: mediaId,
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      descriptionText: '',
+      descriptionHtml: '',
+      comments: [],
+      attachments: [
+        {
+          id: '10001',
+          filename: 'inline-diagram.png',
+          mimeType: 'application/octet-stream',
+          size: 100,
+          imageDataUri: null,
+        },
+      ],
+      linkedCloneIssues: [],
+      activityHtml: '',
+      technicalNotesHtml: '',
+      transitions: [],
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      if (url.includes('/attachment/thumbnail/10001')) {
+        return Promise.resolve(
+          new Response(null, {
+            status: 303,
+            headers: {
+              Location: `https://api.media.atlassian.com/file/${mediaId}/binary?token=redacted`,
+            },
+          })
+        );
+      }
+
+      if (url.includes('/file/')) {
+        return Promise.resolve(
+          new Response(pngSignature, {
+            status: 200,
+            headers: { 'Content-Type': 'application/octet-stream' },
+          })
+        );
+      }
+
+      return Promise.resolve(new Response('not found', { status: 404 }));
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.descriptionHtml).toContain(
+      '<img src="data:image/png;base64,iVBORw0KGgo=" alt="inline-diagram.png" loading="lazy" />'
+    );
+    expect(result.descriptionHtml).not.toContain('Image preview unavailable');
+    expect(result.attachments[0]?.mediaId).toBe(mediaId);
+  });
+
+  test('hydrates inline media by prioritizing ADF media filenames before unrelated attachments', async () => {
+    const attachments = Array.from({ length: 7 }, (_, index) => {
+      const attachmentNumber = index + 1;
+      return {
+        id: `1000${String(attachmentNumber)}`,
+        filename: attachmentNumber === 7 ? 'inline-target.png' : `unrelated-${String(attachmentNumber)}.png`,
+        mimeType: 'image/png',
+        size: 100,
+        imageDataUri: null,
+      };
+    });
+    const detail: JiraIssueDetail = {
+      key: 'OPS-123',
+      summary: 'Summary',
+      status: 'In Progress',
+      statusCategory: 'In Progress',
+      priority: null,
+      updated: '2026-05-01T08:20:00.000+0000',
+      descriptionAdf: {
+        type: 'doc',
+        version: 1,
+        content: [
+          {
+            type: 'mediaSingle',
+            content: [
+              {
+                type: 'media',
+                attrs: {
+                  alt: 'inline-target.png',
+                  collection: 'jira-10000-field-description',
+                  id: 'unmapped-media-id',
+                  type: 'file',
+                },
+              },
+            ],
+          },
+        ],
+      },
+      descriptionText: '',
+      descriptionHtml: '',
+      comments: [],
+      attachments,
+      linkedCloneIssues: [],
+      activityHtml: '',
+      technicalNotesHtml: '',
+      transitions: [],
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      const bytes = url.includes('/10007') ? new Uint8Array([7]) : new Uint8Array([1]);
+      return Promise.resolve(
+        new Response(bytes, {
+          status: 200,
+          headers: { 'Content-Type': 'image/png' },
+        })
+      );
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      maxImages: 1,
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.descriptionHtml).toContain(
+      '<img src="data:image/png;base64,Bw==" alt="inline-target.png" loading="lazy" />'
+    );
+    expect(result.descriptionHtml).not.toContain('Image preview unavailable');
+    expect(result.attachments[0]?.imageDataUri).toBeNull();
+    expect(result.attachments[6]?.imageDataUri).toBe('data:image/png;base64,Bw==');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const firstFetchInput = fetchMock.mock.calls[0]?.[0];
+    if (typeof firstFetchInput !== 'string') {
+      throw new Error('Expected the first attachment image request to use a string URL.');
+    }
+    expect(firstFetchInput).toContain('/10007');
+  });
+
   test('hydrates rendered description media before unrelated image attachments', async () => {
     const detail: JiraIssueDetail = {
       key: 'OPS-123',
