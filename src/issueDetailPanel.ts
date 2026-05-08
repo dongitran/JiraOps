@@ -606,13 +606,8 @@ function renderWebLink(link: DashboardIssue['webLinks'][number]): string {
 }
 
 function renderAttachment(attachment: JiraIssueAttachment): string {
-  const image =
-    attachment.imageDataUri !== null && isImageDataUri(attachment.imageDataUri)
-      ? `<img src="${escapeAttribute(attachment.imageDataUri)}" alt="${escapeAttribute(attachment.filename)}" />`
-      : '';
   return `
     <article class="attachment-card">
-      ${image}
       <div class="attachment-meta">
         <strong>${escapeHtml(attachment.filename)}</strong>
         <span>${escapeHtml(attachment.mimeType)}</span>
@@ -674,10 +669,6 @@ function formatUpdated(value: string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
-}
-
-function isImageDataUri(value: string): boolean {
-  return value.startsWith('data:image/');
 }
 
 function toCloneMrUrlSet(issue: DashboardIssue): ReadonlySet<string> {

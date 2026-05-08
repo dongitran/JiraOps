@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.36
+
+### Details
+
+- Expand inline Jira description images across the available Details width instead of keeping the ADF intrinsic width.
+- Use the full editor tab width for Details content so large Jira screenshots are easier to inspect.
+- Keep image attachments listed by filename and type without rendering duplicate image previews below the description.
+
+### Testing
+
+- Add e2e coverage for full-width inline description images and metadata-only image attachments.
+- Verify the prototype with MCP Playwright on a wide editor surface.
+
 ## 0.1.35
 
 ### Details

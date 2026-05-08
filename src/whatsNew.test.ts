@@ -9,6 +9,17 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.36
+
+### Details
+
+- Expand inline Jira description images across the available Details width.
+- Keep image attachments listed without rendering duplicate previews.
+
+### Testing
+
+- Add e2e coverage for full-width description images and metadata-only image attachments.
+
 ## 0.1.35
 
 ### Details

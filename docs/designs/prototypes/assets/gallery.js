@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.35 Pre-release</span>
+        <span>JiraOps 0.1.36 Release</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media now hydrates through Jira attachment proxy redirects.</p>
+        <p>Inline Jira media now uses the available Details width.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Pre-release 0.1.35</strong>
-          <p>Description images hydrate when Jira returns signed media redirects from attachment endpoints.</p>
+          <strong>Release 0.1.36</strong>
+          <p>Description images expand across the editor while image attachments stay metadata-only.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,22 +158,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Details</strong>
-          <p>Inline description media renders after Jira attachment proxy redirects are accepted and verified.</p>
+          <p>Inline description media fills the readable Details column instead of staying at the ADF width.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Hydration</strong>
-          <p>Jira attachment redirects are followed without sending Authorization headers to signed media URLs.</p>
+          <strong>Attachments</strong>
+          <p>Image attachments remain listed by filename and type without duplicating the inline preview.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>Output</strong>
-          <p>Output keeps sanitized proxy, hydrated image, media ID, and placeholder counts.</p>
+          <strong>Layout</strong>
+          <p>Wide editor tabs give Details content and Jira screenshots more horizontal room.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks Jira proxy redirects, rendered attachment hints, and visible Details images.</p>
+          <p>Coverage checks full-width inline images and metadata-only image attachments.</p>
         </article>
       </section>
     </article>
@@ -516,13 +516,8 @@ function renderAttachments(attachments) {
     <div class="attachment-grid">
       ${attachments
         .map((attachment) => {
-          const image =
-            typeof attachment.imageDataUri === 'string' && attachment.imageDataUri.length > 0
-              ? `<img src="${escapeAttribute(attachment.imageDataUri)}" alt="${escapeAttribute(attachment.filename)}" />`
-              : '';
           return `
             <article class="attachment-card">
-              ${image}
               <div class="attachment-meta">
                 <strong>${escapeHtml(attachment.filename)}</strong>
                 <span>${escapeHtml(attachment.mimeType)}</span>

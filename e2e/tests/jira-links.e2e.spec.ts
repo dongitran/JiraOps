@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.35 pre-release notes', async () => {
+  test('User can review JiraOps 0.1.36 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,9 +34,9 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.35 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.36 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'Jira attachment proxy endpoints require a broad Accept header'
+        'inline Jira description images across the available Details width'
       );
       await expect(whatsNewFrame.getByText('0.1.31')).toHaveCount(0);
     } finally {
@@ -107,6 +107,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     const testInfo = test.info();
 
     try {
+      await session.window.setViewportSize({ width: 1600, height: 900 });
       const frame = await openLoadedDashboard(session.window);
 
       await clickWithFallback(
@@ -141,11 +142,10 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         detailFrame.getByLabel('Activity').getByText('Current User moved the ticket')
       ).toBeVisible();
-      await expect(
-        detailFrame.getByLabel('Attachments').getByRole('img', {
-          name: 'reconciliation-alert-preview.png',
-        })
-      ).toBeVisible();
+      await expect(detailFrame.getByLabel('Attachments').getByRole('img')).toHaveCount(0);
+      await expect(detailFrame.getByLabel('Attachments')).toContainText(
+        'reconciliation-alert-preview.png'
+      );
       await expect(detailFrame.getByLabel('Attachments')).toContainText(
         'application/octet-stream'
       );
@@ -857,10 +857,13 @@ async function expectDescriptionInlineImage(issueContent: Locator): Promise<void
     const imageBox = node.getBoundingClientRect();
     return {
       alt: node.alt,
+      fillsDescriptionWidth:
+        Math.abs(imageBox.width - descriptionBox.width) <= 2,
       figureDisplay: window.getComputedStyle(figure).display,
       figureHasMediaClass: figure.classList.contains('jira-adf-media'),
       naturalHeight: node.naturalHeight,
       naturalWidth: node.naturalWidth,
+      renderedWiderThanIntrinsic: imageBox.width > node.naturalWidth,
       srcStartsWithImageData: node.currentSrc.startsWith('data:image/'),
       visible: imageBox.width > 0 && imageBox.height > 0,
       withinDescription:
@@ -873,10 +876,12 @@ async function expectDescriptionInlineImage(issueContent: Locator): Promise<void
 
   expect(imageState).toEqual({
     alt: 'reconciliation-alert-preview.png',
+    fillsDescriptionWidth: true,
     figureDisplay: 'grid',
     figureHasMediaClass: true,
     naturalHeight: expect.any(Number),
     naturalWidth: expect.any(Number),
+    renderedWiderThanIntrinsic: true,
     srcStartsWithImageData: true,
     visible: true,
     withinDescription: true,
