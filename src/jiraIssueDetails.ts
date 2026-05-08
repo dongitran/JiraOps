@@ -34,6 +34,7 @@ export interface HydrateIssueAttachmentImagesOptions {
   readonly maxImages?: number;
   readonly maxBytes?: number;
   readonly fetchImpl?: typeof fetch;
+  readonly log?: (message: string) => void;
 }
 
 export interface JiraIssueComment {
@@ -587,8 +588,10 @@ async function fetchImageDataForAttachment(
     options.maxBytes === undefined
       ? requestOptions
       : { ...requestOptions, maxBytes: options.maxBytes };
+  const withLog =
+    options.log === undefined ? withMaxBytes : { ...withMaxBytes, log: options.log };
   const withFetch =
-    options.fetchImpl === undefined ? withMaxBytes : { ...withMaxBytes, fetchImpl: options.fetchImpl };
+    options.fetchImpl === undefined ? withLog : { ...withLog, fetchImpl: options.fetchImpl };
   return fetchJiraAttachmentImageData(withFetch);
 }
 

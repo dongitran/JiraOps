@@ -192,6 +192,11 @@ export class JiraOpsIssueDetailController {
     const hydrated = await hydrateIssueAttachmentImages(detail, {
       accessToken: tokens.accessToken,
       cloudId: tokens.cloudId,
+      log: (message) => {
+        this.options.outputChannel.appendLine(
+          `Jira issue ${issueKey} image hydration: ${message}`
+        );
+      },
     });
     this.options.outputChannel.appendLine(
       `Hydrated ${String(countInlineIssueDescriptionImages(hydrated))} inline Jira description image(s) for ${issueKey} from ${String(countHydratedIssueAttachmentImages(hydrated))} hydrated image attachment(s), ${String(countRenderedInlineIssueDescriptionImageHints(hydrated))} rendered inline image hint(s), and ${String(countCapturedIssueAttachmentMediaIds(hydrated))} captured media file id hint(s); ${String(countUnavailableInlineIssueDescriptionImages(hydrated))} inline image placeholder(s) remain unavailable.`

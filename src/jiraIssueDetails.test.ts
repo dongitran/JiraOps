@@ -256,7 +256,7 @@ describe('jira issue details', () => {
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/thumbnail/10001',
       {
         headers: {
-          Accept: 'image/*',
+          Accept: '*/*',
           Authorization: 'Bearer sample-access-value',
         },
         redirect: 'manual',
@@ -306,7 +306,7 @@ describe('jira issue details', () => {
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/content/10001',
       {
         headers: {
-          Accept: 'image/*',
+          Accept: '*/*',
           Authorization: 'Bearer sample-access-value',
         },
         redirect: 'manual',
@@ -983,6 +983,10 @@ describe('jira issue details', () => {
             ? input.toString()
             : input.url;
       if (url.includes('/attachment/thumbnail/10001')) {
+        expect(init?.headers).toEqual({
+          Accept: '*/*',
+          Authorization: 'Bearer sample-access-value',
+        });
         return Promise.resolve(
           new Response(null, {
             status: 303,
@@ -1005,11 +1009,13 @@ describe('jira issue details', () => {
 
       return Promise.resolve(new Response('not found', { status: 404 }));
     });
+    const logs: string[] = [];
 
     const result = await hydrateIssueAttachmentImages(detail, {
       accessToken: 'sample-access-value',
       cloudId: 'cloud-123',
       fetchImpl: fetchMock,
+      log: (message) => logs.push(message),
     });
 
     expect(result.descriptionHtml).toContain(
@@ -1017,6 +1023,15 @@ describe('jira issue details', () => {
     );
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
     expect(result.attachments[0]?.mediaId).toBe(mediaId);
+    expect(logs).toEqual([
+      'Requesting Jira attachment thumbnail image data.',
+      'Jira attachment thumbnail image request returned HTTP 303.',
+      'Following signed Atlassian media redirect for Jira attachment thumbnail.',
+      'Signed Atlassian media request for Jira attachment thumbnail returned HTTP 200.',
+    ]);
+    expect(logs.join('\n')).not.toContain(mediaId);
+    expect(logs.join('\n')).not.toContain('sample-access-value');
+    expect(logs.join('\n')).not.toContain('token=redacted');
   });
 
   test('hydrates inline media from generic Jira media binary responses', async () => {
@@ -1065,7 +1080,7 @@ describe('jira issue details', () => {
       technicalNotesHtml: '',
       transitions: [],
     };
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url =
         typeof input === 'string'
           ? input
@@ -1073,6 +1088,10 @@ describe('jira issue details', () => {
             ? input.toString()
             : input.url;
       if (url.includes('/attachment/thumbnail/10001')) {
+        expect(init?.headers).toEqual({
+          Accept: '*/*',
+          Authorization: 'Bearer sample-access-value',
+        });
         return Promise.resolve(
           new Response(null, {
             status: 303,
@@ -1084,6 +1103,7 @@ describe('jira issue details', () => {
       }
 
       if (url.includes('/file/')) {
+        expect(init?.headers).toEqual({ Accept: 'image/*' });
         return Promise.resolve(
           new Response(pngSignature, {
             status: 200,

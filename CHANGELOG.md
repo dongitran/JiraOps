@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.35
+
+### Details
+
+- Hydrate inline Jira description images when Jira attachment proxy endpoints require a broad Accept header before returning signed media redirects.
+- Keep Authorization only on Jira proxy requests while signed Atlassian media URLs are fetched without credential headers.
+- Log sanitized attachment proxy and signed media HTTP status codes during Details image hydration.
+
+### Testing
+
+- Add unit coverage that fails when Jira proxy image hydration uses `Accept: image/*` instead of the redirect-compatible proxy request.
+- Verify a real read-only Jira issue flow hydrates one inline image with zero unavailable placeholders.
+
 ## 0.1.34
 
 ### Details
