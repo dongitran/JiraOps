@@ -1,6 +1,6 @@
 export const WHATS_NEW_LAST_SEEN_VERSION_KEY =
   'jiraOps.whatsNew.lastSeenVersion.v1';
-export const WHATS_NEW_RELEASE_VERSION = '0.1.34';
+export const WHATS_NEW_RELEASE_VERSION = '0.1.35';
 
 export interface WhatsNewSection {
   readonly title: string;
@@ -167,13 +167,13 @@ export function renderWhatsNewHtml(notes: WhatsNewReleaseNotes): string {
   <body>
     <main aria-label="JiraOps release notes">
       <header>
-        <span>JiraOps ${escapeHtml(notes.version)} Stable</span>
+        <span>JiraOps ${escapeHtml(notes.version)} Release</span>
         <h1>What Is New</h1>
         <p>Cleaner triage, focused Details, visible updates, and safe actions.</p>
       </header>
-      <section class="release-summary" aria-label="Stable release summary">
+      <section class="release-summary" aria-label="Release summary">
         <div>
-          <strong>Stable ${escapeHtml(notes.version)}</strong>
+          <strong>Release ${escapeHtml(notes.version)}</strong>
           <p>Four core JiraOps workflows in one clean view.</p>
         </div>
         <span aria-hidden="true">🚀</span>

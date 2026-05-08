@@ -8,6 +8,7 @@ export interface FetchJiraAttachmentImageDataUriOptions {
   readonly maxBytes?: number;
   readonly mimeType?: string;
   readonly fetchImpl?: typeof fetch;
+  readonly log?: (message: string) => void;
 }
 
 export interface JiraAttachmentImageData {
@@ -19,6 +20,7 @@ const ATLASSIAN_API_ROOT = 'https://api.atlassian.com/ex/jira';
 const DEFAULT_ATTACHMENT_IMAGE_MAX_BYTES = 1_500_000;
 const MEDIA_FILE_ID_PATTERN =
   /\/file\/([0-9a-fA-F-]{36})(?=\/|[?#]|$)/u;
+type JiraAttachmentImageEndpoint = 'content' | 'thumbnail';
 
 export function buildJiraAttachmentThumbnailUrl(
   cloudId: string,
@@ -50,24 +52,40 @@ export async function fetchJiraAttachmentImageData(
 ): Promise<JiraAttachmentImageData | null> {
   const thumbnailData = await fetchImageDataFromJiraEndpoint(
     buildJiraAttachmentThumbnailUrl(options.cloudId, options.attachmentId),
-    options
+    options,
+    'thumbnail'
   );
   return thumbnailData ?? await fetchImageDataFromJiraEndpoint(
     buildJiraAttachmentContentUrl(options.cloudId, options.attachmentId),
-    options
+    options,
+    'content'
   );
 }
 
 async function fetchImageDataFromJiraEndpoint(
   url: string,
-  options: FetchJiraAttachmentImageDataUriOptions
+  options: FetchJiraAttachmentImageDataUriOptions,
+  endpoint: JiraAttachmentImageEndpoint
 ): Promise<JiraAttachmentImageData | null> {
   try {
+    logAttachmentImageStep(options, `Requesting Jira attachment ${endpoint} image data.`);
     const fetchImpl = options.fetchImpl ?? fetch;
     const response = await fetchImpl(url, jiraImageRequestOptions(options.accessToken));
+    logAttachmentImageStep(
+      options,
+      `Jira attachment ${endpoint} image request returned HTTP ${String(response.status)}.`
+    );
     if (isRedirectResponse(response)) {
       const redirectUrl = toAbsoluteRedirectUrl(response.headers.get('location'), url);
-      return redirectUrl === null ? null : await fetchRedirectedImageData(redirectUrl, options);
+      if (redirectUrl === null) {
+        return null;
+      }
+
+      logAttachmentImageStep(
+        options,
+        `Following signed Atlassian media redirect for Jira attachment ${endpoint}.`
+      );
+      return await fetchRedirectedImageData(redirectUrl, options, endpoint);
     }
 
     if (!response.ok) {
@@ -79,17 +97,26 @@ async function fetchImageDataFromJiraEndpoint(
       ? null
       : { imageDataUri, mediaId: extractMediaIdFromUrl(response.url) };
   } catch {
+    logAttachmentImageStep(
+      options,
+      `Jira attachment ${endpoint} image request could not be completed.`
+    );
     return null;
   }
 }
 
 async function fetchRedirectedImageData(
   url: string,
-  options: FetchJiraAttachmentImageDataUriOptions
+  options: FetchJiraAttachmentImageDataUriOptions,
+  endpoint: JiraAttachmentImageEndpoint
 ): Promise<JiraAttachmentImageData | null> {
   try {
     const fetchImpl = options.fetchImpl ?? fetch;
     const response = await fetchImpl(url, signedImageRequestOptions());
+    logAttachmentImageStep(
+      options,
+      `Signed Atlassian media request for Jira attachment ${endpoint} returned HTTP ${String(response.status)}.`
+    );
     if (!response.ok) {
       return null;
     }
@@ -99,6 +126,10 @@ async function fetchRedirectedImageData(
       ? null
       : { imageDataUri, mediaId: extractMediaIdFromUrl(url) };
   } catch {
+    logAttachmentImageStep(
+      options,
+      `Signed Atlassian media request for Jira attachment ${endpoint} could not be completed.`
+    );
     return null;
   }
 }
@@ -135,7 +166,9 @@ async function responseToImageDataUri(
 function jiraImageRequestOptions(accessToken: string): RequestInit {
   return {
     headers: {
-      Accept: 'image/*',
+      // Jira Cloud returns the signed media redirect only when the proxy can answer
+      // with its redirect representation; image/* is rejected before the redirect.
+      Accept: '*/*',
       Authorization: `Bearer ${accessToken}`,
     },
     redirect: 'manual',
@@ -152,6 +185,13 @@ function signedImageRequestOptions(): RequestInit {
 
 function isRedirectResponse(response: Response): boolean {
   return response.status >= 300 && response.status < 400;
+}
+
+function logAttachmentImageStep(
+  options: FetchJiraAttachmentImageDataUriOptions,
+  message: string
+): void {
+  options.log?.(message);
 }
 
 function isResponseLargerThan(response: Response, maxBytes: number): boolean {

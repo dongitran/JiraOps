@@ -9,6 +9,18 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.35
+
+### Details
+
+- Hydrate inline Jira description images through Jira attachment proxy redirects.
+- Keep signed Atlassian media URL fetches free of Authorization headers.
+- Log sanitized proxy and media HTTP status codes.
+
+### Testing
+
+- Add unit coverage for redirect-compatible Jira attachment proxy requests.
+
 ## 0.1.33
 
 ### Details
@@ -188,7 +200,7 @@ describe('What Is New', () => {
       version: '0.1.33',
     });
 
-    expect(html).toContain('JiraOps 0.1.33 Stable');
+    expect(html).toContain('JiraOps 0.1.33 Release');
     expect(html).toContain('🚀');
     expect(html).toContain('📌');
     expect(html).toContain('Secure &lt;b&gt;notes&lt;/b&gt;');

@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.34 Stable</span>
+        <span>JiraOps 0.1.35 Pre-release</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media now renders after generic media binary responses.</p>
+        <p>Inline Jira media now hydrates through Jira attachment proxy redirects.</p>
       </header>
-      <section class="whats-new-hero" aria-label="Stable release summary">
+      <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Stable 0.1.34</strong>
-          <p>Description images hydrate when Jira returns generic attachment MIME metadata.</p>
+          <strong>Pre-release 0.1.35</strong>
+          <p>Description images hydrate when Jira returns signed media redirects from attachment endpoints.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,22 +158,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Details</strong>
-          <p>Inline description media renders from verified image data URIs even when metadata is generic.</p>
+          <p>Inline description media renders after Jira attachment proxy redirects are accepted and verified.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
           <strong>Hydration</strong>
-          <p>Signed Atlassian media binaries are sniffed for PNG, JPEG, GIF, and WebP previews.</p>
+          <p>Jira attachment redirects are followed without sending Authorization headers to signed media URLs.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
           <strong>Output</strong>
-          <p>Output keeps sanitized media, image attachment, hydrated image, and placeholder counts.</p>
+          <p>Output keeps sanitized proxy, hydrated image, media ID, and placeholder counts.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks generic media binaries and filename-prioritized Details hydration.</p>
+          <p>Coverage checks Jira proxy redirects, rendered attachment hints, and visible Details images.</p>
         </article>
       </section>
     </article>
