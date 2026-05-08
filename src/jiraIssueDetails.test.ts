@@ -233,7 +233,7 @@ describe('jira issue details', () => {
     expect(result.descriptionMediaAttachmentIds).toEqual(['10002', '10003']);
   });
 
-  test('fetches an image attachment thumbnail as a bounded data URI', async () => {
+  test('fetches image attachment content as a bounded data URI', async () => {
     const fetchMock = vi.fn(() => {
       return Promise.resolve(
         new Response(new Uint8Array([1, 2, 3]), {
@@ -252,8 +252,9 @@ describe('jira issue details', () => {
     });
 
     expect(result).toBe('data:image/png;base64,AQID');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/thumbnail/10001',
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/content/10001',
       {
         headers: {
           Accept: '*/*',
@@ -264,7 +265,7 @@ describe('jira issue details', () => {
     );
   });
 
-  test('falls back to bounded attachment content when the thumbnail response is not image binary', async () => {
+  test('falls back to bounded attachment thumbnail when content is not image binary', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url =
         typeof input === 'string'
@@ -272,9 +273,9 @@ describe('jira issue details', () => {
           : input instanceof URL
             ? input.toString()
             : input.url;
-      if (url.includes('/thumbnail/')) {
+      if (url.includes('/content/')) {
         return Promise.resolve(
-          new Response(JSON.stringify({ self: 'https://example.invalid/thumb' }), {
+          new Response(JSON.stringify({ self: 'https://example.invalid/content' }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           })
@@ -302,8 +303,19 @@ describe('jira issue details', () => {
 
     expect(result).toBe('data:image/png;base64,AQID');
     expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+      1,
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/content/10001',
+      {
+        headers: {
+          Accept: '*/*',
+          Authorization: 'Bearer sample-access-value',
+        },
+        redirect: 'manual',
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/thumbnail/10001',
       {
         headers: {
           Accept: '*/*',
@@ -982,7 +994,7 @@ describe('jira issue details', () => {
           : input instanceof URL
             ? input.toString()
             : input.url;
-      if (url.includes('/attachment/thumbnail/10001')) {
+      if (url.includes('/attachment/content/10001')) {
         expect(init?.headers).toEqual({
           Accept: '*/*',
           Authorization: 'Bearer sample-access-value',
@@ -1024,10 +1036,10 @@ describe('jira issue details', () => {
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
     expect(result.attachments[0]?.mediaId).toBe(mediaId);
     expect(logs).toEqual([
-      'Requesting Jira attachment thumbnail image data.',
-      'Jira attachment thumbnail image request returned HTTP 303.',
-      'Following signed Atlassian media redirect for Jira attachment thumbnail.',
-      'Signed Atlassian media request for Jira attachment thumbnail returned HTTP 200.',
+      'Requesting Jira attachment content image data.',
+      'Jira attachment content image request returned HTTP 303.',
+      'Following signed Atlassian media redirect for Jira attachment content.',
+      'Signed Atlassian media request for Jira attachment content returned HTTP 200.',
     ]);
     expect(logs.join('\n')).not.toContain(mediaId);
     expect(logs.join('\n')).not.toContain('sample-access-value');
@@ -1087,7 +1099,7 @@ describe('jira issue details', () => {
           : input instanceof URL
             ? input.toString()
             : input.url;
-      if (url.includes('/attachment/thumbnail/10001')) {
+      if (url.includes('/attachment/content/10001')) {
         expect(init?.headers).toEqual({
           Accept: '*/*',
           Authorization: 'Bearer sample-access-value',
@@ -1413,7 +1425,7 @@ describe('jira issue details', () => {
     ).rejects.toThrow('Jira issue detail response was not valid.');
   });
 
-  test('does not return a data URI when the attachment thumbnail request fails', async () => {
+  test('does not return a data URI when attachment image requests fail', async () => {
     const fetchMock = vi.fn(() => {
       return Promise.resolve(new Response('not found', { status: 404 }));
     });

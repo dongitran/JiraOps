@@ -9,6 +9,17 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.37
+
+### Details
+
+- Hydrate inline Jira description images from original attachment content before thumbnail fallbacks.
+- Keep thumbnail hydration available when original content cannot be used.
+
+### Testing
+
+- Add unit and e2e coverage for sharp wide inline previews.
+
 ## 0.1.36
 
 ### Details

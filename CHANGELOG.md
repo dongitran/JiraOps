@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.37
+
+### Details
+
+- Hydrate inline Jira description images from original attachment content before thumbnail fallbacks so wide previews stay sharp.
+- Keep thumbnail hydration as a fallback when original content is unavailable, invalid, or above the existing byte limit.
+- Preserve credential-safe Jira proxy and signed media fetch behavior while improving image source quality.
+
+### Testing
+
+- Add unit coverage for content-first Jira attachment image hydration and thumbnail fallback behavior.
+- Add e2e coverage that wide inline previews are not upscaled beyond their natural image width.
+- Verify a real read-only Jira issue flow hydrates original-resolution image content with zero unavailable placeholders.
+
 ## 0.1.36
 
 ### Details

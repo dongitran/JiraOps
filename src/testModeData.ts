@@ -3,7 +3,7 @@ import type { JiraAssignedIssue } from './jiraClient';
 import type { RemoteWebLink } from './remoteLinks';
 
 const TEST_ATTACHMENT_IMAGE_DATA_URI = `data:image/svg+xml;utf8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="36"><rect width="64" height="36" fill="#2aa198"/></svg>'
+  '<svg xmlns="http://www.w3.org/2000/svg" width="1902" height="653"><rect width="1902" height="653" fill="#2aa198"/></svg>'
 )}`;
 
 let notificationScenarioReadCount = 0;

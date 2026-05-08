@@ -20,12 +20,13 @@ const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
 const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
 
 const SAMPLE_IMAGE_URI = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
-  <rect width="640" height="360" fill="#1e1e1e"/>
-  <rect x="44" y="48" width="552" height="264" rx="10" fill="#252526" stroke="#2aa198" stroke-width="3"/>
-  <path d="M90 242 208 138l82 78 72-55 188 116" fill="none" stroke="#7bd88f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="492" cy="104" r="36" fill="#d7ba7d"/>
-  <text x="88" y="92" fill="#e7e7e7" font-family="Arial, sans-serif" font-size="24" font-weight="700">Jira attachment preview</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1902" height="653" viewBox="0 0 1902 653">
+  <rect width="1902" height="653" fill="#1e1e1e"/>
+  <rect x="76" y="72" width="1750" height="500" rx="18" fill="#252526" stroke="#2aa198" stroke-width="6"/>
+  <path d="M148 468 410 224l210 172 172-128 300 184 214-248 420 286" fill="none" stroke="#7bd88f" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="1560" cy="150" r="72" fill="#d7ba7d"/>
+  <text x="148" y="152" fill="#e7e7e7" font-family="Arial, sans-serif" font-size="56" font-weight="700">Full-resolution Jira attachment preview</text>
+  <text x="148" y="232" fill="#c8c8c8" font-family="Arial, sans-serif" font-size="34">Original media content stays sharp when Details expands the image.</text>
 </svg>
 `)}`;
 
@@ -40,7 +41,7 @@ const MOCK_ISSUES = [
     description:
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window. Tighten thresholds and keep on-call context visible.',
     descriptionHtml:
-      `<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="${SAMPLE_IMAGE_URI}" alt="reconciliation-alert-preview.png" width="640" height="360" loading="lazy" /></figure><ul><li>Tighten the delayed settlement threshold.</li><li>Keep the on-call runbook visible for reviewers.</li></ul><table><tr><th>Signal</th><th>Current</th><th>Target</th></tr><tr><td>Delayed settlements</td><td>15 minutes</td><td>8 minutes</td></tr><tr><td>Retry budget</td><td>4 attempts</td><td>3 attempts</td></tr></table><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p><h3>Test Strategy</h3><p>Run checkout and reconciliation regression before moving the alert threshold.</p>`,
+      `<h3>Alert behavior</h3><p>Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.</p><figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="${SAMPLE_IMAGE_URI}" alt="reconciliation-alert-preview.png" width="1902" height="653" loading="lazy" /></figure><ul><li>Tighten the delayed settlement threshold.</li><li>Keep the on-call runbook visible for reviewers.</li></ul><table><tr><th>Signal</th><th>Current</th><th>Target</th></tr><tr><td>Delayed settlements</td><td>15 minutes</td><td>8 minutes</td></tr><tr><td>Retry budget</td><td>4 attempts</td><td>3 attempts</td></tr></table><p>Review the <a href="https://docs.example.com/runbooks/payments/reconciliation">payment incident runbook</a> before merging.</p><h3>Test Strategy</h3><p>Run checkout and reconciliation regression before moving the alert threshold.</p>`,
     technicalNotesHtml:
       '<p>The payment processor can emit duplicate settlement callbacks after regional failover. Keep the idempotency guard before changing alert thresholds.</p><ul><li>Do not alert while the retry budget is still active.</li><li>Keep a manual override in the runbook for settlement holidays.</li><li>Coordinate the dashboard annotation with the observability owner.</li><li>Confirm that the batch monitor excludes sandbox merchants.</li><li>Backfill the previous 24 hours before enabling the tighter threshold.</li><li>Leave the legacy metric in place until the release train closes.</li><li>Notify support before cutting over the paging policy.</li><li>Capture before-and-after alert counts in the release note.</li><li>Keep the rollback threshold documented for the on-call engineer.</li><li>Verify downstream reporting jobs after the first live settlement batch.</li></ul>',
     activityHtml:

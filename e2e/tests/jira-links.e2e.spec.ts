@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.36 release notes', async () => {
+  test('User can review JiraOps 0.1.37 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,9 +34,9 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.36 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.37 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'inline Jira description images across the available Details width'
+        'original attachment content before thumbnail fallbacks'
       );
       await expect(whatsNewFrame.getByText('0.1.31')).toHaveCount(0);
     } finally {
@@ -863,7 +863,7 @@ async function expectDescriptionInlineImage(issueContent: Locator): Promise<void
       figureHasMediaClass: figure.classList.contains('jira-adf-media'),
       naturalHeight: node.naturalHeight,
       naturalWidth: node.naturalWidth,
-      renderedWiderThanIntrinsic: imageBox.width > node.naturalWidth,
+      notUpscaledBeyondNaturalWidth: node.naturalWidth >= imageBox.width,
       srcStartsWithImageData: node.currentSrc.startsWith('data:image/'),
       visible: imageBox.width > 0 && imageBox.height > 0,
       withinDescription:
@@ -881,13 +881,13 @@ async function expectDescriptionInlineImage(issueContent: Locator): Promise<void
     figureHasMediaClass: true,
     naturalHeight: expect.any(Number),
     naturalWidth: expect.any(Number),
-    renderedWiderThanIntrinsic: true,
+    notUpscaledBeyondNaturalWidth: true,
     srcStartsWithImageData: true,
     visible: true,
     withinDescription: true,
   });
   expect(imageState?.naturalHeight).toBeGreaterThan(0);
-  expect(imageState?.naturalWidth).toBeGreaterThan(0);
+  expect(imageState?.naturalWidth).toBeGreaterThan(1000);
 }
 
 async function expectNoVisibleDetailMessages(frame: Frame): Promise<void> {

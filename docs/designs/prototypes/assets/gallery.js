@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.36 Release</span>
+        <span>JiraOps 0.1.37 Release</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media now uses the available Details width.</p>
+        <p>Inline Jira media now hydrates from full-resolution attachment content.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.36</strong>
-          <p>Description images expand across the editor while image attachments stay metadata-only.</p>
+          <strong>Release 0.1.37</strong>
+          <p>Description screenshots stay sharp when Details expands them across the editor.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,22 +158,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Details</strong>
-          <p>Inline description media fills the readable Details column instead of staying at the ADF width.</p>
+          <p>Inline description media prefers original attachment content before thumbnail fallbacks.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Attachments</strong>
-          <p>Image attachments remain listed by filename and type without duplicating the inline preview.</p>
+          <strong>Sharpness</strong>
+          <p>Hydrated images keep enough natural pixels for wide editor tabs.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>Layout</strong>
-          <p>Wide editor tabs give Details content and Jira screenshots more horizontal room.</p>
+          <strong>Fallback</strong>
+          <p>Thumbnail hydration remains available when original content is unavailable or too large.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks full-width inline images and metadata-only image attachments.</p>
+          <p>Coverage checks content-first hydration and non-upscaled wide previews.</p>
         </article>
       </section>
     </article>

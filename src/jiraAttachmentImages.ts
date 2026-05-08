@@ -50,15 +50,15 @@ export async function fetchJiraAttachmentImageDataUri(
 export async function fetchJiraAttachmentImageData(
   options: FetchJiraAttachmentImageDataUriOptions
 ): Promise<JiraAttachmentImageData | null> {
-  const thumbnailData = await fetchImageDataFromJiraEndpoint(
-    buildJiraAttachmentThumbnailUrl(options.cloudId, options.attachmentId),
-    options,
-    'thumbnail'
-  );
-  return thumbnailData ?? await fetchImageDataFromJiraEndpoint(
+  const contentData = await fetchImageDataFromJiraEndpoint(
     buildJiraAttachmentContentUrl(options.cloudId, options.attachmentId),
     options,
     'content'
+  );
+  return contentData ?? await fetchImageDataFromJiraEndpoint(
+    buildJiraAttachmentThumbnailUrl(options.cloudId, options.attachmentId),
+    options,
+    'thumbnail'
   );
 }
 
