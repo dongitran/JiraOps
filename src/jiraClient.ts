@@ -6,6 +6,19 @@ import { z } from 'zod';
 
 import { parseRemoteLinksResponse, type RemoteWebLink } from './remoteLinks';
 
+export {
+  buildJiraIssueCommentsUrl,
+  buildNotificationIssuesSearchBody,
+  fetchJiraIssueActivityEntries,
+  fetchJiraIssueRecentComments,
+  fetchNotificationJiraIssues,
+  type FetchJiraIssueActivityOptions,
+  type FetchNotificationJiraIssuesOptions,
+  type JiraIssueActivityEntry,
+  type JiraIssueCommentEntry,
+  type NotificationIssuesSearchBody,
+} from './jiraNotificationClient';
+
 export interface JiraTokens {
   readonly accessToken: string;
   readonly refreshToken: string;

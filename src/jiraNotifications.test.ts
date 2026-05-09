@@ -1,9 +1,14 @@
 import { describe, expect, test } from 'vitest';
 
-import type { JiraAssignedIssue, JiraIssueChangelogEntry } from './jiraClient';
+import type {
+  JiraAssignedIssue,
+  JiraIssueActivityEntry,
+  JiraIssueChangelogEntry,
+} from './jiraClient';
 import {
   JIRA_OPS_NOTIFICATION_STATE_KEY,
   computeIssueUpdateNotifications,
+  createIssueActivityNotification,
   createIssueNotification,
   describeChangelogAction,
   formatNotificationLogSummary,
@@ -12,6 +17,7 @@ import {
   markAllNotificationsRead,
   normalizeJiraOpsNotificationState,
   readJiraOpsNotificationState,
+  rebuildIssueActivityNotificationHistory,
   rebuildAssignedIssueNotificationHistory,
   seedAssignedIssueNotificationHistory,
   writeJiraOpsNotificationState,
@@ -32,6 +38,35 @@ function assignedIssue(
     statusCategory: 'In Progress',
     priority: 'High',
     updated,
+  };
+}
+
+function commentActivity(
+  id: string,
+  updated: string,
+  authorDisplayName = 'Release Manager'
+): JiraIssueActivityEntry {
+  return {
+    authorDisplayName,
+    created: updated,
+    id,
+    type: 'comment',
+    updated,
+  };
+}
+
+function changelogActivity(
+  id: string,
+  created: string,
+  field = 'WorklogId',
+  authorDisplayName = 'Current User'
+): JiraIssueActivityEntry {
+  return {
+    authorDisplayName,
+    created,
+    id,
+    items: [{ field, fromString: null, toString: field === 'status' ? 'In Progress' : '10001' }],
+    type: 'changelog',
   };
 }
 
@@ -93,6 +128,25 @@ describe('JiraOps assigned issue notifications', () => {
     expect(createIssueNotification(issue, 'assigned', null)).toMatchObject({
       title: 'New Bug assigned: OPS-123',
       detail: 'Payment incident runbook',
+    });
+  });
+
+  test('creates first-class comment and changelog activity notifications', () => {
+    const issue = assignedIssue('OPS-123', '2026-05-01T08:25:00.000Z', 'Payment incident runbook');
+
+    expect(createIssueActivityNotification(issue, commentActivity('20001', '2026-05-01T08:25:00.000Z'))).toEqual({
+      detail: 'Commented · Payment incident runbook',
+      id: 'OPS-123:comment:20001:2026-05-01T08:25:00.000Z',
+      issueKey: 'OPS-123',
+      title: 'Release Manager commented on Bug OPS-123',
+      unread: true,
+      updated: '2026-05-01T08:25:00.000Z',
+    });
+    expect(createIssueActivityNotification(issue, changelogActivity('10001', '2026-05-01T08:24:00.000Z'))).toMatchObject({
+      detail: 'Logged work · Payment incident runbook',
+      id: 'OPS-123:changelog:10001',
+      title: 'Current User updated Bug OPS-123',
+      updated: '2026-05-01T08:24:00.000Z',
     });
   });
 
@@ -294,6 +348,64 @@ describe('JiraOps assigned issue notifications', () => {
     expect(notifications[notifications.length - 1]?.issueKey).toBe('OPS-101');
     expect(notifications.some((notification) => notification.issueKey === 'OPS-100')).toBe(false);
     expect(notifications.every((notification) => !notification.unread)).toBe(true);
+  });
+
+  test('rebuilds notification history from a merged activity timeline', async () => {
+    const issue = assignedIssue('OPS-123', '2026-05-01T08:25:00.000Z', 'Payment incident runbook');
+    const notifications = await rebuildIssueActivityNotificationHistory({
+      fetchIssueActivities: () =>
+        Promise.resolve([
+          changelogActivity('10001', '2026-05-01T08:24:00.000Z'),
+          commentActivity('20001', '2026-05-01T08:25:00.000Z'),
+        ]),
+      issues: [issue],
+    });
+
+    expect(notifications).toEqual([
+      {
+        detail: 'Commented · Payment incident runbook',
+        id: 'OPS-123:comment:20001:2026-05-01T08:25:00.000Z',
+        issueKey: 'OPS-123',
+        title: 'Release Manager commented on Bug OPS-123',
+        unread: false,
+        updated: '2026-05-01T08:25:00.000Z',
+      },
+      {
+        detail: 'Logged work · Payment incident runbook',
+        id: 'OPS-123:changelog:10001',
+        issueKey: 'OPS-123',
+        title: 'Current User updated Bug OPS-123',
+        unread: false,
+        updated: '2026-05-01T08:24:00.000Z',
+      },
+    ]);
+  });
+
+  test('caps rebuilt activity history to the latest 30 notifications', async () => {
+    const issues = Array.from({ length: 31 }, (_, index) =>
+      assignedIssue(
+        `OPS-${String(index + 100)}`,
+        `2026-05-${String(index + 1).padStart(2, '0')}T08:24:00.000Z`
+      )
+    );
+    const notifications = await rebuildIssueActivityNotificationHistory({
+      fetchIssueActivities: (issueKey) => {
+        const issueNumber = Number.parseInt(issueKey.replace('OPS-', ''), 10);
+        const day = issueNumber - 99;
+        return Promise.resolve([
+          commentActivity(
+            `${String(issueNumber)}01`,
+            `2026-05-${String(day).padStart(2, '0')}T08:25:00.000Z`
+          ),
+        ]);
+      },
+      issues,
+    });
+
+    expect(notifications).toHaveLength(30);
+    expect(notifications[0]?.issueKey).toBe('OPS-130');
+    expect(notifications[notifications.length - 1]?.issueKey).toBe('OPS-101');
+    expect(notifications.some((notification) => notification.issueKey === 'OPS-100')).toBe(false);
   });
 
   test('normalizes persisted notification history and baseline safely', () => {

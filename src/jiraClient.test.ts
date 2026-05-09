@@ -4,13 +4,18 @@ import {
   addJiraIssueWorklog,
   buildAssignedIssuesSearchBody,
   buildAssignedIssuesSearchUrl,
+  buildJiraIssueCommentsUrl,
+  buildNotificationIssuesSearchBody,
   buildJiraIssueLatestChangelogUrl,
   buildJiraIssueTransitionsUrl,
   buildJiraIssueWorklogUrl,
   buildJiraRemoteLinksUrl,
   fetchAssignedJiraIssues,
+  fetchJiraIssueActivityEntries,
+  fetchJiraIssueRecentComments,
   fetchJiraIssueLatestChangelog,
   fetchJiraIssueTransitions,
+  fetchNotificationJiraIssues,
   fetchJiraRemoteLinks,
   isTokenUsable,
   OAuthJiraTokenProvider,
@@ -51,9 +56,20 @@ describe('jiraClient', () => {
     });
   });
 
+  test('builds the notification issue search request for related Jira activity', () => {
+    expect(buildNotificationIssuesSearchBody(30)).toEqual({
+      jql: 'updated >= -30d AND (assignee = currentUser() OR reporter = currentUser() OR watcher = currentUser()) ORDER BY updated DESC',
+      fields: ['summary', 'status', 'priority', 'assignee', 'updated', 'issuetype'],
+      maxResults: 30,
+    });
+  });
+
   test('builds Jira issue action URLs safely', () => {
     expect(buildJiraIssueLatestChangelogUrl('cloud-123', 'OPS-123')).toBe(
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary&expand=changelog'
+    );
+    expect(buildJiraIssueCommentsUrl('cloud-123', 'OPS-123', 5)).toBe(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123/comment?maxResults=5&orderBy=-created'
     );
     expect(buildJiraIssueTransitionsUrl('cloud-123', 'OPS-123')).toBe(
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123/transitions'
@@ -192,6 +208,61 @@ describe('jiraClient', () => {
     );
   });
 
+  test('fetches notification Jira issues with the broader related-activity search', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            issues: [
+              {
+                key: 'OPS-777',
+                fields: {
+                  summary: 'Review deployment notes',
+                  status: {
+                    name: 'In Progress',
+                    statusCategory: { name: 'In Progress' },
+                  },
+                  priority: null,
+                  assignee: null,
+                  issuetype: { name: 'Task' },
+                  updated: '2026-05-01T09:20:00.000+0000',
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchNotificationJiraIssues({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        fetchImpl: fetchMock,
+        maxResults: 30,
+      })
+    ).resolves.toMatchObject([
+      {
+        assigneeDisplayName: null,
+        issueType: 'Task',
+        key: 'OPS-777',
+      },
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/search/jql',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer sample-access-value',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildNotificationIssuesSearchBody(30)),
+      }
+    );
+  });
+
   test('throws a neutral error when assigned issue search fails', async () => {
     const fetchMock = vi.fn(() => {
       return Promise.resolve(new Response('denied', { status: 403 }));
@@ -292,6 +363,135 @@ describe('jiraClient', () => {
         fetchImpl: invalidJsonFetch,
       })
     ).resolves.toBeNull();
+  });
+
+  test('fetches recent Jira issue comments without returning comment body content', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            comments: [
+              {
+                id: '20001',
+                author: { displayName: 'Release Manager' },
+                created: '2026-05-01T08:23:00.000+0000',
+                updated: '2026-05-01T08:25:00.000+0000',
+                body: {
+                  type: 'doc',
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: 'Do not preserve this text.' }],
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchJiraIssueRecentComments({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        fetchImpl: fetchMock,
+        issueKey: 'OPS-123',
+      })
+    ).resolves.toEqual([
+      {
+        authorDisplayName: 'Release Manager',
+        created: '2026-05-01T08:23:00.000+0000',
+        id: '20001',
+        updated: '2026-05-01T08:25:00.000+0000',
+      },
+    ]);
+    expect(JSON.stringify(fetchMock.mock.calls)).not.toContain('Do not preserve this text.');
+  });
+
+  test('returns empty recent comments when Jira comments are unavailable', async () => {
+    const nonOkFetch = vi.fn(() => Promise.resolve(new Response('denied', { status: 403 })));
+    await expect(
+      fetchJiraIssueRecentComments({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        fetchImpl: nonOkFetch,
+        issueKey: 'OPS-123',
+      })
+    ).resolves.toEqual([]);
+
+    const invalidJsonFetch = vi.fn(() => Promise.resolve(new Response('{', { status: 200 })));
+    await expect(
+      fetchJiraIssueRecentComments({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        fetchImpl: invalidJsonFetch,
+        issueKey: 'OPS-123',
+      })
+    ).resolves.toEqual([]);
+  });
+
+  test('fetches a merged Jira issue activity timeline from changelog and comments', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            changelog: {
+              histories: [
+                {
+                  id: '10001',
+                  author: { displayName: 'Current User' },
+                  created: '2026-05-01T08:24:00.000+0000',
+                  items: [{ field: 'WorklogId', fromString: null, toString: '30001' }],
+                },
+              ],
+            },
+          }),
+          { status: 200 }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            comments: [
+              {
+                id: '20001',
+                author: { displayName: 'Release Manager' },
+                created: '2026-05-01T08:23:00.000+0000',
+                updated: '2026-05-01T08:25:00.000+0000',
+              },
+            ],
+          }),
+          { status: 200 }
+        )
+      );
+
+    await expect(
+      fetchJiraIssueActivityEntries({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        fetchImpl: fetchMock,
+        issueKey: 'OPS-123',
+      })
+    ).resolves.toEqual([
+      {
+        authorDisplayName: 'Release Manager',
+        created: '2026-05-01T08:23:00.000+0000',
+        id: '20001',
+        type: 'comment',
+        updated: '2026-05-01T08:25:00.000+0000',
+      },
+      {
+        authorDisplayName: 'Current User',
+        created: '2026-05-01T08:24:00.000+0000',
+        id: '10001',
+        items: [{ field: 'WorklogId', fromString: null, toString: '30001' }],
+        type: 'changelog',
+      },
+    ]);
   });
 
   test('fetches available Jira issue transitions', async () => {

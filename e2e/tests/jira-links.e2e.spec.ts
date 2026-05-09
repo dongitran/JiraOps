@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.40 release notes', async () => {
+  test('User can review JiraOps 0.1.41 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.40 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.41 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'reload button'
+        'far right'
       );
-      await expect(whatsNewFrame.getByText('0.1.39')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.40')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -501,6 +501,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_NOTIFICATION_POLL_INTERVAL_MS: '60000',
+        JIRA_OPS_TEST_NOTIFICATION_RELOAD_DELAY_MS: '700',
         JIRA_OPS_TEST_MODE_NOTIFICATION_UPDATE: '1',
       },
     });
@@ -515,6 +516,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
       await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
       await expect(frame.getByRole('button', { name: 'Reload notifications' })).toBeVisible();
+      await expectReloadButtonAtHeaderEdge(frame);
       await expect(frame.getByText('Checked assigned issue updates just now.')).toHaveCount(0);
       await expect(frame.getByText('OPS-456 Issue assigned issue activity')).toBeVisible();
       await expect(frame.getByText('Review checkout service release readiness')).toBeVisible();
@@ -527,11 +529,15 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
       await expectNotificationReadState(frame, 'Current User updated Bug OPS-123', false);
       await clickWithFallback(frame.getByRole('button', { name: 'Reload notifications' }));
-      await expect(frame.getByText('Notification history is being reloaded.')).toHaveCount(0, {
+      await expect(frame.getByRole('button', { name: 'Reloading notifications' })).toBeDisabled();
+      await expect(frame.getByRole('status')).toContainText('Reloading latest Jira activity');
+      await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
+      await expect(frame.getByText('OPS-456 Issue assigned issue activity')).toHaveCount(0);
+      await expect(frame.getByText('Release Manager commented on Bug OPS-123')).toBeVisible({
         timeout: 8_000,
       });
-      await expect(frame.getByText('OPS-456 Issue assigned issue activity')).toHaveCount(0);
-      await expect(frame.getByText('OPS-456 Task was updated')).toBeVisible();
+      await expect(frame.getByText('Commented · Stabilize payment reconciliation alerts')).toBeVisible();
+      await expect(frame.getByText('Observer updated Task OPS-777')).toBeVisible();
       await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
       await expectNotificationReadState(frame, 'Current User updated Bug OPS-123', false);
       await expectNoVisibleAlerts(frame);
@@ -540,6 +546,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await clickWithFallback(frame.getByRole('button', { name: 'Open notifications' }));
       await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
       await expect(frame.getByText('0 unread')).toBeVisible();
+      await expect(frame.getByText('Release Manager commented on Bug OPS-123')).toBeVisible();
       await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
       await expectNotificationReadState(frame, 'Current User updated Bug OPS-123', false);
     } finally {
@@ -1198,6 +1205,20 @@ async function expectNotificationReadState(
   await expect.poll(async () => item.evaluate((node) => node.getAttribute('data-unread'))).toBe(
     String(unread)
   );
+}
+
+async function expectReloadButtonAtHeaderEdge(frame: Frame): Promise<void> {
+  const headingBox = await resolveBoundingBox(
+    frame.getByRole('heading', { name: 'Notifications' })
+  );
+  const buttonBox = await resolveBoundingBox(
+    frame.getByRole('button', { name: 'Reload notifications' })
+  );
+  const regionBox = await resolveBoundingBox(frame.getByLabel('JiraOps notifications'));
+
+  expect(Math.abs(buttonBox.y - headingBox.y)).toBeLessThanOrEqual(8);
+  expect(buttonBox.x).toBeGreaterThan(headingBox.x + headingBox.width);
+  expect(regionBox.x + regionBox.width - (buttonBox.x + buttonBox.width)).toBeLessThanOrEqual(6);
 }
 
 async function expectLoadingCentered(status: Locator): Promise<void> {

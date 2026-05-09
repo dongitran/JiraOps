@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.41
+
+### Notifications
+
+- Rebuild notification history from recent related Jira activity instead of only assigned issue timestamps.
+- Show Jira comments as first-class notification items alongside changelog activity such as work logs and status changes.
+- Include recently updated watched or reported issues in notification reload candidates.
+- Keep existing notification rows visible while reload is in progress and move the reload control to the far right of the Notifications header.
+
+### Testing
+
+- Add unit coverage for Jira comment parsing, activity timeline notification building, and poller activity enrichment.
+- Add e2e coverage for reload loading state, far-right header control placement, comment notifications, and non-assigned related activity.
+
 ## 0.1.40
 
 ### Notifications

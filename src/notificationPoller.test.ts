@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import type { JiraAssignedIssue, JiraIssueChangelogEntry } from './jiraClient';
+import type { JiraAssignedIssue, JiraIssueActivityEntry } from './jiraClient';
 import { NotificationPoller } from './notificationPoller';
 import type { JiraOpsSettings } from './jiraOpsSettings';
 import type { IssueUpdateNotificationResult } from './jiraNotifications';
@@ -18,11 +18,23 @@ function assignedIssue(key: string, updated: string): JiraAssignedIssue {
   };
 }
 
-function changelogEntry(field = 'WorklogId'): JiraIssueChangelogEntry {
+function changelogActivity(field = 'WorklogId'): JiraIssueActivityEntry {
   return {
     authorDisplayName: 'Current User',
     created: '2026-05-01T08:24:00.000Z',
-    items: [{ field, fromString: null, toString: '10001' }],
+    id: `activity-${field}`,
+    items: [{ field, fromString: null, toString: field === 'status' ? 'In Progress' : '10001' }],
+    type: 'changelog',
+  };
+}
+
+function commentActivity(): JiraIssueActivityEntry {
+  return {
+    authorDisplayName: 'Release Manager',
+    created: '2026-05-01T08:23:00.000Z',
+    id: 'comment-20001',
+    type: 'comment',
+    updated: '2026-05-01T08:23:00.000Z',
   };
 }
 
@@ -137,18 +149,19 @@ describe('NotificationPoller', () => {
     ]);
   });
 
-  test('enriches only new updated notifications with changelog details', async () => {
+  test('creates activity notifications for changed issues', async () => {
     const logs: string[] = [];
     const results: IssueUpdateNotificationResult[] = [];
-    const fetchIssueChangelog = vi.fn((issueKey: string) => {
-      return Promise.resolve(issueKey === 'OPS-123' ? changelogEntry() : null);
+    const fetchIssueActivities = vi.fn((issueKey: string) => {
+      return Promise.resolve(
+        issueKey === 'OPS-123' ? [commentActivity(), changelogActivity()] : []
+      );
     });
     const poller = new NotificationPoller({
-      fetchIssueChangelog,
+      fetchIssueActivities,
       fetchIssues: () =>
         Promise.resolve([
           assignedIssue('OPS-123', '2026-05-01T08:24:00.000Z'),
-          assignedIssue('OPS-456', '2026-05-01T08:25:00.000Z'),
         ]),
       log: (message) => {
         logs.push(message);
@@ -169,27 +182,28 @@ describe('NotificationPoller', () => {
 
     await expect(poller.pollNow('manual')).resolves.toBe(true);
 
-    expect(fetchIssueChangelog).toHaveBeenCalledTimes(1);
-    expect(fetchIssueChangelog).toHaveBeenCalledWith('OPS-123');
+    expect(fetchIssueActivities).toHaveBeenCalledTimes(1);
+    expect(fetchIssueActivities).toHaveBeenCalledWith('OPS-123');
     expect(results[0]?.newNotifications.map((notification) => notification.title)).toEqual([
       'Current User updated Bug OPS-123',
-      'New Bug assigned: OPS-456',
+      'Release Manager commented on Bug OPS-123',
     ]);
     expect(results[0]?.newNotifications[0]?.detail).toBe(
       'Logged work · Ticket summary hidden from logs'
     );
     expect(logs.join('\n')).toContain(
-      'Jira changelog enrichment finished: attempted=1, enriched=1, fallback=0.'
+      'Jira activity enrichment finished: attempted=1, activityNotifications=2, fallback=0.'
     );
     expect(logs.join('\n')).not.toContain('Ticket summary hidden from logs');
     expect(logs.join('\n')).not.toContain('Current User');
+    expect(logs.join('\n')).not.toContain('Release Manager');
   });
 
-  test('keeps fallback notification copy when changelog enrichment fails', async () => {
+  test('keeps fallback notification copy when activity enrichment fails', async () => {
     const logs: string[] = [];
     const results: IssueUpdateNotificationResult[] = [];
     const poller = new NotificationPoller({
-      fetchIssueChangelog: () => Promise.reject(new Error('Jira unavailable')),
+      fetchIssueActivities: () => Promise.reject(new Error('Jira unavailable')),
       fetchIssues: () =>
         Promise.resolve([assignedIssue('OPS-123', '2026-05-01T08:24:00.000Z')]),
       log: (message) => {
@@ -216,25 +230,61 @@ describe('NotificationPoller', () => {
       detail: 'Ticket summary hidden from logs',
     });
     expect(logs.join('\n')).toContain(
-      'Jira changelog enrichment finished: attempted=1, enriched=0, fallback=1.'
+      'Jira activity enrichment finished: attempted=1, activityNotifications=0, fallback=1.'
     );
   });
 
-  test('limits changelog enrichment concurrency to five requests', async () => {
+  test('uses activity copy for newly relevant issues after baseline', async () => {
+    const results: IssueUpdateNotificationResult[] = [];
+    const fetchIssueActivities = vi.fn(() =>
+      Promise.resolve([changelogActivity('status')])
+    );
+    const poller = new NotificationPoller({
+      fetchIssueActivities,
+      fetchIssues: () =>
+        Promise.resolve([
+          assignedIssue('OPS-123', '2026-05-01T08:20:00.000Z'),
+          assignedIssue('OPS-777', '2026-05-01T08:24:00.000Z'),
+        ]),
+      log: () => undefined,
+      onError: () => undefined,
+      onIssues: () => undefined,
+      onNotifications: (result) => {
+        results.push(result);
+      },
+      readSettings: () => Promise.resolve(defaultSettings()),
+    });
+    poller.restore({
+      baseline: {
+        'OPS-123': '2026-05-01T08:20:00.000Z',
+      },
+      notifications: [],
+    });
+
+    await expect(poller.pollNow('manual')).resolves.toBe(true);
+
+    expect(fetchIssueActivities).toHaveBeenCalledWith('OPS-777');
+    expect(results[0]?.newNotifications[0]).toMatchObject({
+      detail: 'Changed status to In Progress · Ticket summary hidden from logs',
+      title: 'Current User updated Bug OPS-777',
+    });
+  });
+
+  test('limits activity enrichment concurrency to five requests', async () => {
     let activeRequests = 0;
     let maxActiveRequests = 0;
     const updatedIssues = Array.from({ length: 6 }, (_, index) => {
       return assignedIssue(`OPS-${String(index + 100)}`, '2026-05-01T08:24:00.000Z');
     });
     const poller = new NotificationPoller({
-      fetchIssueChangelog: async () => {
+      fetchIssueActivities: async () => {
         activeRequests += 1;
         maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
         await new Promise<void>((resolve) => {
           setTimeout(resolve, 0);
         });
         activeRequests -= 1;
-        return changelogEntry('status');
+        return [changelogActivity('status')];
       },
       fetchIssues: () => Promise.resolve(updatedIssues),
       log: () => undefined,

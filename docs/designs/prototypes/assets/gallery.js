@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.40 Release</span>
+        <span>JiraOps 0.1.41 Release</span>
         <h1>What Is New</h1>
         <p>Notifications can now rebuild their local history on demand.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.40</strong>
-          <p>Use the reload control to replace stale notification history with current assigned issue activity.</p>
+          <strong>Release 0.1.41</strong>
+          <p>Reload now rebuilds a recent Jira activity timeline with comments and non-assigned related issues.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,12 +158,12 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Notifications</strong>
-          <p>A compact reload button sits beside the Notifications heading.</p>
+          <p>A compact reload button sits at the far edge of the Notifications header.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
           <strong>Changelog</strong>
-          <p>Reload fetches up to 30 assigned issue activity items.</p>
+          <p>Reload keeps the current list visible while recent related Jira activity is refreshed.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
@@ -173,7 +173,7 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks reload behavior, history replacement, and hidden error states.</p>
+          <p>Coverage checks loading state, comment notifications, and hidden error states.</p>
         </article>
       </section>
     </article>

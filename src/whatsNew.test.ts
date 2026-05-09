@@ -9,6 +9,17 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.41
+
+### Notifications
+
+- Rebuild notification history from recent related Jira activity.
+- Show Jira comments as first-class notification items.
+
+### Testing
+
+- Add unit and e2e coverage for notification activity timelines.
+
 ## 0.1.40
 
 ### Notifications

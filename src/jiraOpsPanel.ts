@@ -4,10 +4,8 @@ import { applyJiraOAuthCredentialsToEnv, ensureJiraOAuthCredentials, getJiraOAut
 import {
   buildAssignedIssuesSearchBody,
   fetchAssignedJiraIssues,
-  fetchJiraIssueLatestChangelog,
   OAuthJiraTokenProvider,
   type JiraAssignedIssue,
-  type JiraIssueChangelogEntry,
   type JiraConnectionStatus,
 } from './jiraClient';
 import { createDashboardIssue, type DashboardIssue } from './dashboardItems';
@@ -31,7 +29,7 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsRead,
   markIssueNotificationsRead,
-  rebuildAssignedIssueNotificationHistory,
+  rebuildIssueActivityNotificationHistory,
   seedAssignedIssueNotificationHistory,
   type IssueUpdateBaseline,
   type IssueUpdateNotificationResult,
@@ -43,12 +41,12 @@ import {
   recordPanelNotificationBaseline,
   restorePanelNotificationState,
 } from './jiraOpsPanelNotificationState';
+import { JiraOpsPanelNotificationService } from './jiraOpsPanelNotificationService';
 import { readJiraOpsSettings, writeJiraOpsSettings, type JiraOpsSettings } from './jiraOpsSettings';
 import { NotificationPoller } from './notificationPoller';
 import {
   isJiraOpsTestMode,
   resolveTestAssignedIssues,
-  resolveTestIssueLatestChangelog,
 } from './testModeData';
 import {
   CONNECTION_CHANGED_MESSAGE_TYPE,
@@ -82,9 +80,11 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
   private readonly disposables: vscode.Disposable[] = [];
   private readonly dashboardIssues: DashboardIssue[] = [];
   private readonly issueDetails: JiraOpsIssueDetailController;
+  private readonly notificationService: JiraOpsPanelNotificationService;
   private readonly notificationPoller: NotificationPoller;
   private notificationBaseline: IssueUpdateBaseline = {};
   private notifications: readonly JiraOpsNotification[] = [];
+  private notificationsReloading = false;
   private testModeConnected = false;
 
   public constructor(
@@ -93,18 +93,22 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     private readonly globalState: vscode.Memento,
     private readonly tokenProvider = new OAuthJiraTokenProvider()
   ) {
+    this.notificationService = new JiraOpsPanelNotificationService({
+      isTestModeConnected: () => this.testModeConnected,
+      outputChannel: this.outputChannel,
+      tokenProvider: this.tokenProvider,
+    });
     this.notificationPoller = new NotificationPoller({
-      fetchIssueChangelog: (issueKey) => this.fetchIssueLatestChangelog(issueKey),
-      fetchIssues: () => this.loadAssignedIssues(),
+      fetchIssueActivities: (issueKey) =>
+        this.notificationService.fetchIssueActivities(issueKey),
+      fetchIssues: () => this.notificationService.loadNotificationIssues(),
       log: (message) => {
         this.outputChannel.appendLine(message);
       },
       onError: (error) => {
         this.handleNotificationPollError(error);
       },
-      onIssues: (issues) => {
-        this.applyAssignedIssues(issues, 'notification poll');
-      },
+      onIssues: () => undefined,
       onNotifications: (result) => {
         this.handleNotificationPollResult(result);
       },
@@ -344,28 +348,37 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
   }
 
   private async handleReloadNotifications(): Promise<void> {
+    if (this.notificationsReloading) {
+      this.outputChannel.appendLine('Skipped JiraOps notification history reload because one is already running.');
+      return;
+    }
+
     const previousBaseline = this.notificationBaseline;
     const previousNotifications = this.notifications;
     this.outputChannel.appendLine('Reloading JiraOps notification history.');
-    this.notifications = [];
+    this.notificationsReloading = true;
     this.syncNotificationPollerState();
-    this.postNotificationsChanged('Notification history is being reloaded.');
+    this.postNotificationsChanged('Reloading latest Jira activity...');
 
     try {
-      const assignedIssues = await this.loadAssignedIssues(NOTIFICATION_RELOAD_LIMIT);
-      this.applyAssignedIssues(assignedIssues, 'notification reload');
-      this.notifications = await rebuildAssignedIssueNotificationHistory({
-        fetchIssueChangelog: (issueKey) => this.fetchIssueLatestChangelog(issueKey),
-        issues: assignedIssues,
+      await this.notificationService.waitForReloadDelay();
+      const notificationIssues =
+        await this.notificationService.loadNotificationIssues(NOTIFICATION_RELOAD_LIMIT);
+      this.notifications = await rebuildIssueActivityNotificationHistory({
+        fetchIssueActivities: (issueKey) =>
+          this.notificationService.fetchIssueActivities(issueKey),
+        issues: notificationIssues,
       });
-      this.recordBaseline(assignedIssues);
+      this.recordBaseline(notificationIssues);
       this.outputChannel.appendLine(
         `Reloaded JiraOps notification history with ${String(this.notifications.length)} item(s).`
       );
-      this.postNotificationsChanged('Notification history reloaded.');
+      this.notificationsReloading = false;
+      this.postNotificationsChanged('Notification history reloaded from recent Jira activity.');
     } catch {
       this.notificationBaseline = previousBaseline;
       this.notifications = previousNotifications;
+      this.notificationsReloading = false;
       this.syncNotificationPollerState();
       this.outputChannel.appendLine('JiraOps notification history reload failed.');
       this.postNotificationsChanged('Notification history reload failed.');
@@ -476,38 +489,6 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     });
     this.outputChannel.appendLine(`Fetched ${String(issues.length)} assigned Jira issue(s) from Jira.`);
     return issues;
-  }
-
-  private async fetchIssueLatestChangelog(
-    issueKey: string
-  ): Promise<JiraIssueChangelogEntry | null> {
-    if (isJiraOpsTestMode()) {
-      return resolveTestIssueLatestChangelog(issueKey);
-    }
-
-    try {
-      const tokens = await this.tokenProvider.getStoredOrRefreshTokens();
-      if (tokens === null) {
-        this.outputChannel.appendLine(`Skipped Jira changelog enrichment for ${issueKey}: Jira is not connected.`);
-        return null;
-      }
-
-      this.outputChannel.appendLine(`Fetching latest Jira changelog for ${issueKey}.`);
-      const changelog = await fetchJiraIssueLatestChangelog({
-        accessToken: tokens.accessToken,
-        cloudId: tokens.cloudId,
-        issueKey,
-      });
-      this.outputChannel.appendLine(
-        changelog === null
-          ? `No Jira changelog enrichment was available for ${issueKey}.`
-          : `Loaded latest Jira changelog metadata for ${issueKey}.`
-      );
-      return changelog;
-    } catch {
-      this.outputChannel.appendLine(`Jira changelog enrichment failed for ${issueKey}.`);
-      return null;
-    }
   }
 
   private applyAssignedIssues(
@@ -642,6 +623,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       type: NOTIFICATIONS_CHANGED_MESSAGE_TYPE,
       notifications: this.notifications,
       pollStatus,
+      reloading: this.notificationsReloading,
     });
   }
 

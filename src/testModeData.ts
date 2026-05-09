@@ -1,5 +1,9 @@
 import type { JiraIssueDetail } from './jiraIssueDetails';
-import type { JiraAssignedIssue, JiraIssueChangelogEntry } from './jiraClient';
+import type {
+  JiraAssignedIssue,
+  JiraIssueActivityEntry,
+  JiraIssueChangelogEntry,
+} from './jiraClient';
 import type { RemoteWebLink } from './remoteLinks';
 
 const TEST_ATTACHMENT_IMAGE_DATA_URI = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -82,6 +86,22 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
   });
 }
 
+export function resolveTestNotificationIssues(): JiraAssignedIssue[] {
+  return [
+    ...resolveTestAssignedIssues(),
+    {
+      key: 'OPS-777',
+      issueType: 'Task',
+      summary: 'Review incident communication timeline',
+      status: 'In Progress',
+      statusCategory: 'In Progress',
+      priority: 'Medium',
+      assigneeDisplayName: null,
+      updated: '2026-05-01T08:22:00.000+0000',
+    },
+  ].sort((left, right) => Date.parse(right.updated) - Date.parse(left.updated));
+}
+
 export function resolveTestRemoteLinks(issueKey: string): RemoteWebLink[] {
   if (issueKey === 'OPS-123') {
     return resolveOps123RemoteLinks();
@@ -157,6 +177,54 @@ export function resolveTestIssueLatestChangelog(
       { field: 'timespent', fromString: null, toString: '1800' },
     ],
   };
+}
+
+export function resolveTestIssueActivities(
+  issueKey: string
+): readonly JiraIssueActivityEntry[] {
+  if (issueKey === 'OPS-123') {
+    return [
+      {
+        authorDisplayName: 'Current User',
+        created: '2026-05-01T08:24:00.000+0000',
+        id: 'ops-123-worklog',
+        items: [
+          { field: 'WorklogId', fromString: null, toString: '10001' },
+          { field: 'timespent', fromString: null, toString: '1800' },
+        ],
+        type: 'changelog',
+      },
+      {
+        authorDisplayName: 'Release Manager',
+        created: '2026-05-01T08:23:00.000+0000',
+        id: 'ops-123-comment',
+        type: 'comment',
+        updated: '2026-05-01T08:23:00.000+0000',
+      },
+    ];
+  }
+
+  if (issueKey === 'OPS-777') {
+    return [
+      {
+        authorDisplayName: 'Observer',
+        created: '2026-05-01T08:22:00.000+0000',
+        id: 'ops-777-status',
+        items: [{ field: 'status', fromString: 'To Do', toString: 'In Progress' }],
+        type: 'changelog',
+      },
+    ];
+  }
+
+  return [];
+}
+
+export function resolveTestNotificationReloadDelayMs(): number {
+  const value = Number.parseInt(
+    process.env['JIRA_OPS_TEST_NOTIFICATION_RELOAD_DELAY_MS'] ?? '0',
+    10
+  );
+  return Number.isInteger(value) && value > 0 ? value : 0;
 }
 
 export function isJiraOpsTestMode(): boolean {

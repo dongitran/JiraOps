@@ -1,10 +1,12 @@
 import type {
   JiraAssignedIssue,
+  JiraIssueActivityEntry,
   JiraIssueChangelogEntry,
   JiraIssueChangelogItem,
 } from './jiraClient';
 
 const MAX_NOTIFICATION_HISTORY = 30;
+const ACTIVITY_FETCH_BATCH_LIMIT = 5;
 export const JIRA_OPS_NOTIFICATION_STATE_KEY = 'jiraOps.notifications.v1';
 
 export interface JiraOpsNotification {
@@ -34,6 +36,11 @@ export interface IssueUpdateNotificationResult {
 export interface JiraOpsNotificationState {
   readonly baseline: IssueUpdateBaseline;
   readonly notifications: readonly JiraOpsNotification[];
+}
+
+interface IssueActivityGroup {
+  readonly activities: readonly JiraIssueActivityEntry[];
+  readonly issue: JiraAssignedIssue;
 }
 
 export interface JiraOpsNotificationMemento {
@@ -145,6 +152,20 @@ export async function rebuildAssignedIssueNotificationHistory(options: {
   return notifications;
 }
 
+export async function rebuildIssueActivityNotificationHistory(options: {
+  readonly fetchIssueActivities: (
+    issueKey: string
+  ) => Promise<readonly JiraIssueActivityEntry[]>;
+  readonly issues: readonly JiraAssignedIssue[];
+}): Promise<readonly JiraOpsNotification[]> {
+  const activityGroups = await settleIssueActivities(options.issues, options.fetchIssueActivities);
+  return activityGroups
+    .flatMap((group) => createNotificationsForIssueActivities(group.issue, group.activities))
+    .sort(compareNotificationsByUpdatedDesc)
+    .slice(0, MAX_NOTIFICATION_HISTORY)
+    .map((notification) => ({ ...notification, unread: false }));
+}
+
 export function formatNotificationLogSummary(
   notifications: readonly JiraOpsNotification[]
 ): string {
@@ -217,6 +238,71 @@ function compareUpdatedDesc(leftValue: string, rightValue: string): number {
     return rightValue.localeCompare(leftValue);
   }
   return rightTime - leftTime;
+}
+
+async function settleIssueActivities(
+  issues: readonly JiraAssignedIssue[],
+  fetchIssueActivities: (
+    issueKey: string
+  ) => Promise<readonly JiraIssueActivityEntry[]>
+): Promise<readonly IssueActivityGroup[]> {
+  const groups: IssueActivityGroup[] = [];
+  for (let index = 0; index < issues.length; index += ACTIVITY_FETCH_BATCH_LIMIT) {
+    const batch = issues.slice(index, index + ACTIVITY_FETCH_BATCH_LIMIT);
+    const settled = await Promise.allSettled(
+      batch.map(async (issue) => ({
+        activities: await fetchIssueActivities(issue.key),
+        issue,
+      }))
+    );
+    groups.push(...settled.map((item, itemIndex) => activityGroupFromSettled(item, batch[itemIndex])));
+  }
+  return groups;
+}
+
+function activityGroupFromSettled(
+  item: PromiseSettledResult<IssueActivityGroup>,
+  issue: JiraAssignedIssue | undefined
+): IssueActivityGroup {
+  if (item.status === 'fulfilled') {
+    return item.value;
+  }
+
+  return {
+    activities: [],
+    issue: issue ?? createUnknownIssue(),
+  };
+}
+
+function createNotificationsForIssueActivities(
+  issue: JiraAssignedIssue,
+  activities: readonly JiraIssueActivityEntry[]
+): readonly JiraOpsNotification[] {
+  if (activities.length === 0) {
+    return [createIssueNotification(issue, 'updated', null)];
+  }
+
+  return activities.map((activity) => createIssueActivityNotification(issue, activity));
+}
+
+function createUnknownIssue(): JiraAssignedIssue {
+  return {
+    assigneeDisplayName: null,
+    issueType: 'Issue',
+    key: 'UNKNOWN',
+    priority: null,
+    status: 'Unknown',
+    statusCategory: 'Unknown',
+    summary: 'Jira issue activity',
+    updated: '',
+  };
+}
+
+function compareNotificationsByUpdatedDesc(
+  left: JiraOpsNotification,
+  right: JiraOpsNotification
+): number {
+  return compareUpdatedDesc(left.updated, right.updated);
 }
 
 function createNotificationForIssue(
@@ -319,6 +405,17 @@ export function createIssueNotification(
   };
 }
 
+export function createIssueActivityNotification(
+  issue: JiraAssignedIssue,
+  activity: JiraIssueActivityEntry
+): JiraOpsNotification {
+  if (activity.type === 'comment') {
+    return createCommentNotification(issue, activity);
+  }
+
+  return createChangelogActivityNotification(issue, activity);
+}
+
 export function enrichIssueUpdateNotification(
   notification: JiraOpsNotification,
   issue: JiraAssignedIssue,
@@ -328,6 +425,17 @@ export function enrichIssueUpdateNotification(
     ...createIssueNotification(issue, 'updated', changelog),
     unread: notification.unread,
   };
+}
+
+export function createIssueActivityNotificationsSince(options: {
+  readonly activities: readonly JiraIssueActivityEntry[];
+  readonly issue: JiraAssignedIssue;
+  readonly previousUpdated: string | undefined;
+}): readonly JiraOpsNotification[] {
+  return options.activities
+    .filter((activity) => isActivityNewerThan(activity, options.previousUpdated))
+    .map((activity) => createIssueActivityNotification(options.issue, activity))
+    .sort(compareNotificationsByUpdatedDesc);
 }
 
 export function describeChangelogAction(
@@ -411,6 +519,36 @@ function createNotificationCopy(
   };
 }
 
+function createCommentNotification(
+  issue: JiraAssignedIssue,
+  activity: Extract<JiraIssueActivityEntry, { readonly type: 'comment' }>
+): JiraOpsNotification {
+  const issueType = normalizeIssueType(issue);
+  return {
+    detail: `Commented · ${issue.summary}`,
+    id: `${issue.key}:comment:${activity.id}:${activity.updated}`,
+    issueKey: issue.key,
+    title: `${activity.authorDisplayName} commented on ${issueType} ${issue.key}`,
+    unread: true,
+    updated: activity.updated,
+  };
+}
+
+function createChangelogActivityNotification(
+  issue: JiraAssignedIssue,
+  activity: Extract<JiraIssueActivityEntry, { readonly type: 'changelog' }>
+): JiraOpsNotification {
+  const issueType = normalizeIssueType(issue);
+  return {
+    detail: `${describeChangelogAction(activity.items)} · ${issue.summary}`,
+    id: `${issue.key}:changelog:${activity.id}`,
+    issueKey: issue.key,
+    title: `${activity.authorDisplayName} updated ${issueType} ${issue.key}`,
+    unread: true,
+    updated: activity.created,
+  };
+}
+
 function normalizeIssueType(issue: JiraAssignedIssue): string {
   return typeof issue.issueType === 'string' && issue.issueType.trim().length > 0
     ? issue.issueType.trim()
@@ -451,4 +589,19 @@ function isNewerTimestamp(nextValue: string, previousValue: string): boolean {
   }
 
   return nextTime > previousTime;
+}
+
+function isActivityNewerThan(
+  activity: JiraIssueActivityEntry,
+  previousUpdated: string | undefined
+): boolean {
+  if (previousUpdated === undefined) {
+    return true;
+  }
+
+  return isNewerTimestamp(activityUpdated(activity), previousUpdated);
+}
+
+function activityUpdated(activity: JiraIssueActivityEntry): string {
+  return activity.type === 'comment' ? activity.updated : activity.created;
 }

@@ -333,6 +333,41 @@ const MOCK_NOTIFICATIONS = [
   },
 ];
 
+const MOCK_RELOADED_NOTIFICATIONS = [
+  {
+    id: 'ops-123-worklog-2026-05-01T08-24',
+    issueKey: 'OPS-123',
+    title: 'Current User updated Bug OPS-123',
+    detail: 'Logged work · Stabilize payment reconciliation alerts',
+    updated: '2026-05-01T08:24:00.000Z',
+    unread: false,
+  },
+  {
+    id: 'ops-123-comment-2026-05-01T08-23',
+    issueKey: 'OPS-123',
+    title: 'Release Manager commented on Bug OPS-123',
+    detail: 'Commented · Stabilize payment reconciliation alerts',
+    updated: '2026-05-01T08:23:00.000Z',
+    unread: false,
+  },
+  {
+    id: 'ops-456-2026-05-01T08-18',
+    issueKey: 'OPS-456',
+    title: 'Current User updated Task OPS-456',
+    detail: 'Changed status to In Progress · Review checkout service release readiness',
+    updated: '2026-05-01T08:18:00.000Z',
+    unread: false,
+  },
+  {
+    id: 'ops-777-status-2026-05-01T08-16',
+    issueKey: 'OPS-777',
+    title: 'Observer updated Task OPS-777',
+    detail: 'Changed status to In Progress · Review incident communication timeline',
+    updated: '2026-05-01T08:16:00.000Z',
+    unread: false,
+  },
+];
+
 const state = {
   issues: [],
   status: '',
@@ -346,6 +381,7 @@ const state = {
     enabled: true,
     intervalMinutes: 1,
   },
+  notificationsReloading: false,
   intervalDraft: '1',
   pollStatus: 'Notification polling is ready.',
   cachedIssueKeys: [],
@@ -561,6 +597,9 @@ function renderNotificationButton() {
 }
 
 function renderNotificationsScreen() {
+  const reloadButtonLabel = state.notificationsReloading
+    ? 'Reloading notifications'
+    : 'Reload notifications';
   return `
     <section class="notifications-page" aria-label="JiraOps notifications">
       <div class="settings-heading">
@@ -569,13 +608,13 @@ function renderNotificationsScreen() {
         </button>
         <div class="settings-title notifications-title-row">
           <h2>Notifications</h2>
-          <button class="reload-notifications-button" data-notification-action="reload" type="button" aria-label="Reload notifications" title="Reload notifications">
+          <button class="reload-notifications-button" data-notification-action="reload" type="button" aria-label="${reloadButtonLabel}" title="${reloadButtonLabel}"${state.notificationsReloading ? ' disabled aria-busy="true"' : ''}>
             <span aria-hidden="true">&#8635;</span>
           </button>
         </div>
       </div>
       <div class="notification-summary" role="status">
-        <strong>${String(getUnreadNotificationCount())} unread</strong>
+        <strong>${state.notificationsReloading ? 'Reloading latest Jira activity...' : `${String(getUnreadNotificationCount())} unread`}</strong>
         <button class="clear-notifications-button" data-notification-action="clear" type="button"${getUnreadNotificationCount() === 0 ? ' disabled' : ''}>Clear</button>
       </div>
       ${renderNotificationList()}
@@ -587,8 +626,8 @@ function renderNotificationList() {
   if (state.notifications.length === 0) {
     return `
       <div class="empty-state notification-empty">
-        <strong>No assigned issue updates</strong>
-        <span>JiraOps will show updates after the next successful poll.</span>
+        <strong>No notifications</strong>
+        <span>JiraOps will show recent related Jira activity after a successful reload or poll.</span>
       </div>
     `;
   }
@@ -816,7 +855,12 @@ function openSettingsScreen() {
 
 function openNotificationsScreen() {
   state.screen = 'notifications';
-  if (state.connection === 'connected' && state.notificationSettings.enabled && state.notifications.length === 0) {
+  if (
+    vscodeApi === null &&
+    state.connection === 'connected' &&
+    state.notificationSettings.enabled &&
+    state.notifications.length === 0
+  ) {
     state.notifications = MOCK_NOTIFICATIONS;
   }
   if (vscodeApi !== null) {
@@ -989,17 +1033,26 @@ function clearUnreadNotifications() {
 }
 
 function reloadNotifications() {
-  state.notifications = MOCK_NOTIFICATIONS.map((notification) => ({
-    ...notification,
-    unread: false,
-  }));
-  state.pollStatus = 'Notification history reloaded from the latest assigned issue activity.';
+  if (state.notificationsReloading) {
+    return;
+  }
+
+  state.notificationsReloading = true;
+  state.pollStatus = 'Reloading latest related Jira activity...';
 
   if (vscodeApi !== null) {
     vscodeApi.postMessage({ type: RELOAD_NOTIFICATIONS_MESSAGE_TYPE });
+    render();
+    return;
   }
 
   render();
+  window.setTimeout(() => {
+    state.notifications = MOCK_RELOADED_NOTIFICATIONS;
+    state.notificationsReloading = false;
+    state.pollStatus = 'Notification history reloaded from recent related Jira activity.';
+    render();
+  }, 900);
 }
 
 function markIssueNotificationsRead(issueKey) {
@@ -1065,6 +1118,7 @@ function handleNotificationsChangedMessage(message) {
     typeof message.pollStatus === 'string' && message.pollStatus.length > 0
       ? message.pollStatus
       : state.pollStatus;
+  state.notificationsReloading = message.reloading === true;
   render();
 }
 

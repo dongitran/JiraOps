@@ -198,7 +198,8 @@ a:focus-visible {
 
 .connection-button:disabled,
 .refresh-button:disabled,
-.clear-notifications-button:disabled {
+.clear-notifications-button:disabled,
+.reload-notifications-button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }
@@ -569,7 +570,9 @@ a:focus-visible {
 .notifications-title-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  flex: 1 1 auto;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .reload-notifications-button {
@@ -581,6 +584,16 @@ a:focus-visible {
   padding: 0;
   font-size: 16px;
   line-height: 1;
+}
+
+.reload-notifications-button[aria-busy='true'] span {
+  animation: reload-notifications-spin 0.8s linear infinite;
+}
+
+@keyframes reload-notifications-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .settings-title h2 {

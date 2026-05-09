@@ -1,7 +1,7 @@
-import type { JiraAssignedIssue, JiraIssueChangelogEntry } from './jiraClient';
+import type { JiraAssignedIssue, JiraIssueActivityEntry } from './jiraClient';
 import {
   computeIssueUpdateNotifications,
-  enrichIssueUpdateNotification,
+  createIssueActivityNotificationsSince,
   formatNotificationLogSummary,
   buildIssueUpdateBaseline,
   type IssueUpdateBaseline,
@@ -14,10 +14,12 @@ import {
   type JiraOpsSettings,
 } from './jiraOpsSettings';
 
+const MAX_NOTIFICATION_HISTORY = 30;
+
 export interface NotificationPollerOptions {
-  readonly fetchIssueChangelog?: (
+  readonly fetchIssueActivities?: (
     issueKey: string
-  ) => Promise<JiraIssueChangelogEntry | null>;
+  ) => Promise<readonly JiraIssueActivityEntry[]>;
   readonly fetchIssues: () => Promise<readonly JiraAssignedIssue[]>;
   readonly log: (message: string) => void;
   readonly onError: (error: unknown) => void;
@@ -29,14 +31,16 @@ export interface NotificationPollerOptions {
   readonly resolveIntervalMs?: (settings: JiraOpsSettings) => number;
 }
 
-interface ChangelogEnrichmentCandidate {
+interface ActivityEnrichmentCandidate {
   readonly issue: JiraAssignedIssue;
   readonly notification: JiraOpsNotification;
+  readonly previousUpdated: string | undefined;
 }
 
-interface ChangelogEnrichmentResult {
-  readonly enriched: boolean;
-  readonly notification: JiraOpsNotification;
+interface ActivityEnrichmentResult {
+  readonly fallback: boolean;
+  readonly notifications: readonly JiraOpsNotification[];
+  readonly replaceNotificationId: string;
 }
 
 export class NotificationPoller {
@@ -111,7 +115,7 @@ export class NotificationPoller {
 
     this.options.log(`Running JiraOps notification poll for ${reason}.`);
     const issues = await this.options.fetchIssues();
-    this.options.log(`Fetched ${String(issues.length)} assigned Jira issue(s) for notification poll ${reason}.`);
+    this.options.log(`Fetched ${String(issues.length)} Jira issue(s) for notification poll ${reason}.`);
     await this.options.onIssues(issues);
     const previousBaseline = this.baseline;
     const result = computeIssueUpdateNotifications({
@@ -141,11 +145,11 @@ export class NotificationPoller {
     issues: readonly JiraAssignedIssue[],
     previousBaseline: IssueUpdateBaseline
   ): Promise<IssueUpdateNotificationResult> {
-    if (this.options.fetchIssueChangelog === undefined) {
+    if (this.options.fetchIssueActivities === undefined) {
       return result;
     }
 
-    const candidates = findChangelogEnrichmentCandidates(
+    const candidates = findActivityEnrichmentCandidates(
       result.newNotifications,
       issues,
       previousBaseline
@@ -161,16 +165,31 @@ export class NotificationPoller {
   }
 
   private async enrichNotification(
-    candidate: ChangelogEnrichmentCandidate
-  ): Promise<ChangelogEnrichmentResult> {
-    const changelog = await this.options.fetchIssueChangelog?.(candidate.issue.key);
+    candidate: ActivityEnrichmentCandidate
+  ): Promise<ActivityEnrichmentResult> {
+    const activities =
+      (await this.options.fetchIssueActivities?.(candidate.issue.key)) ?? [];
+    const notifications = createIssueActivityNotificationsSince({
+      activities,
+      issue: candidate.issue,
+      previousUpdated: candidate.previousUpdated,
+    });
+
+    if (notifications.length === 0) {
+      return {
+        fallback: true,
+        notifications: [candidate.notification],
+        replaceNotificationId: candidate.notification.id,
+      };
+    }
+
     return {
-      enriched: changelog !== null && changelog !== undefined,
-      notification: enrichIssueUpdateNotification(
-        candidate.notification,
-        candidate.issue,
-        changelog ?? null
-      ),
+      fallback: false,
+      notifications: notifications.map((notification) => ({
+        ...notification,
+        unread: candidate.notification.unread,
+      })),
+      replaceNotificationId: candidate.notification.id,
     };
   }
 
@@ -208,18 +227,24 @@ export class NotificationPoller {
   }
 }
 
-function findChangelogEnrichmentCandidates(
+function findActivityEnrichmentCandidates(
   notifications: readonly JiraOpsNotification[],
   issues: readonly JiraAssignedIssue[],
   previousBaseline: IssueUpdateBaseline
-): ChangelogEnrichmentCandidate[] {
+): ActivityEnrichmentCandidate[] {
   const issueByKey = new Map(issues.map((issue) => [issue.key, issue]));
   return notifications.flatMap((notification) => {
     const issue = issueByKey.get(notification.issueKey);
-    if (issue === undefined || previousBaseline[notification.issueKey] === undefined) {
+    if (issue === undefined) {
       return [];
     }
-    return [{ issue, notification }];
+    return [
+      {
+        issue,
+        notification,
+        previousUpdated: previousBaseline[notification.issueKey],
+      },
+    ];
   });
 }
 
@@ -238,41 +263,48 @@ async function settleInBatches<TInput, TOutput>(
 
 function mergeEnrichedNotifications(
   result: IssueUpdateNotificationResult,
-  settled: readonly PromiseSettledResult<ChangelogEnrichmentResult>[],
+  settled: readonly PromiseSettledResult<ActivityEnrichmentResult>[],
   log: (message: string) => void
 ): IssueUpdateNotificationResult {
-  const { enrichedById, stats } = summarizeChangelogEnrichment(settled);
+  const { replacementsById, stats } = summarizeActivityEnrichment(settled);
   log(
-    `Jira changelog enrichment finished: attempted=${String(stats.attempted)}, enriched=${String(stats.enriched)}, fallback=${String(stats.fallback)}.`
+    `Jira activity enrichment finished: attempted=${String(stats.attempted)}, activityNotifications=${String(stats.activityNotifications)}, fallback=${String(stats.fallback)}.`
   );
   return {
     ...result,
-    newNotifications: result.newNotifications.map((notification) => {
-      return enrichedById.get(notification.id) ?? notification;
+    newNotifications: result.newNotifications.flatMap((notification) => {
+      return replacementsById.get(notification.id) ?? [notification];
     }),
-    notifications: result.notifications.map((notification) => {
-      return enrichedById.get(notification.id) ?? notification;
-    }),
+    notifications: result.notifications
+      .flatMap((notification) => replacementsById.get(notification.id) ?? [notification])
+      .slice(0, MAX_NOTIFICATION_HISTORY),
   };
 }
 
-function summarizeChangelogEnrichment(
-  settled: readonly PromiseSettledResult<ChangelogEnrichmentResult>[]
+function summarizeActivityEnrichment(
+  settled: readonly PromiseSettledResult<ActivityEnrichmentResult>[]
 ): {
-  readonly enrichedById: ReadonlyMap<string, JiraOpsNotification>;
-  readonly stats: { readonly attempted: number; readonly enriched: number; readonly fallback: number };
+  readonly replacementsById: ReadonlyMap<string, readonly JiraOpsNotification[]>;
+  readonly stats: {
+    readonly activityNotifications: number;
+    readonly attempted: number;
+    readonly fallback: number;
+  };
 } {
-  const enrichedById = new Map<string, JiraOpsNotification>();
-  let enriched = 0;
+  const replacementsById = new Map<string, readonly JiraOpsNotification[]>();
+  let activityNotifications = 0;
   let fallback = 0;
   for (const item of settled) {
     if (item.status === 'rejected') {
       fallback += 1;
       continue;
     }
-    enrichedById.set(item.value.notification.id, item.value.notification);
-    enriched += item.value.enriched ? 1 : 0;
-    fallback += item.value.enriched ? 0 : 1;
+    replacementsById.set(item.value.replaceNotificationId, item.value.notifications);
+    activityNotifications += item.value.fallback ? 0 : item.value.notifications.length;
+    fallback += item.value.fallback ? 1 : 0;
   }
-  return { enrichedById, stats: { attempted: settled.length, enriched, fallback } };
+  return {
+    replacementsById,
+    stats: { activityNotifications, attempted: settled.length, fallback },
+  };
 }
