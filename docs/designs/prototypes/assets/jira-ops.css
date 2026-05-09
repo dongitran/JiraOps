@@ -150,6 +150,7 @@ a:focus-visible {
 .detail-button,
 .notification-button,
 .clear-notifications-button,
+.reload-notifications-button,
 .settings-save-button {
   min-height: 28px;
   padding: 0 8px;
@@ -170,6 +171,7 @@ a:focus-visible {
 .connection-button[data-variant='secondary'],
 .detail-button,
 .clear-notifications-button,
+.reload-notifications-button,
 .settings-save-button {
   border-color: var(--border-color);
   background: transparent;
@@ -181,6 +183,7 @@ a:focus-visible {
 .detail-button:hover,
 .notification-button:hover,
 .clear-notifications-button:hover,
+.reload-notifications-button:hover,
 .settings-save-button:hover {
   filter: brightness(1.08);
 }
@@ -188,6 +191,7 @@ a:focus-visible {
 .connection-button[data-variant='secondary']:hover,
 .detail-button:hover,
 .clear-notifications-button:hover,
+.reload-notifications-button:hover,
 .settings-save-button:hover {
   background: var(--surface-2);
 }
@@ -560,6 +564,23 @@ a:focus-visible {
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+.notifications-title-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reload-notifications-button {
+  display: grid;
+  flex: 0 0 28px;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .settings-title h2 {

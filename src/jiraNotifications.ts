@@ -121,6 +121,30 @@ export function seedAssignedIssueNotificationHistory(options: {
   );
 }
 
+export async function rebuildAssignedIssueNotificationHistory(options: {
+  readonly fetchIssueChangelog?: (
+    issueKey: string
+  ) => Promise<JiraIssueChangelogEntry | null>;
+  readonly issues: readonly JiraAssignedIssue[];
+}): Promise<readonly JiraOpsNotification[]> {
+  const issues = [...options.issues]
+    .sort(compareAssignedIssuesByUpdatedDesc)
+    .slice(0, MAX_NOTIFICATION_HISTORY);
+  const notifications = await Promise.all(
+    issues.map(async (issue) => {
+      const changelog = await resolveIssueChangelog(
+        issue.key,
+        options.fetchIssueChangelog
+      );
+      return {
+        ...createIssueNotification(issue, 'updated', changelog),
+        unread: false,
+      };
+    })
+  );
+  return notifications;
+}
+
 export function formatNotificationLogSummary(
   notifications: readonly JiraOpsNotification[]
 ): string {
@@ -160,6 +184,39 @@ export async function writeJiraOpsNotificationState(
   const normalized = normalizeJiraOpsNotificationState(state);
   await memento.update(JIRA_OPS_NOTIFICATION_STATE_KEY, normalized);
   return normalized;
+}
+
+async function resolveIssueChangelog(
+  issueKey: string,
+  fetchIssueChangelog:
+    | ((issueKey: string) => Promise<JiraIssueChangelogEntry | null>)
+    | undefined
+): Promise<JiraIssueChangelogEntry | null> {
+  if (fetchIssueChangelog === undefined) {
+    return null;
+  }
+
+  try {
+    return await fetchIssueChangelog(issueKey);
+  } catch {
+    return null;
+  }
+}
+
+function compareAssignedIssuesByUpdatedDesc(
+  left: JiraAssignedIssue,
+  right: JiraAssignedIssue
+): number {
+  return compareUpdatedDesc(left.updated, right.updated);
+}
+
+function compareUpdatedDesc(leftValue: string, rightValue: string): number {
+  const leftTime = Date.parse(leftValue);
+  const rightTime = Date.parse(rightValue);
+  if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) {
+    return rightValue.localeCompare(leftValue);
+  }
+  return rightTime - leftTime;
 }
 
 function createNotificationForIssue(

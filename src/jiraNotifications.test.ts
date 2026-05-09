@@ -12,6 +12,7 @@ import {
   markAllNotificationsRead,
   normalizeJiraOpsNotificationState,
   readJiraOpsNotificationState,
+  rebuildAssignedIssueNotificationHistory,
   seedAssignedIssueNotificationHistory,
   writeJiraOpsNotificationState,
 } from './jiraNotifications';
@@ -253,6 +254,46 @@ describe('JiraOps assigned issue notifications', () => {
     });
 
     expect(notifications).toEqual(existing);
+  });
+
+  test('rebuilds the latest 30 assigned issue notifications with changelog enrichment', async () => {
+    const issues = Array.from({ length: 31 }, (_, index) => {
+      const issueNumber = 100 + index;
+      return assignedIssue(
+        `OPS-${String(issueNumber)}`,
+        `2026-05-${String(index + 1).padStart(2, '0')}T08:24:00.000Z`,
+        `Reloaded summary ${String(issueNumber)}`,
+        index === 30 ? 'Task' : 'Bug'
+      );
+    });
+    const notifications = await rebuildAssignedIssueNotificationHistory({
+      fetchIssueChangelog: (issueKey) =>
+        Promise.resolve(
+          issueKey === 'OPS-130'
+            ? {
+                authorDisplayName: 'Current User',
+                created: '2026-05-31T08:24:00.000Z',
+                items: [
+                  { field: 'status', fromString: 'To Do', toString: 'In Progress' },
+                ],
+              }
+            : null
+        ),
+      issues,
+    });
+
+    expect(notifications).toHaveLength(30);
+    expect(notifications[0]).toEqual({
+      id: 'OPS-130:2026-05-31T08:24:00.000Z',
+      issueKey: 'OPS-130',
+      title: 'Current User updated Task OPS-130',
+      detail: 'Changed status to In Progress · Reloaded summary 130',
+      updated: '2026-05-31T08:24:00.000Z',
+      unread: false,
+    });
+    expect(notifications[notifications.length - 1]?.issueKey).toBe('OPS-101');
+    expect(notifications.some((notification) => notification.issueKey === 'OPS-100')).toBe(false);
+    expect(notifications.every((notification) => !notification.unread)).toBe(true);
   });
 
   test('normalizes persisted notification history and baseline safely', () => {

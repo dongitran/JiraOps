@@ -15,6 +15,7 @@ const NOTIFICATIONS_CHANGED_MESSAGE_TYPE = 'jiraOps.notificationsChanged';
 const SETTINGS_CHANGED_MESSAGE_TYPE = 'jiraOps.settingsChanged';
 const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
 const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
+const RELOAD_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.reloadNotifications';
 const OPEN_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.openNotifications';
 const PROTOTYPE_OPEN_DETAIL_MESSAGE_TYPE = 'jiraOps.prototypeOpenIssueDetail';
 const PROTOTYPE_DETAIL_LOADING_MESSAGE_TYPE = 'jiraOps.prototypeIssueDetailLoading';
@@ -566,8 +567,11 @@ function renderNotificationsScreen() {
         <button class="back-button" data-nav-action="home" type="button" aria-label="Back to dashboard" title="Back to dashboard">
           <span aria-hidden="true">&#8592;</span>
         </button>
-        <div class="settings-title">
+        <div class="settings-title notifications-title-row">
           <h2>Notifications</h2>
+          <button class="reload-notifications-button" data-notification-action="reload" type="button" aria-label="Reload notifications" title="Reload notifications">
+            <span aria-hidden="true">&#8635;</span>
+          </button>
         </div>
       </div>
       <div class="notification-summary" role="status">
@@ -785,6 +789,11 @@ function handleNotificationAction(action, issueKey) {
     return;
   }
 
+  if (action === 'reload') {
+    reloadNotifications();
+    return;
+  }
+
   if (action === 'open-detail') {
     markIssueNotificationsRead(issueKey);
     openHomeScreen();
@@ -974,6 +983,20 @@ function clearUnreadNotifications() {
 
   if (vscodeApi !== null) {
     vscodeApi.postMessage({ type: CLEAR_NOTIFICATIONS_MESSAGE_TYPE });
+  }
+
+  render();
+}
+
+function reloadNotifications() {
+  state.notifications = MOCK_NOTIFICATIONS.map((notification) => ({
+    ...notification,
+    unread: false,
+  }));
+  state.pollStatus = 'Notification history reloaded from the latest assigned issue activity.';
+
+  if (vscodeApi !== null) {
+    vscodeApi.postMessage({ type: RELOAD_NOTIFICATIONS_MESSAGE_TYPE });
   }
 
   render();

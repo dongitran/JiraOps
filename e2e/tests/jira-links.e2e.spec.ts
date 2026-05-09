@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.39 release notes', async () => {
+  test('User can review JiraOps 0.1.40 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.39 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.40 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'who changed what'
+        'reload button'
       );
-      await expect(whatsNewFrame.getByText('0.1.38')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.39')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -514,6 +514,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await clickWithFallback(notificationButton);
 
       await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+      await expect(frame.getByRole('button', { name: 'Reload notifications' })).toBeVisible();
       await expect(frame.getByText('Checked assigned issue updates just now.')).toHaveCount(0);
       await expect(frame.getByText('OPS-456 Issue assigned issue activity')).toBeVisible();
       await expect(frame.getByText('Review checkout service release readiness')).toBeVisible();
@@ -525,6 +526,15 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(frame.getByText('0 unread')).toBeVisible();
       await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
       await expectNotificationReadState(frame, 'Current User updated Bug OPS-123', false);
+      await clickWithFallback(frame.getByRole('button', { name: 'Reload notifications' }));
+      await expect(frame.getByText('Notification history is being reloaded.')).toHaveCount(0, {
+        timeout: 8_000,
+      });
+      await expect(frame.getByText('OPS-456 Issue assigned issue activity')).toHaveCount(0);
+      await expect(frame.getByText('OPS-456 Task was updated')).toBeVisible();
+      await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
+      await expectNotificationReadState(frame, 'Current User updated Bug OPS-123', false);
+      await expectNoVisibleAlerts(frame);
       await returnToDashboard(frame);
       await expect(frame.getByRole('button', { name: 'Open notifications' })).toBeVisible();
       await clickWithFallback(frame.getByRole('button', { name: 'Open notifications' }));
@@ -1056,6 +1066,32 @@ async function expectNoVisibleDetailMessages(frame: Frame): Promise<void> {
   });
 
   expect(visibleMessages).toEqual([]);
+}
+
+async function expectNoVisibleAlerts(frame: Frame): Promise<void> {
+  const visibleAlerts = await frame.evaluate(() => {
+    return [...document.querySelectorAll('[role="alert"]')]
+      .filter((node): node is HTMLElement => {
+        return node instanceof HTMLElement;
+      })
+      .filter((node) => {
+        const text = node.textContent.trim();
+        const box = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        return (
+          text.length > 0 &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          box.width > 0 &&
+          box.height > 0
+        );
+      })
+      .map((node) => {
+        return node.textContent.trim();
+      });
+  });
+
+  expect(visibleAlerts).toEqual([]);
 }
 
 async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> {

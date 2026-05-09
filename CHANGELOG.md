@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.40
+
+### Notifications
+
+- Add a reload button beside the Notifications heading to rebuild local notification history from the latest assigned issue activity.
+- Reload up to 30 assigned issue notification items and enrich them with latest Jira changelog data when available.
+- Replace stale notification history after reload while resetting the baseline to avoid duplicate follow-up alerts.
+
+### Testing
+
+- Add unit coverage for reload message parsing and 30-item notification history rebuilds.
+- Add e2e coverage for reloading Notifications without visible error alerts.
+
 ## 0.1.39
 
 ### Notifications

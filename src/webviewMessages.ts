@@ -8,6 +8,7 @@ export const OPEN_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.openNotifications';
 export const OPEN_EXTERNAL_LINK_MESSAGE_TYPE = 'jiraOps.openExternalLink';
 export const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
 export const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
+export const RELOAD_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.reloadNotifications';
 export const TRANSITION_ISSUE_MESSAGE_TYPE = 'jiraOps.transitionIssue';
 export const LOG_WORK_MESSAGE_TYPE = 'jiraOps.logWork';
 export const CLONE_MERGE_REQUEST_MESSAGE_TYPE = 'jiraOps.cloneMergeRequest';
@@ -63,6 +64,10 @@ export interface ClearNotificationsMessage {
   readonly type: typeof CLEAR_NOTIFICATIONS_MESSAGE_TYPE;
 }
 
+export interface ReloadNotificationsMessage {
+  readonly type: typeof RELOAD_NOTIFICATIONS_MESSAGE_TYPE;
+}
+
 export interface TransitionIssueMessage {
   readonly issueKey: string;
   readonly transitionId: string;
@@ -98,6 +103,7 @@ export type WebviewInboundMessage =
   | OpenExternalLinkMessage
   | UpdateSettingsMessage
   | ClearNotificationsMessage
+  | ReloadNotificationsMessage
   | TransitionIssueMessage
   | LogWorkMessage
   | CloneMergeRequestMessage;
@@ -184,6 +190,12 @@ export function isClearNotificationsMessage(
   message: unknown
 ): message is ClearNotificationsMessage {
   return hasMessageType(message, CLEAR_NOTIFICATIONS_MESSAGE_TYPE);
+}
+
+export function isReloadNotificationsMessage(
+  message: unknown
+): message is ReloadNotificationsMessage {
+  return hasMessageType(message, RELOAD_NOTIFICATIONS_MESSAGE_TYPE);
 }
 
 export function isTransitionIssueMessage(

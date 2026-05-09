@@ -9,6 +9,17 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.40
+
+### Notifications
+
+- Add a reload button beside the Notifications heading.
+- Rebuild local notification history from the latest assigned issue activity.
+
+### Testing
+
+- Add unit and e2e coverage for notification history reloads.
+
 ## 0.1.39
 
 ### Details

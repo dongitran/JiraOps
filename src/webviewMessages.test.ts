@@ -5,6 +5,7 @@ import {
   CLONE_MERGE_REQUEST_MESSAGE_TYPE,
   DISCONNECT_JIRA_MESSAGE_TYPE,
   CLEAR_NOTIFICATIONS_MESSAGE_TYPE,
+  RELOAD_NOTIFICATIONS_MESSAGE_TYPE,
   LOG_WORK_MESSAGE_TYPE,
   OPEN_ISSUE_DETAIL_MESSAGE_TYPE,
   OPEN_NOTIFICATIONS_MESSAGE_TYPE,
@@ -23,6 +24,7 @@ import {
   isOpenNotificationsMessage,
   isOpenExternalLinkMessage,
   isOpenSettingsMessage,
+  isReloadNotificationsMessage,
   isRefreshDashboardMessage,
   isTransitionIssueMessage,
   isUpdateSettingsMessage,
@@ -123,10 +125,15 @@ describe('webview message guards', () => {
     ).toBe(false);
   });
 
-  test('accepts notification clear and settings update messages', () => {
+  test('accepts notification clear, reload, and settings update messages', () => {
     expect(
       isClearNotificationsMessage({
         type: CLEAR_NOTIFICATIONS_MESSAGE_TYPE,
+      })
+    ).toBe(true);
+    expect(
+      isReloadNotificationsMessage({
+        type: RELOAD_NOTIFICATIONS_MESSAGE_TYPE,
       })
     ).toBe(true);
     expect(

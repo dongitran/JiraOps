@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.39 Release</span>
+        <span>JiraOps 0.1.40 Release</span>
         <h1>What Is New</h1>
-        <p>Assigned issue notifications now explain who changed what.</p>
+        <p>Notifications can now rebuild their local history on demand.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.39</strong>
-          <p>Notification titles and details now mirror the useful parts of Jira activity.</p>
+          <strong>Release 0.1.40</strong>
+          <p>Use the reload control to replace stale notification history with current assigned issue activity.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,22 +158,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Notifications</strong>
-          <p>Updated issues include the actor, issue type, key, action, and issue summary.</p>
+          <p>A compact reload button sits beside the Notifications heading.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
           <strong>Changelog</strong>
-          <p>JiraOps enriches new update alerts from the latest Jira changelog entry.</p>
+          <p>Reload fetches up to 30 assigned issue activity items.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
           <strong>Fallback</strong>
-          <p>Alerts still appear with issue type and summary when changelog data is unavailable.</p>
+          <p>Changelog enrichment still falls back to issue type and summary when unavailable.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks changelog parsing, fallback copy, and notification persistence.</p>
+          <p>Coverage checks reload behavior, history replacement, and hidden error states.</p>
         </article>
       </section>
     </article>

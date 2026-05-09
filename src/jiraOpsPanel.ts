@@ -31,6 +31,7 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsRead,
   markIssueNotificationsRead,
+  rebuildAssignedIssueNotificationHistory,
   seedAssignedIssueNotificationHistory,
   type IssueUpdateBaseline,
   type IssueUpdateNotificationResult,
@@ -62,6 +63,7 @@ import {
   isOpenIssueDetailMessage,
   isOpenNotificationsMessage,
   isOpenSettingsMessage,
+  isReloadNotificationsMessage,
   isRefreshDashboardMessage,
   isUpdateSettingsMessage,
   isWebviewReadyMessage,
@@ -73,6 +75,7 @@ import {
 export const LINKS_VIEW_ID = 'jiraOps.linksView';
 
 const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
+const NOTIFICATION_RELOAD_LIMIT = 30;
 
 export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private webviewView: vscode.WebviewView | undefined;
@@ -215,6 +218,11 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
 
     if (isClearNotificationsMessage(message)) {
       this.handleClearNotifications();
+      return;
+    }
+
+    if (isReloadNotificationsMessage(message)) {
+      await this.handleReloadNotifications();
     }
   }
 
@@ -335,6 +343,35 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     this.postNotificationsChanged('Notifications marked as read.');
   }
 
+  private async handleReloadNotifications(): Promise<void> {
+    const previousBaseline = this.notificationBaseline;
+    const previousNotifications = this.notifications;
+    this.outputChannel.appendLine('Reloading JiraOps notification history.');
+    this.notifications = [];
+    this.syncNotificationPollerState();
+    this.postNotificationsChanged('Notification history is being reloaded.');
+
+    try {
+      const assignedIssues = await this.loadAssignedIssues(NOTIFICATION_RELOAD_LIMIT);
+      this.applyAssignedIssues(assignedIssues, 'notification reload');
+      this.notifications = await rebuildAssignedIssueNotificationHistory({
+        fetchIssueChangelog: (issueKey) => this.fetchIssueLatestChangelog(issueKey),
+        issues: assignedIssues,
+      });
+      this.recordBaseline(assignedIssues);
+      this.outputChannel.appendLine(
+        `Reloaded JiraOps notification history with ${String(this.notifications.length)} item(s).`
+      );
+      this.postNotificationsChanged('Notification history reloaded.');
+    } catch {
+      this.notificationBaseline = previousBaseline;
+      this.notifications = previousNotifications;
+      this.syncNotificationPollerState();
+      this.outputChannel.appendLine('JiraOps notification history reload failed.');
+      this.postNotificationsChanged('Notification history reload failed.');
+    }
+  }
+
   private handleOpenIssueDetail(issueKey: string): void {
     const issue = this.dashboardIssues.find((item) => item.key === issueKey);
     if (issue === undefined) {
@@ -414,13 +451,13 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     await vscode.env.openExternal(vscode.Uri.parse(url));
   }
 
-  private async loadAssignedIssues(): Promise<readonly JiraAssignedIssue[]> {
+  private async loadAssignedIssues(maxResults?: number): Promise<readonly JiraAssignedIssue[]> {
     if (isJiraOpsTestMode()) {
       if (!this.testModeConnected) {
         throw new JiraConnectionRequiredError();
       }
 
-      return resolveTestAssignedIssues();
+      return resolveTestAssignedIssues().slice(0, maxResults);
     }
 
     const tokens = await this.tokenProvider.getStoredOrRefreshTokens();
@@ -428,13 +465,14 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       throw new JiraConnectionRequiredError();
     }
 
-    const searchBody = buildAssignedIssuesSearchBody();
+    const searchBody = buildAssignedIssuesSearchBody(maxResults);
     this.outputChannel.appendLine(
       `Running Jira assigned issue search with maxResults=${String(searchBody.maxResults)}, fields=${searchBody.fields.join(',')}, jql="${searchBody.jql}".`
     );
     const issues = await fetchAssignedJiraIssues({
       accessToken: tokens.accessToken,
       cloudId: tokens.cloudId,
+      maxResults: searchBody.maxResults,
     });
     this.outputChannel.appendLine(`Fetched ${String(issues.length)} assigned Jira issue(s) from Jira.`);
     return issues;
