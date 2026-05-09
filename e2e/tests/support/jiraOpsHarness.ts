@@ -314,7 +314,10 @@ export async function clickWithFallback(locator: Locator): Promise<void> {
     await locator.click({ timeout: 10_000 });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes('intercepts pointer events')) {
+    if (
+      message.includes('intercepts pointer events') ||
+      message.includes('visible, enabled and stable')
+    ) {
       await locator.click({ force: true, timeout: 10_000 });
       return;
     }

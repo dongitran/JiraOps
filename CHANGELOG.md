@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.42
+
+### Details
+
+- Keep the sidebar on Notifications when opening issue Details from a notification row.
+- Hydrate inline Jira images inside comments with the same attachment image pipeline used for descriptions.
+- Hide empty GitLab merge request, clone merge request, and Jira web-link sections while keeping Attachments visible.
+- Log sanitized inline comment image and placeholder counts during Details hydration.
+
+### Testing
+
+- Add unit coverage for comment ADF preservation, comment image hydration, and comment media hydration ordering.
+- Add e2e coverage for notification context preservation, hidden empty related-link sections, and comment inline images.
+- Verify the prototype with MCP Playwright through the local prototype server.
+
 ## 0.1.41
 
 ### Notifications

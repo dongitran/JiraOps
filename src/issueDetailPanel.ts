@@ -572,23 +572,21 @@ function renderCommentBody(comment: JiraIssueComment): string {
 }
 
 function renderMergeRequestSection(issue: DashboardIssue): string {
-  const count = issue.mergeRequests.length;
-  const content =
-    count === 0
-      ? '<p class="detail-muted">No GitLab merge requests were found for this issue.</p>'
-      : `<div class="detail-grid">${issue.mergeRequests.map(renderMergeRequestLink).join('')}</div>`;
+  if (issue.mergeRequests.length === 0) {
+    return '';
+  }
 
-  return renderDetailSection('GitLab merge requests', count, content);
+  const content = `<div class="detail-grid">${issue.mergeRequests.map(renderMergeRequestLink).join('')}</div>`;
+  return renderDetailSection('GitLab merge requests', issue.mergeRequests.length, content);
 }
 
 function renderWebLinksSection(issue: DashboardIssue): string {
-  const count = issue.webLinks.length;
-  const content =
-    count === 0
-      ? '<p class="detail-muted">No Jira remote web links were found for this issue.</p>'
-      : `<div class="detail-grid">${issue.webLinks.map(renderWebLink).join('')}</div>`;
+  if (issue.webLinks.length === 0) {
+    return '';
+  }
 
-  return renderDetailSection('All Jira web links', count, content);
+  const content = `<div class="detail-grid">${issue.webLinks.map(renderWebLink).join('')}</div>`;
+  return renderDetailSection('All Jira web links', issue.webLinks.length, content);
 }
 
 function renderAttachmentsSection(attachments: readonly JiraIssueAttachment[]): string {

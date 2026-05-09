@@ -11,6 +11,54 @@ import {
   type JiraIssueDetail,
 } from './jiraIssueDetails';
 
+function createHydrationDetail(overrides: Partial<JiraIssueDetail> = {}): JiraIssueDetail {
+  return {
+    key: 'OPS-123',
+    summary: 'Summary',
+    status: 'In Progress',
+    statusCategory: 'In Progress',
+    priority: null,
+    updated: '2026-05-01T08:20:00.000+0000',
+    descriptionAdf: {
+      type: 'doc',
+      version: 1,
+      content: [],
+    },
+    descriptionText: '',
+    descriptionHtml: '',
+    comments: [],
+    attachments: [],
+    linkedCloneIssues: [],
+    activityHtml: '',
+    technicalNotesHtml: '',
+    transitions: [],
+    ...overrides,
+  };
+}
+
+function createMediaDocument(filename: string, mediaId: string): unknown {
+  return {
+    type: 'doc',
+    version: 1,
+    content: [
+      {
+        type: 'mediaSingle',
+        attrs: { layout: 'center' },
+        content: [
+          {
+            type: 'media',
+            attrs: {
+              alt: filename,
+              id: mediaId,
+              type: 'file',
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 describe('jira issue details', () => {
   test('builds issue detail and attachment thumbnail URLs safely', () => {
     expect(buildJiraIssueDetailUrl('cloud-123', 'OPS-123')).toBe(
@@ -145,6 +193,11 @@ describe('jira issue details', () => {
           authorDisplayName: 'Current User',
           bodyText: 'Latest review note.',
           bodyHtml: '<p>Latest review note.</p>',
+          bodyAdf: {
+            type: 'doc',
+            version: 1,
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Latest review note.' }] }],
+          },
           created: '2026-05-01T08:30:00.000+0000',
         },
       ],
@@ -845,6 +898,176 @@ describe('jira issue details', () => {
       '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,AQID" alt="preview.png" width="640" height="360" loading="lazy" data-lightbox="true" /></figure>'
     );
     expect(result.attachments[0]?.imageDataUri).toBe('data:image/png;base64,AQID');
+  });
+
+  test('hydrates inline media in Jira comments from image attachments', async () => {
+    const commentAdf = createMediaDocument('comment-preview.png', 'comment-media-id');
+    const detail = createHydrationDetail({
+      comments: [
+        {
+          id: 'comment-1',
+          authorDisplayName: 'Current User',
+          bodyText: '',
+          bodyHtml:
+            '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><span class="jira-adf-media-placeholder" role="img" aria-label="comment-preview.png">Image preview unavailable</span></figure>',
+          bodyAdf: commentAdf,
+          created: '2026-05-01T08:30:00.000+0000',
+        },
+      ],
+      attachments: [
+        {
+          id: '10001',
+          filename: 'comment-preview.png',
+          mimeType: 'image/png',
+          size: 100,
+          imageDataUri: null,
+        },
+      ],
+    });
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: { 'Content-Type': 'image/png' },
+        })
+      );
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.comments[0]?.bodyHtml).toContain(
+      '<img src="data:image/png;base64,AQID" alt="comment-preview.png" loading="lazy" data-lightbox="true" />'
+    );
+    expect(result.comments[0]?.bodyHtml).not.toContain('Image preview unavailable');
+  });
+
+  test('hydrates Jira comment media outside rendered description attachment hints', async () => {
+    const detail = createHydrationDetail({
+      descriptionAdf: createMediaDocument('description-preview.png', 'description-media-id'),
+      descriptionMediaAttachmentIds: ['10001'],
+      comments: [
+        {
+          id: 'comment-1',
+          authorDisplayName: 'Current User',
+          bodyText: '',
+          bodyHtml:
+            '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><span class="jira-adf-media-placeholder" role="img" aria-label="comment-preview.png">Image preview unavailable</span></figure>',
+          bodyAdf: createMediaDocument('comment-preview.png', 'comment-media-id'),
+          created: '2026-05-01T08:30:00.000+0000',
+        },
+      ],
+      attachments: [
+        {
+          id: '10001',
+          filename: 'description-preview.png',
+          mimeType: 'image/png',
+          size: 100,
+          imageDataUri: null,
+        },
+        {
+          id: '10002',
+          filename: 'comment-preview.png',
+          mimeType: 'image/png',
+          size: 100,
+          imageDataUri: null,
+        },
+      ],
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      const bytes = url.includes('/10002') ? new Uint8Array([2]) : new Uint8Array([1]);
+      return Promise.resolve(
+        new Response(bytes, {
+          status: 200,
+          headers: { 'Content-Type': 'image/png' },
+        })
+      );
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.descriptionHtml).toContain(
+      '<img src="data:image/png;base64,AQ==" alt="description-preview.png" loading="lazy" data-lightbox="true" />'
+    );
+    expect(result.comments[0]?.bodyHtml).toContain(
+      '<img src="data:image/png;base64,Ag==" alt="comment-preview.png" loading="lazy" data-lightbox="true" />'
+    );
+    expect(result.comments[0]?.bodyHtml).not.toContain('Image preview unavailable');
+  });
+
+  test('prioritizes Jira comment media filenames while hydrating attachments', async () => {
+    const attachments = Array.from({ length: 7 }, (_, index) => {
+      const attachmentNumber = index + 1;
+      return {
+        id: `1000${String(attachmentNumber)}`,
+        filename: attachmentNumber === 7 ? 'comment-target.png' : `unrelated-${String(attachmentNumber)}.png`,
+        mimeType: 'image/png',
+        size: 100,
+        imageDataUri: null,
+      };
+    });
+    const detail = createHydrationDetail({
+      comments: [
+        {
+          id: 'comment-1',
+          authorDisplayName: 'Current User',
+          bodyText: '',
+          bodyHtml:
+            '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><span class="jira-adf-media-placeholder" role="img" aria-label="comment-target.png">Image preview unavailable</span></figure>',
+          bodyAdf: createMediaDocument('comment-target.png', 'comment-media-id'),
+          created: '2026-05-01T08:30:00.000+0000',
+        },
+      ],
+      attachments,
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      const bytes = url.includes('/10007') ? new Uint8Array([7]) : new Uint8Array([1]);
+      return Promise.resolve(
+        new Response(bytes, {
+          status: 200,
+          headers: { 'Content-Type': 'image/png' },
+        })
+      );
+    });
+
+    const result = await hydrateIssueAttachmentImages(detail, {
+      accessToken: 'sample-access-value',
+      cloudId: 'cloud-123',
+      maxImages: 1,
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.comments[0]?.bodyHtml).toContain(
+      '<img src="data:image/png;base64,Bw==" alt="comment-target.png" loading="lazy" data-lightbox="true" />'
+    );
+    expect(result.comments[0]?.bodyHtml).not.toContain('Image preview unavailable');
+    expect(result.attachments[0]?.imageDataUri).toBeNull();
+    expect(result.attachments[6]?.imageDataUri).toBe('data:image/png;base64,Bw==');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const firstFetchInput = fetchMock.mock.calls[0]?.[0];
+    if (typeof firstFetchInput !== 'string') {
+      throw new Error('Expected the first attachment image request to use a string URL.');
+    }
+    expect(firstFetchInput).toContain('/10007');
   });
 
   test('hydrates inline media by image attachment order when Jira media IDs differ from attachment IDs', async () => {

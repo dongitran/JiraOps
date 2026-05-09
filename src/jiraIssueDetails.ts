@@ -42,6 +42,7 @@ export interface JiraIssueComment {
   readonly authorDisplayName: string;
   readonly bodyText: string;
   readonly bodyHtml: string;
+  readonly bodyAdf?: unknown;
   readonly created: string;
 }
 
@@ -213,7 +214,7 @@ export async function hydrateIssueAttachmentImages(
   const hydrationQueue = orderAttachmentsForHydration(
     detail.attachments,
     detail.descriptionMediaAttachmentIds ?? [],
-    collectDescriptionMediaFilenames(detail.descriptionAdf)
+    collectIssueMediaFilenames(detail)
   );
 
   for (const attachment of hydrationQueue) {
@@ -253,6 +254,18 @@ export function countUnavailableInlineIssueDescriptionImages(
     countInlinePlaceholderMarkup(detail.activityHtml) +
     countInlinePlaceholderMarkup(detail.technicalNotesHtml)
   );
+}
+
+export function countInlineIssueCommentImages(detail: JiraIssueDetail): number {
+  return detail.comments.reduce((count, comment) => {
+    return count + countInlineImageMarkup(comment.bodyHtml);
+  }, 0);
+}
+
+export function countUnavailableInlineIssueCommentImages(detail: JiraIssueDetail): number {
+  return detail.comments.reduce((count, comment) => {
+    return count + countInlinePlaceholderMarkup(comment.bodyHtml);
+  }, 0);
 }
 
 export function countRenderedInlineIssueDescriptionImageHints(
@@ -314,29 +327,31 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
     : { ...detail, descriptionMediaAttachmentIds: mediaAttachmentIds };
 }
 
-function renderIssueDescriptionWithHydratedMedia(
-  detail: JiraIssueDetail
-): JiraIssueDetail {
-  if (!('descriptionAdf' in detail)) {
-    return detail;
-  }
-
+function renderIssueDescriptionWithHydratedMedia(detail: JiraIssueDetail): JiraIssueDetail {
   const inlineAttachmentIds = detail.descriptionMediaAttachmentIds ?? [];
-  const inlineMediaImages = toOrderedAdfMediaImages(
-    detail.attachments,
-    inlineAttachmentIds
-  );
-  const mediaImages =
-    inlineAttachmentIds.length === 0 ? toAdfMediaImages(detail.attachments) : inlineMediaImages;
-  const descriptionSections = renderAdfHtmlSections(detail.descriptionAdf, {
-    mediaImages,
-  });
-  return {
+  const descriptionMediaImages =
+    inlineAttachmentIds.length === 0
+      ? toAdfMediaImages(detail.attachments)
+      : toOrderedAdfMediaImages(detail.attachments, inlineAttachmentIds);
+  const commentMediaImages = toAdfMediaImages(detail.attachments);
+  const descriptionSections =
+    'descriptionAdf' in detail
+      ? renderAdfHtmlSections(detail.descriptionAdf, { mediaImages: descriptionMediaImages })
+      : null;
+  const withHydratedComments = {
     ...detail,
-    activityHtml: descriptionSections.activityHtml,
-    descriptionHtml: descriptionSections.mainHtml,
-    technicalNotesHtml: descriptionSections.technicalNotesHtml,
+    comments: detail.comments.map((comment) =>
+      renderCommentWithHydratedMedia(comment, commentMediaImages)
+    ),
   };
+  return descriptionSections === null
+    ? withHydratedComments
+    : {
+        ...withHydratedComments,
+        activityHtml: descriptionSections.activityHtml,
+        descriptionHtml: descriptionSections.mainHtml,
+        technicalNotesHtml: descriptionSections.technicalNotesHtml,
+      };
 }
 
 function orderAttachmentsForHydration(
@@ -436,7 +451,17 @@ function countAdfMediaNodes(value: unknown): number {
   }, current);
 }
 
-function collectDescriptionMediaFilenames(value: unknown): string[] {
+function collectIssueMediaFilenames(detail: JiraIssueDetail): string[] {
+  const filenames = collectAdfMediaFilenames(detail.descriptionAdf);
+  for (const comment of detail.comments) {
+    if (comment.bodyAdf !== undefined) {
+      filenames.push(...collectAdfMediaFilenames(comment.bodyAdf));
+    }
+  }
+  return filenames;
+}
+
+function collectAdfMediaFilenames(value: unknown): string[] {
   if (!isUnknownRecord(value)) {
     return [];
   }
@@ -452,9 +477,22 @@ function collectDescriptionMediaFilenames(value: unknown): string[] {
   }
 
   return content.reduce<string[]>((filenames, child: unknown) => {
-    filenames.push(...collectDescriptionMediaFilenames(child));
+    filenames.push(...collectAdfMediaFilenames(child));
     return filenames;
   }, current);
+}
+
+function renderCommentWithHydratedMedia(
+  comment: JiraIssueComment,
+  mediaImages: readonly AdfMediaImage[]
+): JiraIssueComment {
+  if (comment.bodyAdf === undefined) {
+    return comment;
+  }
+  return {
+    ...comment,
+    bodyHtml: renderAdfHtml(comment.bodyAdf, { mediaImages }),
+  };
 }
 
 function countInlineImageMarkup(value: string): number {
@@ -489,19 +527,18 @@ function extractAttachmentIdFromHtml(value: string): string | null {
 function mapComments(commentField: z.infer<typeof JiraIssueDetailResponseSchema>['fields']['comment']): JiraIssueComment[] {
   const comments = Array.isArray(commentField) ? commentField : commentField?.comments ?? [];
   return comments.map((comment, index) => {
-    return {
+    const mappedComment = {
       id: normalizeId(comment.id, index, 'comment'),
       authorDisplayName: comment.author?.displayName ?? 'Unknown author',
       bodyText: extractTextFromAdf(comment.body),
       bodyHtml: renderAdfHtml(comment.body),
       created: comment.created ?? '',
     };
+    return comment.body === undefined ? mappedComment : { ...mappedComment, bodyAdf: comment.body };
   });
 }
 
-function mapAttachments(
-  attachments: readonly z.infer<typeof AttachmentSchema>[]
-): JiraIssueAttachment[] {
+function mapAttachments(attachments: readonly z.infer<typeof AttachmentSchema>[]): JiraIssueAttachment[] {
   return attachments.map((attachment) => {
     return {
       id: normalizeId(attachment.id, 0, 'attachment'),

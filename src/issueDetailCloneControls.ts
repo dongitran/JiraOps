@@ -5,13 +5,12 @@ import {
 } from './gitportClone';
 
 export function renderCloneMergeRequestSection(issue: DashboardIssue): string {
-  const count = issue.cloneMergeRequests.length;
-  const content =
-    count === 0
-      ? '<p class="detail-muted">No GitLab merge requests were found on cloned Jira work items.</p>'
-      : `<div class="detail-grid">${issue.cloneMergeRequests.map((link) => renderCloneMergeRequestCard(issue, link)).join('')}</div>`;
+  if (issue.cloneMergeRequests.length === 0) {
+    return '';
+  }
 
-  return renderDetailSection('Clone merge requests', count, content);
+  const content = `<div class="detail-grid">${issue.cloneMergeRequests.map((link) => renderCloneMergeRequestCard(issue, link)).join('')}</div>`;
+  return renderDetailSection('Clone merge requests', issue.cloneMergeRequests.length, content);
 }
 
 export function renderCloneDialog(issue: DashboardIssue): string {

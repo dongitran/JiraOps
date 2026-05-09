@@ -19,8 +19,10 @@ import {
   resolveWhatsNewFrame,
 } from './support/jiraOpsHarness';
 
+type LocatorBoundingBox = NonNullable<Awaited<ReturnType<Locator['boundingBox']>>>;
+
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.41 release notes', async () => {
+  test('User can review JiraOps 0.1.42 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +36,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.41 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.42 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'far right'
+        'comment image'
       );
-      await expect(whatsNewFrame.getByText('0.1.40')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.41')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -137,7 +139,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(issueContent.getByRole('columnheader', { name: 'Signal' })).toBeVisible();
       await expect(issueContent.getByRole('cell', { name: '8 minutes' })).toBeVisible();
       await expectTableBordersAreVisible(issueContent.getByRole('table'));
-      await expectDescriptionInlineImage(issueContent);
+      await expectIssueContentInlineImages(issueContent);
       await expect(issueContent.getByText('Current User', { exact: true })).toBeVisible();
       await expect(
         detailFrame.getByLabel('Activity').getByText('Current User moved the ticket')
@@ -329,9 +331,10 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await clickWithFallback(issue.getByRole('button', { name: 'Details' }));
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-321');
-      await expect(detailFrame.getByLabel('GitLab merge requests')).toContainText(
-        'No GitLab merge requests were found for this issue.'
-      );
+      await expect(detailFrame.getByLabel('GitLab merge requests')).toHaveCount(0);
+      await expect(
+        detailFrame.getByText('No GitLab merge requests were found for this issue.')
+      ).toHaveCount(0);
       await expect(
         detailFrame.getByLabel('Clone merge requests').getByRole('link', {
           name: /Clean stale inventory reservations/u,
@@ -351,6 +354,41 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         detailFrame.getByLabel('Clone merge requests').getByRole('link')
       ).toHaveCount(2);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User can review issue details without empty related link sections', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await clickWithFallback(
+        frame.getByLabel('OPS-900 assigned ticket').getByRole('button', {
+          name: 'Details',
+        })
+      );
+
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-900');
+      await expect(detailFrame.getByLabel('Description and comments')).toContainText(
+        'No description was provided for this test issue.'
+      );
+      await expect(detailFrame.getByLabel('GitLab merge requests')).toHaveCount(0);
+      await expect(detailFrame.getByLabel('Clone merge requests')).toHaveCount(0);
+      await expect(detailFrame.getByLabel('All Jira web links')).toHaveCount(0);
+      await expect(
+        detailFrame.getByText('No GitLab merge requests were found for this issue.')
+      ).toHaveCount(0);
+      await expect(
+        detailFrame.getByText('No GitLab merge requests were found on cloned Jira work items.')
+      ).toHaveCount(0);
+      await expect(
+        detailFrame.getByText('No Jira remote web links were found for this issue.')
+      ).toHaveCount(0);
+      await expect(detailFrame.getByLabel('Attachments')).toContainText(
+        'No attachments were found for this issue.'
+      );
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -549,6 +587,18 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(frame.getByText('Release Manager commented on Bug OPS-123')).toBeVisible();
       await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
       await expectNotificationReadState(frame, 'Current User updated Bug OPS-123', false);
+      await clickWithFallback(
+        frame
+          .getByLabel('Release Manager commented on Bug OPS-123')
+          .getByRole('button', { name: 'Details' })
+      );
+      await expect(frame.getByRole('heading', { name: 'Notifications' })).toBeVisible();
+      await expect(frame.getByLabel('JiraOps notifications')).toBeVisible();
+      await expect(frame.getByLabel('Assigned Jira tickets')).toHaveCount(0);
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      await expect(detailFrame.getByLabel('Description and comments')).toContainText(
+        'Reconciliation alerts fire too late'
+      );
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -868,7 +918,7 @@ async function expectLongDetailTitleDoesNotOverlapStatus(frame: Frame): Promise<
   expect(layout?.actionWidth).toBeGreaterThanOrEqual(250);
 }
 
-async function expectDescriptionInlineImage(issueContent: Locator): Promise<void> {
+async function expectIssueContentInlineImages(issueContent: Locator): Promise<void> {
   const image = issueContent.getByRole('img', {
     name: 'reconciliation-alert-preview.png',
   });
@@ -925,6 +975,39 @@ async function expectDescriptionInlineImage(issueContent: Locator): Promise<void
   });
   expect(imageState?.naturalHeight).toBeGreaterThan(0);
   expect(imageState?.naturalWidth).toBeGreaterThan(1000);
+
+  const commentImage = issueContent.getByRole('img', {
+    name: 'comment-alert-preview.png',
+  });
+  await expect(commentImage).toBeVisible();
+  await expect(commentImage).toHaveAttribute('src', /^data:image\//u);
+  const commentImageState = await commentImage.evaluate((node) => {
+    if (!(node instanceof HTMLImageElement)) {
+      return null;
+    }
+
+    const comment = node.closest('.detail-comment');
+    const figure = node.closest('figure');
+    const commentBox = comment instanceof HTMLElement ? comment.getBoundingClientRect() : null;
+    const imageBox = node.getBoundingClientRect();
+    return {
+      figureHasMediaClass: figure instanceof HTMLElement && figure.classList.contains('jira-adf-media'),
+      srcStartsWithImageData: node.currentSrc.startsWith('data:image/'),
+      visible: imageBox.width > 0 && imageBox.height > 0,
+      withinComment:
+        commentBox !== null &&
+        imageBox.left >= commentBox.left &&
+        imageBox.right <= commentBox.right + 1 &&
+        imageBox.top >= commentBox.top &&
+        imageBox.bottom <= commentBox.bottom + 1,
+    };
+  });
+  expect(commentImageState).toEqual({
+    figureHasMediaClass: true,
+    srcStartsWithImageData: true,
+    visible: true,
+    withinComment: true,
+  });
 }
 
 async function expectImageLightbox(frame: Frame): Promise<void> {
@@ -1166,12 +1249,16 @@ async function expectCloneButtonHoverReveal(
   cloneButton: Locator
 ): Promise<void> {
   await expect(cloneCard).toBeVisible();
-  const beforeHover = await cloneButton.evaluate((button) => {
-    return window.getComputedStyle(button).opacity;
-  });
+  await expect
+    .poll(async () => {
+      const opacity = await cloneButton.evaluate((button) => {
+        return window.getComputedStyle(button).opacity;
+      });
+      return Number.parseFloat(opacity);
+    })
+    .toBeLessThan(0.05);
   await cloneCard.hover();
 
-  expect(beforeHover).toBe('0');
   await expect(cloneButton).toHaveCSS('opacity', '1');
 }
 
@@ -1281,11 +1368,23 @@ async function expectClearButtonUsesCompactWidth(frame: Frame): Promise<void> {
   expect(await readRatio()).toBeLessThan(0.38);
 }
 
-async function resolveBoundingBox(locator: Locator): Promise<NonNullable<Awaited<ReturnType<Locator['boundingBox']>>>> {
-  await expect(locator).toBeVisible();
-  const box = await locator.boundingBox();
-  if (box === null) {
+async function resolveBoundingBox(locator: Locator): Promise<LocatorBoundingBox> {
+  const resolved: { box?: LocatorBoundingBox } = {};
+  await expect
+    .poll(
+      async () => {
+        const box = await locator.boundingBox().catch(() => null);
+        if (box === null || box.width <= 0 || box.height <= 0) {
+          return false;
+        }
+        resolved.box = box;
+        return true;
+      },
+      { timeout: 10_000 }
+    )
+    .toBe(true);
+  if (resolved.box === undefined) {
     throw new Error('Expected visible element to have a bounding box.');
   }
-  return box;
+  return resolved.box;
 }

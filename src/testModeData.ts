@@ -329,7 +329,7 @@ function createOps123IssueDetail(): JiraIssueDetail {
         bodyText:
           'Validated against the delayed settlement sample. The alert should page only after the retry budget is exhausted.',
         bodyHtml:
-          '<p>Validated against the delayed settlement sample.</p><p><strong>Expected:</strong> page only after the retry budget is exhausted.</p>',
+          `<p>Validated against the delayed settlement sample.</p><figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="${TEST_ATTACHMENT_IMAGE_DATA_URI}" alt="comment-alert-preview.png" width="640" height="220" loading="lazy" data-lightbox="true" /></figure><p><strong>Expected:</strong> page only after the retry budget is exhausted.</p>`,
         created: '2026-05-01T07:55:00.000+0000',
       },
     ],

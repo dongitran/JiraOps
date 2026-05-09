@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.41 Release</span>
+        <span>JiraOps 0.1.42 Release</span>
         <h1>What Is New</h1>
-        <p>Notifications can now rebuild their local history on demand.</p>
+        <p>Details now preserve notification context and hydrate images in Jira comments.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.41</strong>
-          <p>Reload now rebuilds a recent Jira activity timeline with comments and non-assigned related issues.</p>
+          <strong>Release 0.1.42</strong>
+          <p>Notification-driven detail views stay in context while empty related-link sections stay out of the way.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,22 +158,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Notifications</strong>
-          <p>A compact reload button sits at the far edge of the Notifications header.</p>
+          <p>Opening Details from a notification leaves the sidebar on Notifications.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Changelog</strong>
-          <p>Reload keeps the current list visible while recent related Jira activity is refreshed.</p>
+          <strong>Comments</strong>
+          <p>Inline comment image previews render from hydrated Jira attachment media.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>Fallback</strong>
-          <p>Changelog enrichment still falls back to issue type and summary when unavailable.</p>
+          <strong>Details</strong>
+          <p>Empty merge request and web-link sections are hidden from issue details.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks loading state, comment notifications, and hidden error states.</p>
+          <p>Coverage checks notification context, comment images, and hidden empty sections.</p>
         </article>
       </section>
     </article>
@@ -218,27 +218,9 @@ function renderIssueDetail(issue) {
       <section class="detail-section detail-content-section" aria-label="Description and comments">
         ${renderIssueContent(issue)}
       </section>
-      <section class="detail-section" aria-label="GitLab merge requests">
-        <div class="detail-section-heading">
-          <h2>GitLab merge requests</h2>
-          <span>${String(issue.mergeRequests.length)}</span>
-        </div>
-        ${renderMergeRequests(issue.mergeRequests)}
-      </section>
-      <section class="detail-section" aria-label="Clone merge requests">
-        <div class="detail-section-heading">
-          <h2>Clone merge requests</h2>
-          <span>${String(issue.cloneMergeRequests.length)}</span>
-        </div>
-        ${renderCloneMergeRequests(issue.cloneMergeRequests)}
-      </section>
-      <section class="detail-section" aria-label="All Jira web links">
-        <div class="detail-section-heading">
-          <h2>All Jira web links</h2>
-          <span>${String(issue.webLinks.length)}</span>
-        </div>
-        ${renderWebLinks(issue.webLinks)}
-      </section>
+      ${renderCountedDetailSection('GitLab merge requests', issue.mergeRequests, renderMergeRequests)}
+      ${renderCountedDetailSection('Clone merge requests', issue.cloneMergeRequests, renderCloneMergeRequests)}
+      ${renderCountedDetailSection('All Jira web links', issue.webLinks, renderWebLinks)}
       ${renderActivitySection(issue)}
       ${renderTechnicalNotesSection(issue)}
       <section class="detail-section" aria-label="Attachments" data-detail-section="attachments">
@@ -453,10 +435,6 @@ function renderCommentBody(comment) {
 }
 
 function renderMergeRequests(mergeRequests) {
-  if (mergeRequests.length === 0) {
-    return '<p class="detail-muted">No GitLab merge requests were found for this issue.</p>';
-  }
-
   return `
     <div class="detail-grid">
       ${mergeRequests
@@ -474,10 +452,6 @@ function renderMergeRequests(mergeRequests) {
 }
 
 function renderCloneMergeRequests(mergeRequests) {
-  if (mergeRequests.length === 0) {
-    return '<p class="detail-muted">No GitLab merge requests were found on cloned Jira work items.</p>';
-  }
-
   return `
     <div class="detail-grid">
       ${mergeRequests.map(renderCloneMergeRequestCard).join('')}
@@ -499,10 +473,6 @@ function renderCloneMergeRequestCard(mergeRequest) {
 }
 
 function renderWebLinks(webLinks) {
-  if (webLinks.length === 0) {
-    return '<p class="detail-muted">No Jira remote web links were found for this issue.</p>';
-  }
-
   return `
     <div class="detail-grid">
       ${webLinks
@@ -516,6 +486,22 @@ function renderWebLinks(webLinks) {
         })
         .join('')}
     </div>
+  `;
+}
+
+function renderCountedDetailSection(title, items, renderItems) {
+  if (items.length === 0) {
+    return '';
+  }
+
+  return `
+    <section class="detail-section" aria-label="${escapeAttribute(title)}">
+      <div class="detail-section-heading">
+        <h2>${escapeHtml(title)}</h2>
+        <span>${String(items.length)}</span>
+      </div>
+      ${renderItems(items)}
+    </section>
   `;
 }
 
