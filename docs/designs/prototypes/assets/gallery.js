@@ -143,37 +143,37 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.38 Release</span>
+        <span>JiraOps 0.1.39 Release</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media can now expand into a fullscreen image viewer.</p>
+        <p>Assigned issue notifications now explain who changed what.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.38</strong>
-          <p>Details keeps inline previews compact until you need a closer look.</p>
+          <strong>Release 0.1.39</strong>
+          <p>Notification titles and details now mirror the useful parts of Jira activity.</p>
         </div>
         <span>🚀</span>
       </section>
       <section class="whats-new-grid" aria-label="Release highlights">
         <article>
           <span aria-hidden="true">📌</span>
-          <strong>Details</strong>
-          <p>Click hydrated Jira images in description, comments, or activity to open them fullscreen.</p>
+          <strong>Notifications</strong>
+          <p>Updated issues include the actor, issue type, key, action, and issue summary.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Viewer</strong>
-          <p>The image viewer reuses the loaded data URI and preserves the original alt text.</p>
+          <strong>Changelog</strong>
+          <p>JiraOps enriches new update alerts from the latest Jira changelog entry.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>Close</strong>
-          <p>Close with the top-right button, the dark backdrop, or the native Escape dialog behavior.</p>
+          <strong>Fallback</strong>
+          <p>Alerts still appear with issue type and summary when changelog data is unavailable.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks open, sizing, close paths, and normal hidden status messages.</p>
+          <p>Coverage checks changelog parsing, fallback copy, and notification persistence.</p>
         </article>
       </section>
     </article>

@@ -7,6 +7,7 @@ describe('dashboard issue mapping', () => {
     const issue = createDashboardIssue(
       {
         key: 'OPS-123',
+        issueType: 'Bug',
         summary: 'Stabilize payment reconciliation alerts',
         status: 'In Progress',
         statusCategory: 'In Progress',
@@ -42,6 +43,7 @@ describe('dashboard issue mapping', () => {
     const issue = createDashboardIssue(
       {
         key: 'OPS-321',
+        issueType: 'Task',
         summary: 'Follow cloned inventory reservation cleanup',
         status: 'In Review',
         statusCategory: 'In Progress',

@@ -38,6 +38,13 @@ export interface FetchJiraIssueTransitionsOptions {
   readonly fetchImpl?: typeof fetch;
 }
 
+export interface FetchJiraIssueLatestChangelogOptions {
+  readonly accessToken: string;
+  readonly cloudId: string;
+  readonly issueKey: string;
+  readonly fetchImpl?: typeof fetch;
+}
+
 export interface TransitionJiraIssueOptions extends FetchJiraIssueTransitionsOptions {
   readonly transitionId: string;
 }
@@ -56,12 +63,25 @@ export interface AssignedIssuesSearchBody {
 
 export interface JiraAssignedIssue {
   readonly key: string;
+  readonly issueType: string;
   readonly summary: string;
   readonly status: string;
   readonly statusCategory: string;
   readonly priority: string | null;
   readonly assigneeDisplayName: string | null;
   readonly updated: string;
+}
+
+export interface JiraIssueChangelogItem {
+  readonly field: string;
+  readonly fromString: string | null;
+  readonly toString: string | null;
+}
+
+export interface JiraIssueChangelogEntry {
+  readonly authorDisplayName: string;
+  readonly created: string;
+  readonly items: readonly JiraIssueChangelogItem[];
 }
 
 export interface JiraIssueTransition {
@@ -103,6 +123,7 @@ const ASSIGNED_ISSUE_FIELDS = [
   'priority',
   'assignee',
   'updated',
+  'issuetype',
 ] as const;
 const DEFAULT_ASSIGNED_ISSUE_LIMIT = 25;
 
@@ -128,6 +149,9 @@ const JiraAssignedIssueSchema = z.object({
       })
       .nullable()
       .optional(),
+    issuetype: z.object({
+      name: z.string().min(1),
+    }),
     updated: z.string().min(1),
   }),
 });
@@ -149,6 +173,30 @@ const JiraIssueTransitionsResponseSchema = z.object({
     })
   ),
 });
+
+const JiraIssueChangelogItemSchema = z.object({
+  field: z.string().min(1),
+  fromString: z.string().nullable().optional(),
+  toString: z.string().nullable().optional(),
+});
+
+const JiraIssueChangelogHistorySchema = z.object({
+  author: z.object({
+    displayName: z.string().min(1),
+  }),
+  created: z.string().min(1),
+  items: z.array(JiraIssueChangelogItemSchema),
+});
+
+const JiraIssueLatestChangelogResponseSchema = z.object({
+  changelog: z.object({
+    histories: z.array(JiraIssueChangelogHistorySchema),
+  }),
+});
+
+type JiraIssueChangelogHistoryResponse = z.infer<
+  typeof JiraIssueChangelogHistorySchema
+>;
 
 export class OAuthJiraTokenProvider implements JiraTokenProvider {
   private resolvedClient: JiraOAuthClientLike | null = null;
@@ -262,6 +310,13 @@ export function buildJiraIssueTransitionsUrl(
   return `${buildJiraIssueUrl(cloudId, issueKey)}/transitions`;
 }
 
+export function buildJiraIssueLatestChangelogUrl(
+  cloudId: string,
+  issueKey: string
+): string {
+  return `${buildJiraIssueUrl(cloudId, issueKey)}?fields=summary&expand=changelog`;
+}
+
 export function buildJiraIssueWorklogUrl(cloudId: string, issueKey: string): string {
   return `${buildJiraIssueUrl(cloudId, issueKey)}/worklog`;
 }
@@ -319,6 +374,32 @@ export async function fetchAssignedJiraIssues(
 
   const responseBody: unknown = await response.json();
   return parseAssignedIssuesResponse(responseBody);
+}
+
+export async function fetchJiraIssueLatestChangelog(
+  options: FetchJiraIssueLatestChangelogOptions
+): Promise<JiraIssueChangelogEntry | null> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  try {
+    const response = await fetchImpl(
+      buildJiraIssueLatestChangelogUrl(options.cloudId, options.issueKey),
+      {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${options.accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const responseBody: unknown = await response.json();
+    return parseLatestChangelogResponse(responseBody);
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchJiraIssueTransitions(
@@ -385,6 +466,7 @@ function parseAssignedIssuesResponse(responseBody: unknown): JiraAssignedIssue[]
   return parseResult.data.issues.map((issue) => {
     return {
       key: issue.key,
+      issueType: issue.fields.issuetype.name,
       summary: issue.fields.summary,
       status: issue.fields.status.name,
       statusCategory: issue.fields.status.statusCategory.name,
@@ -393,6 +475,57 @@ function parseAssignedIssuesResponse(responseBody: unknown): JiraAssignedIssue[]
       updated: issue.fields.updated,
     };
   });
+}
+
+function parseLatestChangelogResponse(
+  responseBody: unknown
+): JiraIssueChangelogEntry | null {
+  const parseResult = JiraIssueLatestChangelogResponseSchema.safeParse(responseBody);
+  if (!parseResult.success) {
+    return null;
+  }
+
+  const latestHistory = pickLatestChangelogHistory(
+    parseResult.data.changelog.histories
+  );
+  return latestHistory === null ? null : mapChangelogHistory(latestHistory);
+}
+
+function pickLatestChangelogHistory(
+  histories: readonly JiraIssueChangelogHistoryResponse[]
+): JiraIssueChangelogHistoryResponse | null {
+  let selected = histories[0] ?? null;
+  let selectedTime = selected === null ? null : parseTimestamp(selected.created);
+  for (const history of histories.slice(1)) {
+    const time = parseTimestamp(history.created);
+    if (time === null) {
+      continue;
+    }
+    if (selectedTime === null || time > selectedTime) {
+      selected = history;
+      selectedTime = time;
+    }
+  }
+  return selected;
+}
+
+function mapChangelogHistory(
+  history: JiraIssueChangelogHistoryResponse
+): JiraIssueChangelogEntry {
+  return {
+    authorDisplayName: history.author.displayName,
+    created: history.created,
+    items: history.items.map((item) => ({
+      field: item.field,
+      fromString: item.fromString ?? null,
+      toString: item.toString ?? null,
+    })),
+  };
+}
+
+function parseTimestamp(value: string): number | null {
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? null : time;
 }
 
 function parseIssueTransitionsResponse(responseBody: unknown): JiraIssueTransition[] {

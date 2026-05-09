@@ -1,4 +1,8 @@
-import type { JiraAssignedIssue } from './jiraClient';
+import type {
+  JiraAssignedIssue,
+  JiraIssueChangelogEntry,
+  JiraIssueChangelogItem,
+} from './jiraClient';
 
 const MAX_NOTIFICATION_HISTORY = 30;
 export const JIRA_OPS_NOTIFICATION_STATE_KEY = 'jiraOps.notifications.v1';
@@ -241,35 +245,145 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function createIssueNotification(
+export function createIssueNotification(
   issue: JiraAssignedIssue,
-  reason: 'assigned' | 'updated'
+  reason: 'assigned' | 'updated',
+  changelog: JiraIssueChangelogEntry | null = null
 ): JiraOpsNotification {
-  const reasonText = reason === 'assigned' ? 'assigned' : 'updated';
+  const issueType = normalizeIssueType(issue);
+  const copy = createNotificationCopy(issue, issueType, reason, changelog);
   return {
-    detail:
-      reason === 'assigned'
-        ? 'A new issue is assigned to you.'
-        : 'Assigned issue update detected by JiraOps.',
+    detail: copy.detail,
     id: `${issue.key}:${issue.updated}`,
     issueKey: issue.key,
-    title: `${issue.key} was ${reasonText}`,
+    title: copy.title,
     unread: true,
     updated: issue.updated,
   };
 }
 
+export function enrichIssueUpdateNotification(
+  notification: JiraOpsNotification,
+  issue: JiraAssignedIssue,
+  changelog: JiraIssueChangelogEntry | null
+): JiraOpsNotification {
+  return {
+    ...createIssueNotification(issue, 'updated', changelog),
+    unread: notification.unread,
+  };
+}
+
+export function describeChangelogAction(
+  items: readonly JiraIssueChangelogItem[]
+): string {
+  if (hasChangelogField(items, ['WorklogId', 'timespent'])) {
+    return 'Logged work';
+  }
+
+  const status = findChangelogItem(items, 'status');
+  if (status !== null) {
+    return describeTargetAction('Changed status to', status, 'Changed status');
+  }
+
+  const assignee = findChangelogItem(items, 'assignee');
+  if (assignee !== null) {
+    return describeTargetAction('Reassigned to', assignee, 'Reassigned');
+  }
+
+  if (findChangelogItem(items, 'Attachment') !== null) {
+    return 'Added an attachment';
+  }
+  if (findChangelogItem(items, 'comment') !== null) {
+    return 'Added a comment';
+  }
+  if (findChangelogItem(items, 'summary') !== null) {
+    return 'Updated the title';
+  }
+  if (findChangelogItem(items, 'description') !== null) {
+    return 'Updated the description';
+  }
+
+  const priority = findChangelogItem(items, 'priority');
+  if (priority !== null) {
+    return describeTargetAction('Changed priority to', priority, 'Changed priority');
+  }
+
+  if (findChangelogItem(items, 'resolution') !== null) {
+    return 'Resolved the issue';
+  }
+  return 'Made changes';
+}
+
 function createAssignedIssueHistoryNotification(
   issue: JiraAssignedIssue
 ): JiraOpsNotification {
+  const issueType = normalizeIssueType(issue);
   return {
-    detail: 'Current assigned issue activity captured by JiraOps.',
+    detail: issue.summary,
     id: `${issue.key}:${issue.updated}`,
     issueKey: issue.key,
-    title: `${issue.key} assigned issue activity`,
+    title: `${issue.key} ${issueType} assigned issue activity`,
     unread: false,
     updated: issue.updated,
   };
+}
+
+function createNotificationCopy(
+  issue: JiraAssignedIssue,
+  issueType: string,
+  reason: 'assigned' | 'updated',
+  changelog: JiraIssueChangelogEntry | null
+): { readonly detail: string; readonly title: string } {
+  if (reason === 'assigned') {
+    return {
+      detail: issue.summary,
+      title: `New ${issueType} assigned: ${issue.key}`,
+    };
+  }
+
+  if (changelog !== null) {
+    return {
+      detail: `${describeChangelogAction(changelog.items)} · ${issue.summary}`,
+      title: `${changelog.authorDisplayName} updated ${issueType} ${issue.key}`,
+    };
+  }
+
+  return {
+    detail: issue.summary,
+    title: `${issue.key} ${issueType} was updated`,
+  };
+}
+
+function normalizeIssueType(issue: JiraAssignedIssue): string {
+  return typeof issue.issueType === 'string' && issue.issueType.trim().length > 0
+    ? issue.issueType.trim()
+    : 'Issue';
+}
+
+function hasChangelogField(
+  items: readonly JiraIssueChangelogItem[],
+  fields: readonly string[]
+): boolean {
+  return fields.some((field) => findChangelogItem(items, field) !== null);
+}
+
+function findChangelogItem(
+  items: readonly JiraIssueChangelogItem[],
+  field: string
+): JiraIssueChangelogItem | null {
+  const normalizedField = field.toLowerCase();
+  return (
+    items.find((item) => item.field.trim().toLowerCase() === normalizedField) ?? null
+  );
+}
+
+function describeTargetAction(
+  prefix: string,
+  item: JiraIssueChangelogItem,
+  fallback: string
+): string {
+  const target = item.toString?.trim() ?? '';
+  return target.length > 0 ? `${prefix} ${target}` : fallback;
 }
 
 function isNewerTimestamp(nextValue: string, previousValue: string): boolean {

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import {
   isJiraOpsTestMode,
   resolveTestAssignedIssues,
+  resolveTestIssueLatestChangelog,
   resolveTestIssueDetail,
   resolveTestRemoteLinks,
 } from './testModeData';
@@ -12,6 +13,7 @@ describe('testModeData', () => {
     expect(resolveTestAssignedIssues()).toEqual([
       {
         key: 'OPS-123',
+        issueType: 'Bug',
         summary: 'Stabilize payment reconciliation alerts',
         status: 'In Progress',
         statusCategory: 'In Progress',
@@ -21,6 +23,7 @@ describe('testModeData', () => {
       },
       {
         key: 'OPS-456',
+        issueType: 'Task',
         summary: 'Review checkout service release readiness',
         status: 'Code Review',
         statusCategory: 'In Progress',
@@ -30,6 +33,7 @@ describe('testModeData', () => {
       },
       {
         key: 'OPS-321',
+        issueType: 'Task',
         summary: 'Follow cloned inventory reservation cleanup',
         status: 'In Review',
         statusCategory: 'In Progress',
@@ -39,6 +43,7 @@ describe('testModeData', () => {
       },
       {
         key: 'OPS-900',
+        issueType: 'Task',
         summary: 'demoABCDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
         status: 'To Do',
         statusCategory: 'To Do',
@@ -48,6 +53,7 @@ describe('testModeData', () => {
       },
       {
         key: 'OPS-789',
+        issueType: 'Task',
         summary: 'Confirm warehouse webhook retry policy',
         status: 'Waiting for Input',
         statusCategory: 'To Do',
@@ -56,6 +62,18 @@ describe('testModeData', () => {
         updated: '2026-04-30T17:45:00.000+0000',
       },
     ]);
+  });
+
+  test('returns deterministic latest changelog entries for notification enrichment', () => {
+    expect(resolveTestIssueLatestChangelog('OPS-123')).toEqual({
+      authorDisplayName: 'Current User',
+      created: '2026-05-01T08:24:00.000+0000',
+      items: [
+        { field: 'WorklogId', fromString: null, toString: '10001' },
+        { field: 'timespent', fromString: null, toString: '1800' },
+      ],
+    });
+    expect(resolveTestIssueLatestChangelog('OPS-456')).toBeNull();
   });
 
   test('returns deterministic remote web links for an issue key', () => {

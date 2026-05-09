@@ -4,8 +4,10 @@ import { applyJiraOAuthCredentialsToEnv, ensureJiraOAuthCredentials, getJiraOAut
 import {
   buildAssignedIssuesSearchBody,
   fetchAssignedJiraIssues,
+  fetchJiraIssueLatestChangelog,
   OAuthJiraTokenProvider,
   type JiraAssignedIssue,
+  type JiraIssueChangelogEntry,
   type JiraConnectionStatus,
 } from './jiraClient';
 import { createDashboardIssue, type DashboardIssue } from './dashboardItems';
@@ -42,7 +44,11 @@ import {
 } from './jiraOpsPanelNotificationState';
 import { readJiraOpsSettings, writeJiraOpsSettings, type JiraOpsSettings } from './jiraOpsSettings';
 import { NotificationPoller } from './notificationPoller';
-import { isJiraOpsTestMode, resolveTestAssignedIssues } from './testModeData';
+import {
+  isJiraOpsTestMode,
+  resolveTestAssignedIssues,
+  resolveTestIssueLatestChangelog,
+} from './testModeData';
 import {
   CONNECTION_CHANGED_MESSAGE_TYPE,
   CONNECTION_LOADING_MESSAGE_TYPE,
@@ -85,6 +91,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     private readonly tokenProvider = new OAuthJiraTokenProvider()
   ) {
     this.notificationPoller = new NotificationPoller({
+      fetchIssueChangelog: (issueKey) => this.fetchIssueLatestChangelog(issueKey),
       fetchIssues: () => this.loadAssignedIssues(),
       log: (message) => {
         this.outputChannel.appendLine(message);
@@ -433,6 +440,38 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     return issues;
   }
 
+  private async fetchIssueLatestChangelog(
+    issueKey: string
+  ): Promise<JiraIssueChangelogEntry | null> {
+    if (isJiraOpsTestMode()) {
+      return resolveTestIssueLatestChangelog(issueKey);
+    }
+
+    try {
+      const tokens = await this.tokenProvider.getStoredOrRefreshTokens();
+      if (tokens === null) {
+        this.outputChannel.appendLine(`Skipped Jira changelog enrichment for ${issueKey}: Jira is not connected.`);
+        return null;
+      }
+
+      this.outputChannel.appendLine(`Fetching latest Jira changelog for ${issueKey}.`);
+      const changelog = await fetchJiraIssueLatestChangelog({
+        accessToken: tokens.accessToken,
+        cloudId: tokens.cloudId,
+        issueKey,
+      });
+      this.outputChannel.appendLine(
+        changelog === null
+          ? `No Jira changelog enrichment was available for ${issueKey}.`
+          : `Loaded latest Jira changelog metadata for ${issueKey}.`
+      );
+      return changelog;
+    } catch {
+      this.outputChannel.appendLine(`Jira changelog enrichment failed for ${issueKey}.`);
+      return null;
+    }
+  }
+
   private applyAssignedIssues(
     issues: readonly JiraAssignedIssue[],
     source: string
@@ -583,8 +622,15 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       return;
     }
 
+    if (count === 1) {
+      void vscode.window.showInformationMessage(
+        result.newNotifications[0]?.title ?? 'JiraOps found an assigned issue update.'
+      );
+      return;
+    }
+
     void vscode.window.showInformationMessage(
-      `JiraOps found ${String(count)} assigned issue update${count === 1 ? '' : 's'}.`
+      `JiraOps found ${String(count)} assigned issue updates.`
     );
   }
 

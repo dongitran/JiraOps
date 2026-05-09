@@ -4,10 +4,12 @@ import {
   addJiraIssueWorklog,
   buildAssignedIssuesSearchBody,
   buildAssignedIssuesSearchUrl,
+  buildJiraIssueLatestChangelogUrl,
   buildJiraIssueTransitionsUrl,
   buildJiraIssueWorklogUrl,
   buildJiraRemoteLinksUrl,
   fetchAssignedJiraIssues,
+  fetchJiraIssueLatestChangelog,
   fetchJiraIssueTransitions,
   fetchJiraRemoteLinks,
   isTokenUsable,
@@ -44,12 +46,15 @@ describe('jiraClient', () => {
     );
     expect(buildAssignedIssuesSearchBody()).toEqual({
       jql: 'assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC',
-      fields: ['summary', 'status', 'priority', 'assignee', 'updated'],
+      fields: ['summary', 'status', 'priority', 'assignee', 'updated', 'issuetype'],
       maxResults: 25,
     });
   });
 
   test('builds Jira issue action URLs safely', () => {
+    expect(buildJiraIssueLatestChangelogUrl('cloud-123', 'OPS-123')).toBe(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary&expand=changelog'
+    );
     expect(buildJiraIssueTransitionsUrl('cloud-123', 'OPS-123')).toBe(
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123/transitions'
     );
@@ -142,6 +147,9 @@ describe('jiraClient', () => {
                   assignee: {
                     displayName: 'Current User',
                   },
+                  issuetype: {
+                    name: 'Bug',
+                  },
                   updated: '2026-05-01T08:20:00.000+0000',
                 },
               },
@@ -166,6 +174,7 @@ describe('jiraClient', () => {
         statusCategory: 'In Progress',
         priority: 'High',
         assigneeDisplayName: 'Current User',
+        issueType: 'Bug',
         updated: '2026-05-01T08:20:00.000+0000',
       },
     ]);
@@ -195,6 +204,94 @@ describe('jiraClient', () => {
         fetchImpl: fetchMock,
       })
     ).rejects.toThrow('Assigned Jira issues could not be loaded.');
+  });
+
+  test('fetches the latest expanded Jira issue changelog entry defensively', async () => {
+    const fetchMock = vi.fn(() => {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            changelog: {
+              histories: [
+                {
+                  author: { displayName: 'Current User' },
+                  created: '2026-05-01T08:20:00.000+0000',
+                  items: [{ field: 'status', fromString: 'To Do', toString: 'In Progress' }],
+                },
+                {
+                  author: { displayName: 'Release Manager' },
+                  created: '2026-05-01T08:24:00.000+0000',
+                  items: [
+                    { field: 'WorklogId', fromString: null, toString: '10001' },
+                    { field: 'timespent', fromString: null, toString: '1800' },
+                  ],
+                },
+              ],
+            },
+          }),
+          { status: 200 }
+        )
+      );
+    });
+
+    await expect(
+      fetchJiraIssueLatestChangelog({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toEqual({
+      authorDisplayName: 'Release Manager',
+      created: '2026-05-01T08:24:00.000+0000',
+      items: [
+        { field: 'WorklogId', fromString: null, toString: '10001' },
+        { field: 'timespent', fromString: null, toString: '1800' },
+      ],
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary&expand=changelog',
+      {
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer sample-access-value',
+        },
+      }
+    );
+  });
+
+  test('returns null when the expanded Jira issue changelog is unavailable', async () => {
+    const nonOkFetch = vi.fn(() => Promise.resolve(new Response('denied', { status: 403 })));
+    await expect(
+      fetchJiraIssueLatestChangelog({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: nonOkFetch,
+      })
+    ).resolves.toBeNull();
+
+    const emptyFetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ changelog: { histories: [] } }), { status: 200 }))
+    );
+    await expect(
+      fetchJiraIssueLatestChangelog({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: emptyFetch,
+      })
+    ).resolves.toBeNull();
+
+    const invalidJsonFetch = vi.fn(() => Promise.resolve(new Response('{', { status: 200 })));
+    await expect(
+      fetchJiraIssueLatestChangelog({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        issueKey: 'OPS-123',
+        fetchImpl: invalidJsonFetch,
+      })
+    ).resolves.toBeNull();
   });
 
   test('fetches available Jira issue transitions', async () => {

@@ -35,6 +35,7 @@ export function testIssueDetailLoader(issueKey: string): Promise<JiraIssueDetail
 export function toAssignedIssue(issue: DashboardIssue): JiraAssignedIssue {
   return {
     assigneeDisplayName: null,
+    issueType: 'Issue',
     key: issue.key,
     priority: issue.priority === 'No priority' ? null : issue.priority,
     status: issue.status,

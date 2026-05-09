@@ -33,6 +33,7 @@ const SAMPLE_IMAGE_URI = `data:image/svg+xml;utf8,${encodeURIComponent(`
 const MOCK_ISSUES = [
   {
     key: 'OPS-123',
+    issueType: 'Bug',
     summary: 'Stabilize payment reconciliation alerts',
     status: 'In Progress',
     statusCategory: 'In Progress',
@@ -140,6 +141,7 @@ const MOCK_ISSUES = [
   },
   {
     key: 'OPS-456',
+    issueType: 'Task',
     summary: 'Review checkout service release readiness',
     status: 'Code Review',
     statusCategory: 'In Progress',
@@ -189,6 +191,7 @@ const MOCK_ISSUES = [
   },
   {
     key: 'OPS-321',
+    issueType: 'Task',
     summary: 'Follow cloned inventory reservation cleanup',
     status: 'In Review',
     statusCategory: 'In Progress',
@@ -256,6 +259,7 @@ const MOCK_ISSUES = [
   },
   {
     key: 'OPS-900',
+    issueType: 'Task',
     summary: 'demoABCDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
     status: 'To Do',
     statusCategory: 'To Do',
@@ -275,6 +279,7 @@ const MOCK_ISSUES = [
   },
   {
     key: 'OPS-789',
+    issueType: 'Task',
     summary: 'Confirm warehouse webhook retry policy',
     status: 'Waiting for Input',
     statusCategory: 'To Do',
@@ -312,16 +317,16 @@ const MOCK_NOTIFICATIONS = [
   {
     id: 'ops-123-2026-05-01T08-24',
     issueKey: 'OPS-123',
-    title: 'OPS-123 was updated',
-    detail: 'Assigned issue update detected by the 1 minute poller.',
+    title: 'Current User updated Bug OPS-123',
+    detail: 'Logged work · Stabilize payment reconciliation alerts',
     updated: '2026-05-01T08:24:00.000Z',
     unread: true,
   },
   {
     id: 'ops-456-2026-05-01T08-18',
     issueKey: 'OPS-456',
-    title: 'OPS-456 moved in code review',
-    detail: 'JiraOps refreshed assigned tickets from the same poll result.',
+    title: 'New Task assigned: OPS-456',
+    detail: 'Review checkout service release readiness',
     updated: '2026-05-01T08:18:00.000Z',
     unread: true,
   },

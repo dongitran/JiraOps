@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.39
+
+### Notifications
+
+- Show assigned issue notifications with who changed what instead of generic update text.
+- Enrich updated issue alerts with the latest Jira changelog actor and action when changelog data is available.
+- Keep fallback notification copy useful with issue type and summary when changelog enrichment is unavailable.
+- Log sanitized changelog enrichment counts without tokens, raw Jira payloads, authors, or summaries.
+
+### Testing
+
+- Add unit coverage for Jira changelog parsing, notification action descriptions, enrichment fallback, and poller concurrency.
+- Add e2e coverage for enriched notification title/detail persistence in test mode.
+
 ## 0.1.38
 
 ### Details

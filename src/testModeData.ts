@@ -1,5 +1,5 @@
 import type { JiraIssueDetail } from './jiraIssueDetails';
-import type { JiraAssignedIssue } from './jiraClient';
+import type { JiraAssignedIssue, JiraIssueChangelogEntry } from './jiraClient';
 import type { RemoteWebLink } from './remoteLinks';
 
 const TEST_ATTACHMENT_IMAGE_DATA_URI = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -12,6 +12,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
   const issues = [
     {
       key: 'OPS-123',
+      issueType: 'Bug',
       summary: 'Stabilize payment reconciliation alerts',
       status: 'In Progress',
       statusCategory: 'In Progress',
@@ -21,6 +22,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
     },
     {
       key: 'OPS-456',
+      issueType: 'Task',
       summary: 'Review checkout service release readiness',
       status: 'Code Review',
       statusCategory: 'In Progress',
@@ -30,6 +32,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
     },
     {
       key: 'OPS-321',
+      issueType: 'Task',
       summary: 'Follow cloned inventory reservation cleanup',
       status: 'In Review',
       statusCategory: 'In Progress',
@@ -39,6 +42,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
     },
     {
       key: 'OPS-900',
+      issueType: 'Task',
       summary: 'demoABCDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
       status: 'To Do',
       statusCategory: 'To Do',
@@ -48,6 +52,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
     },
     {
       key: 'OPS-789',
+      issueType: 'Task',
       summary: 'Confirm warehouse webhook retry policy',
       status: 'Waiting for Input',
       statusCategory: 'To Do',
@@ -135,6 +140,23 @@ export function resolveTestIssueDetail(issueKey: string): JiraIssueDetail {
 
   const issue = resolveTestAssignedIssues().find((item) => item.key === issueKey);
   return createDefaultIssueDetail(issueKey, issue?.summary ?? 'Test issue');
+}
+
+export function resolveTestIssueLatestChangelog(
+  issueKey: string
+): JiraIssueChangelogEntry | null {
+  if (issueKey !== 'OPS-123') {
+    return null;
+  }
+
+  return {
+    authorDisplayName: 'Current User',
+    created: '2026-05-01T08:24:00.000+0000',
+    items: [
+      { field: 'WorklogId', fromString: null, toString: '10001' },
+      { field: 'timespent', fromString: null, toString: '1800' },
+    ],
+  };
 }
 
 export function isJiraOpsTestMode(): boolean {

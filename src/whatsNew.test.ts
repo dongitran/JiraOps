@@ -9,6 +9,17 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.39
+
+### Details
+
+- Show assigned issue notifications with who changed what.
+- Enrich updated issue alerts with Jira changelog actions.
+
+### Testing
+
+- Add unit and e2e coverage for enriched notification copy.
+
 ## 0.1.38
 
 ### Details

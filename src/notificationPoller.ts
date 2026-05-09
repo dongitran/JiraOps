@@ -1,6 +1,7 @@
-import type { JiraAssignedIssue } from './jiraClient';
+import type { JiraAssignedIssue, JiraIssueChangelogEntry } from './jiraClient';
 import {
   computeIssueUpdateNotifications,
+  enrichIssueUpdateNotification,
   formatNotificationLogSummary,
   buildIssueUpdateBaseline,
   type IssueUpdateBaseline,
@@ -14,6 +15,9 @@ import {
 } from './jiraOpsSettings';
 
 export interface NotificationPollerOptions {
+  readonly fetchIssueChangelog?: (
+    issueKey: string
+  ) => Promise<JiraIssueChangelogEntry | null>;
   readonly fetchIssues: () => Promise<readonly JiraAssignedIssue[]>;
   readonly log: (message: string) => void;
   readonly onError: (error: unknown) => void;
@@ -23,6 +27,16 @@ export interface NotificationPollerOptions {
   ) => void | Promise<void>;
   readonly readSettings: () => Promise<JiraOpsSettings>;
   readonly resolveIntervalMs?: (settings: JiraOpsSettings) => number;
+}
+
+interface ChangelogEnrichmentCandidate {
+  readonly issue: JiraAssignedIssue;
+  readonly notification: JiraOpsNotification;
+}
+
+interface ChangelogEnrichmentResult {
+  readonly enriched: boolean;
+  readonly notification: JiraOpsNotification;
 }
 
 export class NotificationPoller {
@@ -99,21 +113,65 @@ export class NotificationPoller {
     const issues = await this.options.fetchIssues();
     this.options.log(`Fetched ${String(issues.length)} assigned Jira issue(s) for notification poll ${reason}.`);
     await this.options.onIssues(issues);
+    const previousBaseline = this.baseline;
     const result = computeIssueUpdateNotifications({
       existingNotifications: this.notifications,
       hasPreviousBaseline: this.baselineReady,
       issues,
-      previousBaseline: this.baseline,
+      previousBaseline,
     });
-    this.baseline = result.nextBaseline;
+    const enrichedResult = await this.enrichNotificationResult(
+      result,
+      issues,
+      previousBaseline
+    );
+    this.baseline = enrichedResult.nextBaseline;
     this.baselineReady = true;
-    this.notifications = result.notifications;
-    await this.options.onNotifications(result);
+    this.notifications = enrichedResult.notifications;
+    await this.options.onNotifications(enrichedResult);
     this.options.log(
       `JiraOps notification poll baseline now tracks ${String(Object.keys(this.baseline).length)} issue(s); history has ${String(this.notifications.length)} item(s).`
     );
-    this.options.log(formatNotificationLogSummary(result.newNotifications));
+    this.options.log(formatNotificationLogSummary(enrichedResult.newNotifications));
     return true;
+  }
+
+  private async enrichNotificationResult(
+    result: IssueUpdateNotificationResult,
+    issues: readonly JiraAssignedIssue[],
+    previousBaseline: IssueUpdateBaseline
+  ): Promise<IssueUpdateNotificationResult> {
+    if (this.options.fetchIssueChangelog === undefined) {
+      return result;
+    }
+
+    const candidates = findChangelogEnrichmentCandidates(
+      result.newNotifications,
+      issues,
+      previousBaseline
+    );
+    if (candidates.length === 0) {
+      return result;
+    }
+
+    const settled = await settleInBatches(candidates, 5, (candidate) =>
+      this.enrichNotification(candidate)
+    );
+    return mergeEnrichedNotifications(result, settled, this.options.log);
+  }
+
+  private async enrichNotification(
+    candidate: ChangelogEnrichmentCandidate
+  ): Promise<ChangelogEnrichmentResult> {
+    const changelog = await this.options.fetchIssueChangelog?.(candidate.issue.key);
+    return {
+      enriched: changelog !== null && changelog !== undefined,
+      notification: enrichIssueUpdateNotification(
+        candidate.notification,
+        candidate.issue,
+        changelog ?? null
+      ),
+    };
   }
 
   private scheduleNext(settings: JiraOpsSettings): void {
@@ -148,4 +206,73 @@ export class NotificationPoller {
     clearTimeout(this.timer);
     this.timer = null;
   }
+}
+
+function findChangelogEnrichmentCandidates(
+  notifications: readonly JiraOpsNotification[],
+  issues: readonly JiraAssignedIssue[],
+  previousBaseline: IssueUpdateBaseline
+): ChangelogEnrichmentCandidate[] {
+  const issueByKey = new Map(issues.map((issue) => [issue.key, issue]));
+  return notifications.flatMap((notification) => {
+    const issue = issueByKey.get(notification.issueKey);
+    if (issue === undefined || previousBaseline[notification.issueKey] === undefined) {
+      return [];
+    }
+    return [{ issue, notification }];
+  });
+}
+
+async function settleInBatches<TInput, TOutput>(
+  items: readonly TInput[],
+  limit: number,
+  task: (item: TInput) => Promise<TOutput>
+): Promise<PromiseSettledResult<TOutput>[]> {
+  const settled: PromiseSettledResult<TOutput>[] = [];
+  for (let index = 0; index < items.length; index += limit) {
+    const batch = items.slice(index, index + limit);
+    settled.push(...(await Promise.allSettled(batch.map(task))));
+  }
+  return settled;
+}
+
+function mergeEnrichedNotifications(
+  result: IssueUpdateNotificationResult,
+  settled: readonly PromiseSettledResult<ChangelogEnrichmentResult>[],
+  log: (message: string) => void
+): IssueUpdateNotificationResult {
+  const { enrichedById, stats } = summarizeChangelogEnrichment(settled);
+  log(
+    `Jira changelog enrichment finished: attempted=${String(stats.attempted)}, enriched=${String(stats.enriched)}, fallback=${String(stats.fallback)}.`
+  );
+  return {
+    ...result,
+    newNotifications: result.newNotifications.map((notification) => {
+      return enrichedById.get(notification.id) ?? notification;
+    }),
+    notifications: result.notifications.map((notification) => {
+      return enrichedById.get(notification.id) ?? notification;
+    }),
+  };
+}
+
+function summarizeChangelogEnrichment(
+  settled: readonly PromiseSettledResult<ChangelogEnrichmentResult>[]
+): {
+  readonly enrichedById: ReadonlyMap<string, JiraOpsNotification>;
+  readonly stats: { readonly attempted: number; readonly enriched: number; readonly fallback: number };
+} {
+  const enrichedById = new Map<string, JiraOpsNotification>();
+  let enriched = 0;
+  let fallback = 0;
+  for (const item of settled) {
+    if (item.status === 'rejected') {
+      fallback += 1;
+      continue;
+    }
+    enrichedById.set(item.value.notification.id, item.value.notification);
+    enriched += item.value.enriched ? 1 : 0;
+    fallback += item.value.enriched ? 0 : 1;
+  }
+  return { enrichedById, stats: { attempted: settled.length, enriched, fallback } };
 }
