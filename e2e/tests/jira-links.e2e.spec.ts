@@ -21,8 +21,17 @@ import {
 
 type LocatorBoundingBox = NonNullable<Awaited<ReturnType<Locator['boundingBox']>>>;
 
+interface DashboardDetailButtonState {
+  readonly buttonWidth: number;
+  readonly cardWidth: number;
+  readonly headerHeight: number;
+  readonly hoverMedia: boolean;
+  readonly opacity: number;
+  readonly pointerEvents: string;
+}
+
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.42 release notes', async () => {
+  test('User can review JiraOps 0.1.43 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -36,11 +45,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.42 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.43 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'comment image'
+        'hover'
       );
-      await expect(whatsNewFrame.getByText('0.1.41')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.42')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -88,6 +97,17 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
+  test('User can reveal dashboard Details controls on ticket hover', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await expectDashboardDetailButtonHoverReveal(frame);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
   test('User can use the assigned ticket dashboard without an internal connection banner', async () => {
     const session = await launchExtensionHost();
     const testInfo = test.info();
@@ -112,11 +132,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await session.window.setViewportSize({ width: 1600, height: 900 });
       const frame = await openLoadedDashboard(session.window);
 
-      await clickWithFallback(
-        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
-          name: 'Details',
-        })
-      );
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
       const issueContent = detailFrame.getByLabel('Description and comments');
@@ -187,11 +203,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
     try {
       const frame = await openLoadedDashboard(session.window);
-      await clickWithFallback(
-        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
-          name: 'Details',
-        })
-      );
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
       await expectImageLightbox(detailFrame);
@@ -205,11 +217,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
     try {
       const frame = await openLoadedDashboard(session.window);
-      await clickWithFallback(
-        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
-          name: 'Details',
-        })
-      );
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
       await expect(detailFrame.getByLabel('Issue actions')).toBeVisible();
@@ -250,11 +258,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await session.window.setViewportSize({ width: 1200, height: 827 });
       const frame = await openLoadedDashboard(session.window);
 
-      await clickWithFallback(
-        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
-          name: 'Details',
-        })
-      );
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
       await expectNarrowDetailHeaderActionsOnIssueKeyRow(detailFrame);
@@ -264,16 +268,16 @@ test.describe('Jira Ops assigned ticket workflow', () => {
   });
 
   test('User can see issue details open with a centered loading state', async () => {
-    const session = await launchExtensionHost();
+    const session = await launchExtensionHost({
+      env: {
+        JIRA_OPS_DETAIL_TEST_DELAY_MS: '3000',
+      },
+    });
 
     try {
       const frame = await openLoadedDashboard(session.window);
 
-      await clickWithFallback(
-        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
-          name: 'Details',
-        })
-      );
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
 
       const detailFrame = await resolveIssueDetailFrame(session.window, 'OPS-123');
       const loadingStatus = detailFrame.getByRole('status');
@@ -294,11 +298,9 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
     try {
       const frame = await openLoadedDashboard(session.window);
-      const detailsButton = frame
-        .getByLabel('OPS-123 assigned ticket')
-        .getByRole('button', { name: 'Details' });
+      const issueCard = frame.getByLabel('OPS-123 assigned ticket');
 
-      await clickWithFallback(detailsButton);
+      await openIssueDetailFromCard(issueCard);
       await expect(
         (await resolveLoadedIssueDetailFrame(session.window, 'OPS-123')).getByLabel(
           'Description and comments'
@@ -306,7 +308,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       ).toBeVisible();
       await closeActiveEditor(session.window, 'OPS-123');
 
-      await clickWithFallback(detailsButton);
+      await openIssueDetailFromCard(issueCard);
       const reopenedFrame = await resolveIssueDetailFrame(session.window, 'OPS-123');
       await expect(reopenedFrame.getByLabel('Description and comments')).toBeVisible({
         timeout: 700,
@@ -328,7 +330,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
       await expect(issue.getByText('GitLab merge requests')).toHaveCount(0);
       await expect(issue.getByText('Clean stale inventory reservations')).toHaveCount(0);
-      await clickWithFallback(issue.getByRole('button', { name: 'Details' }));
+      await openIssueDetailFromCard(issue);
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-321');
       await expect(detailFrame.getByLabel('GitLab merge requests')).toHaveCount(0);
@@ -364,11 +366,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
     try {
       const frame = await openLoadedDashboard(session.window);
-      await clickWithFallback(
-        frame.getByLabel('OPS-900 assigned ticket').getByRole('button', {
-          name: 'Details',
-        })
-      );
+      await openIssueDetailFromCard(frame.getByLabel('OPS-900 assigned ticket'));
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-900');
       await expect(detailFrame.getByLabel('Description and comments')).toContainText(
@@ -403,11 +401,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
 
     try {
       const frame = await openLoadedDashboard(session.window);
-      await clickWithFallback(
-        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
-          name: 'Details',
-        })
-      );
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
 
       const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
       const cloneCard = detailFrame.getByLabel('Merge request - TOR-45 clone merge request');
@@ -587,6 +581,14 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(frame.getByText('Release Manager commented on Bug OPS-123')).toBeVisible();
       await expect(frame.getByText('Current User updated Bug OPS-123')).toBeVisible();
       await expectNotificationReadState(frame, 'Current User updated Bug OPS-123', false);
+      await expectNotificationDetailButtonAlwaysVisible(
+        frame,
+        'Current User updated Bug OPS-123'
+      );
+      await expectNotificationDetailButtonAlwaysVisible(
+        frame,
+        'Release Manager commented on Bug OPS-123'
+      );
       await clickWithFallback(
         frame
           .getByLabel('Release Manager commented on Bug OPS-123')
@@ -611,6 +613,12 @@ async function openLoadedDashboard(window: Page): Promise<Frame> {
   await clickWithFallback(frame.getByRole('button', { name: 'Connect Jira' }));
   await expectLoadedDashboard(frame);
   return frame;
+}
+
+async function openIssueDetailFromCard(issueCard: Locator): Promise<void> {
+  await expect(issueCard).toBeVisible();
+  await issueCard.hover();
+  await clickWithFallback(issueCard.getByRole('button', { name: 'Details' }));
 }
 
 async function expectHomeShell(frame: Frame): Promise<void> {
@@ -710,6 +718,82 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
     priority: 'none',
     updated: 'none',
   });
+}
+
+async function expectDashboardDetailButtonHoverReveal(frame: Frame): Promise<void> {
+  const issue = frame.getByLabel('OPS-123 assigned ticket');
+  const detailButton = issue.getByRole('button', { name: 'Details' });
+  await expect(issue).toBeVisible();
+  await frame.getByRole('button', { name: 'Refresh' }).hover();
+
+  const before = await readDashboardDetailButtonState(issue);
+  if (before.hoverMedia) {
+    expect(before.opacity).toBeLessThan(0.05);
+    expect(before.pointerEvents).toBe('none');
+  } else {
+    expect(before.opacity).toBe(1);
+    expect(before.pointerEvents).toBe('auto');
+  }
+
+  await issue.hover();
+  await expect(detailButton).toHaveCSS('opacity', '1');
+  const afterHover = await readDashboardDetailButtonState(issue);
+  expect(afterHover.pointerEvents).toBe('auto');
+  expect(afterHover).toMatchObject({
+    buttonWidth: before.buttonWidth,
+    cardWidth: before.cardWidth,
+    headerHeight: before.headerHeight,
+  });
+
+  await frame.getByRole('button', { name: 'Refresh' }).hover();
+  if (before.hoverMedia) {
+    await expect
+      .poll(async () => {
+        return (await readDashboardDetailButtonState(issue)).opacity;
+      })
+      .toBeLessThan(0.05);
+  }
+
+  await detailButton.focus();
+  await expect(detailButton).toHaveCSS('opacity', '1');
+  const afterFocus = await readDashboardDetailButtonState(issue);
+  expect(afterFocus.pointerEvents).toBe('auto');
+  expect(afterFocus).toMatchObject({
+    buttonWidth: before.buttonWidth,
+    cardWidth: before.cardWidth,
+    headerHeight: before.headerHeight,
+  });
+}
+
+async function readDashboardDetailButtonState(
+  issue: Locator
+): Promise<DashboardDetailButtonState> {
+  const state = await issue.evaluate((card) => {
+    const button = card.querySelector('button');
+    const header = card.querySelector('.issue-card-header');
+    if (!(button instanceof HTMLElement) || !(header instanceof HTMLElement)) {
+      return null;
+    }
+
+    const buttonStyle = window.getComputedStyle(button);
+    const buttonBox = button.getBoundingClientRect();
+    const cardBox = card.getBoundingClientRect();
+    const headerBox = header.getBoundingClientRect();
+    return {
+      buttonWidth: Math.round(buttonBox.width),
+      cardWidth: Math.round(cardBox.width),
+      headerHeight: Math.round(headerBox.height),
+      hoverMedia: window.matchMedia('(hover: hover)').matches,
+      opacity: Number.parseFloat(buttonStyle.opacity),
+      pointerEvents: buttonStyle.pointerEvents,
+    };
+  });
+
+  if (state === null) {
+    throw new Error('Expected dashboard detail button state to be measurable.');
+  }
+
+  return state;
 }
 
 async function expectTableBordersAreVisible(table: Locator): Promise<void> {
@@ -1292,6 +1376,33 @@ async function expectNotificationReadState(
   await expect.poll(async () => item.evaluate((node) => node.getAttribute('data-unread'))).toBe(
     String(unread)
   );
+}
+
+async function expectNotificationDetailButtonAlwaysVisible(
+  frame: Frame,
+  title: string
+): Promise<void> {
+  const item = frame.getByLabel(title);
+  const button = item.getByRole('button', { name: 'Details' });
+  await expect(item).toBeVisible();
+  await expect(button).toBeVisible();
+
+  const state = await button.evaluate((node) => {
+    const style = window.getComputedStyle(node);
+    return {
+      className: node.getAttribute('class') ?? '',
+      insideIssueCard: node.closest('.issue-card') !== null,
+      opacity: Number.parseFloat(style.opacity),
+      pointerEvents: style.pointerEvents,
+    };
+  });
+
+  expect(state).toEqual({
+    className: expect.stringContaining('notification-detail-button'),
+    insideIssueCard: false,
+    opacity: 1,
+    pointerEvents: 'auto',
+  });
 }
 
 async function expectReloadButtonAtHeaderEdge(frame: Frame): Promise<void> {

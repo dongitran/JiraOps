@@ -30,6 +30,25 @@ describe('extension manifest assets', () => {
     expect(activitySvg).not.toMatch(/<rect\b/u);
     expect(activitySvg).not.toContain('#10161e');
   });
+
+  test('scopes dashboard Details hover reveal to issue cards', () => {
+    const css = readProjectFile('docs/designs/prototypes/assets/jira-ops.css');
+    const hoverMediaStart = css.indexOf('@media (hover: hover)');
+    const hoverMediaEnd = css.indexOf('.issue-meta-row', hoverMediaStart);
+    const hoverMediaBlock = css.slice(hoverMediaStart, hoverMediaEnd);
+
+    expect(hoverMediaStart).toBeGreaterThanOrEqual(0);
+    expect(hoverMediaEnd).toBeGreaterThan(hoverMediaStart);
+    expect(hoverMediaBlock).toContain('.issue-card .detail-button');
+    expect(hoverMediaBlock).toContain('opacity: 0;');
+    expect(hoverMediaBlock).toContain('pointer-events: none;');
+    expect(hoverMediaBlock).toContain('transition: opacity 0.15s ease;');
+    expect(hoverMediaBlock).toContain('.issue-card:hover .detail-button');
+    expect(hoverMediaBlock).toContain('.issue-card:focus-within .detail-button');
+    expect(hoverMediaBlock).toContain('opacity: 1;');
+    expect(hoverMediaBlock).toContain('pointer-events: auto;');
+    expect(hoverMediaBlock).not.toContain('.notification-detail-button');
+  });
 });
 
 function readManifest(): z.infer<typeof ManifestSchema> {

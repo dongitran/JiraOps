@@ -143,37 +143,37 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.42 Release</span>
+        <span>JiraOps 0.1.43 Release</span>
         <h1>What Is New</h1>
-        <p>Details now preserve notification context and hydrate images in Jira comments.</p>
+        <p>Dashboard ticket Details stay out of the way until a ticket is in focus.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.42</strong>
-          <p>Notification-driven detail views stay in context while empty related-link sections stay out of the way.</p>
+          <strong>Release 0.1.43</strong>
+          <p>Assigned ticket cards keep a calmer scan path while Details remains quick to open.</p>
         </div>
         <span>🚀</span>
       </section>
       <section class="whats-new-grid" aria-label="Release highlights">
         <article>
           <span aria-hidden="true">📌</span>
-          <strong>Notifications</strong>
-          <p>Opening Details from a notification leaves the sidebar on Notifications.</p>
+          <strong>Dashboard</strong>
+          <p>Details appears when hovering a ticket card on mouse devices.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Comments</strong>
-          <p>Inline comment image previews render from hydrated Jira attachment media.</p>
+          <strong>Keyboard</strong>
+          <p>Details also appears when keyboard focus enters the ticket card.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>Details</strong>
-          <p>Empty merge request and web-link sections are hidden from issue details.</p>
+          <strong>Touch</strong>
+          <p>Touch devices keep the Details button visible because hover is not available.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks notification context, comment images, and hidden empty sections.</p>
+          <p>Coverage checks hover reveal, focus reveal, layout stability, and notification scope.</p>
         </article>
       </section>
     </article>

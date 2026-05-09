@@ -404,6 +404,20 @@ a:focus-visible {
   min-width: 68px;
 }
 
+@media (hover: hover) {
+  .issue-card .detail-button {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .issue-card:hover .detail-button,
+  .issue-card:focus-within .detail-button {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 .issue-meta-row {
   display: flex;
   flex-wrap: nowrap;

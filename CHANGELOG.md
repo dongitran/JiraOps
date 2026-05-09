@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.43
+
+### Dashboard
+
+- Show each assigned ticket Details button only when the ticket card is hovered on mouse devices.
+- Preserve touch-device access by keeping Details visible when hover is unavailable.
+- Preserve keyboard access by revealing Details while focus is inside a ticket card.
+- Keep notification Details buttons visible and outside the dashboard hover behavior.
+
+### Testing
+
+- Add coverage for dashboard Details hover reveal, focus reveal, layout stability, and notification scope.
+- Verify the prototype with MCP Playwright through the local prototype server.
+
 ## 0.1.42
 
 ### Details
