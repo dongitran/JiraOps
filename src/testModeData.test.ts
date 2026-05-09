@@ -130,6 +130,7 @@ describe('testModeData', () => {
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window.'
     );
     expect(detail.descriptionHtml).toContain('<p>Reconciliation alerts fire too late');
+    expect(detail.descriptionHtml).toContain('data-lightbox="true"');
     expect(detail.comments[0]?.bodyHtml).toContain(
       '<p>Validated against the delayed settlement sample.'
     );

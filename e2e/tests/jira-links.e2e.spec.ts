@@ -20,7 +20,7 @@ import {
 } from './support/jiraOpsHarness';
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.37 release notes', async () => {
+  test('User can review JiraOps 0.1.38 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -34,11 +34,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.37 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.38 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'original attachment content before thumbnail fallbacks'
+        'fullscreen image viewer'
       );
-      await expect(whatsNewFrame.getByText('0.1.31')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.37')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -175,6 +175,24 @@ test.describe('Jira Ops assigned ticket workflow', () => {
         testInfo,
         'issue-detail-activity-order.png'
       );
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User can enlarge inline Jira images from issue details', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await clickWithFallback(
+        frame.getByLabel('OPS-123 assigned ticket').getByRole('button', {
+          name: 'Details',
+        })
+      );
+
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      await expectImageLightbox(detailFrame);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -888,6 +906,124 @@ async function expectDescriptionInlineImage(issueContent: Locator): Promise<void
   });
   expect(imageState?.naturalHeight).toBeGreaterThan(0);
   expect(imageState?.naturalWidth).toBeGreaterThan(1000);
+}
+
+async function expectImageLightbox(frame: Frame): Promise<void> {
+  const sourceImage = frame.getByRole('img', {
+    name: 'reconciliation-alert-preview.png',
+  });
+  await expect(sourceImage).toBeVisible();
+  const beforeOpenState = await readImageLightboxState(frame);
+
+  expect(beforeOpenState).toMatchObject({
+    closeVisible: false,
+    dialogDisplay: 'none',
+    dialogFullscreen: false,
+    dialogOpen: false,
+    lightboxAlt: '',
+    lightboxHasHeightAttribute: false,
+    lightboxHasSrc: true,
+    lightboxHasWidthAttribute: false,
+    lightboxSrc: '',
+    sourceCursor: 'zoom-in',
+    sourceMarked: 'true',
+    sourceRole: null,
+  });
+
+  await clickWithFallback(sourceImage);
+  const dialog = frame.getByRole('dialog', { name: 'Image viewer' });
+  await expect(dialog).toBeVisible();
+  expect(await readImageLightboxState(frame)).toMatchObject({
+    closeVisible: true,
+    dialogDisplay: 'grid',
+    dialogFullscreen: true,
+    dialogOpen: true,
+    imageFitsViewport: true,
+    lightboxAlt: 'reconciliation-alert-preview.png',
+    lightboxHasHeightAttribute: false,
+    lightboxHasSrc: true,
+    lightboxHasWidthAttribute: false,
+    lightboxSrcStartsWithImageData: true,
+    sameSrc: true,
+    visibleMessages: [],
+  });
+
+  await clickWithFallback(dialog.getByRole('button', { name: 'Close image viewer' }));
+  await expect(dialog).toBeHidden();
+  expect(await readImageLightboxState(frame)).toMatchObject({
+    dialogDisplay: 'none',
+    dialogOpen: false,
+    lightboxAlt: '',
+    lightboxSrc: '',
+  });
+
+  await clickWithFallback(sourceImage);
+  await expect(dialog).toBeVisible();
+  await dialog.click({ position: { x: 12, y: 12 } });
+  await expect(dialog).toBeHidden();
+  expect(await readImageLightboxState(frame)).toMatchObject({
+    dialogOpen: false,
+    lightboxAlt: '',
+    lightboxSrc: '',
+  });
+}
+
+async function readImageLightboxState(frame: Frame): Promise<Record<string, unknown>> {
+  const state = await frame.evaluate(() => {
+    const source = document.querySelector('.jira-adf-media img[alt="reconciliation-alert-preview.png"]');
+    const dialog = document.querySelector('.detail-image-lightbox-dialog');
+    const image = dialog?.querySelector('.detail-image-lightbox-img');
+    const close = dialog?.querySelector('.detail-image-lightbox-close');
+    if (!(source instanceof HTMLImageElement) || !(dialog instanceof HTMLDialogElement) || !(image instanceof HTMLImageElement)) {
+      return null;
+    }
+
+    const dialogBox = dialog.getBoundingClientRect();
+    const imageBox = image.getBoundingClientRect();
+    const closeBox = close instanceof HTMLElement ? close.getBoundingClientRect() : null;
+    const visibleMessages = [
+      ...document.querySelectorAll(
+        '.detail-action-status, .detail-dialog-status, [role="alert"]'
+      ),
+    ]
+      .filter((node): node is HTMLElement => node instanceof HTMLElement)
+      .filter((node) => {
+        const box = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        return node.textContent.trim().length > 0 && style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0;
+      })
+      .map((node) => node.textContent.trim());
+
+    return {
+      closeVisible: closeBox !== null && closeBox.width > 0 && closeBox.height > 0,
+      dialogDisplay: window.getComputedStyle(dialog).display,
+      dialogFullscreen:
+        Math.round(dialogBox.width) === window.innerWidth &&
+        Math.round(dialogBox.height) === window.innerHeight &&
+        Math.round(dialogBox.left) === 0 &&
+        Math.round(dialogBox.top) === 0,
+      dialogOpen: dialog.open,
+      imageFitsViewport:
+        imageBox.width <= window.innerWidth * 0.9 + 1 &&
+        imageBox.height <= window.innerHeight * 0.9 + 1,
+      lightboxAlt: image.alt,
+      lightboxHasHeightAttribute: image.hasAttribute('height'),
+      lightboxHasSrc: image.hasAttribute('src'),
+      lightboxHasWidthAttribute: image.hasAttribute('width'),
+      lightboxSrc: image.getAttribute('src') ?? '',
+      lightboxSrcStartsWithImageData: image.src.startsWith('data:image/'),
+      sameSrc: image.src === source.currentSrc || image.src === source.src,
+      sourceCursor: window.getComputedStyle(source).cursor,
+      sourceMarked: source.dataset['lightbox'],
+      sourceRole: source.getAttribute('role'),
+      visibleMessages,
+    };
+  });
+  if (state === null) {
+    throw new Error('Expected image lightbox DOM to be present.');
+  }
+
+  return state;
 }
 
 async function expectNoVisibleDetailMessages(frame: Frame): Promise<void> {

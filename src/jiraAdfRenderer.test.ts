@@ -165,7 +165,7 @@ describe('jiraAdfRenderer', () => {
     );
 
     expect(html).toBe(
-      '<p>Before image.</p><figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,AQID" alt="system-diagram.png" width="640" height="360" loading="lazy" /></figure><p>After image.</p>'
+      '<p>Before image.</p><figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,AQID" alt="system-diagram.png" width="640" height="360" loading="lazy" data-lightbox="true" /></figure><p>After image.</p>'
     );
   });
 
@@ -243,7 +243,7 @@ describe('jiraAdfRenderer', () => {
     );
 
     expect(html).toBe(
-      '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,Ag==" alt="generic-preview.png" loading="lazy" /></figure>'
+      '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,Ag==" alt="generic-preview.png" loading="lazy" data-lightbox="true" /></figure>'
     );
   });
 
@@ -332,10 +332,10 @@ describe('jiraAdfRenderer', () => {
     );
 
     expect(html).toContain(
-      '<img src="data:image/png;base64,AQID" alt="first-preview.png" loading="lazy" />'
+      '<img src="data:image/png;base64,AQID" alt="first-preview.png" loading="lazy" data-lightbox="true" />'
     );
     expect(html).toContain(
-      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" />'
+      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" data-lightbox="true" />'
     );
     expect(html).not.toContain('Image preview unavailable');
   });
@@ -398,10 +398,10 @@ describe('jiraAdfRenderer', () => {
     );
 
     expect(sections.mainHtml).toContain(
-      '<img src="data:image/png;base64,AQID" alt="description-preview.png" loading="lazy" />'
+      '<img src="data:image/png;base64,AQID" alt="description-preview.png" loading="lazy" data-lightbox="true" />'
     );
     expect(sections.activityHtml).toContain(
-      '<img src="data:image/png;base64,Ag==" alt="activity-preview.png" loading="lazy" />'
+      '<img src="data:image/png;base64,Ag==" alt="activity-preview.png" loading="lazy" data-lightbox="true" />'
     );
     expect(sections.technicalNotesHtml).toBe('');
   });
@@ -437,7 +437,7 @@ describe('jiraAdfRenderer', () => {
 
     expect(html).toContain('Image preview unavailable');
     expect(html).toContain(
-      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" />'
+      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" data-lightbox="true" />'
     );
   });
 

@@ -271,7 +271,7 @@ function renderResolvedMediaImage(
   image: AdfMediaImage
 ): string {
   const alt = resolveAdfMediaAlt(attrs, image);
-  return `<img src="${escapeAttribute(image.imageDataUri)}" alt="${escapeAttribute(alt)}"${renderImageDimensions(attrs)} loading="lazy" />`;
+  return `<img src="${escapeAttribute(image.imageDataUri)}" alt="${escapeAttribute(alt)}"${renderImageDimensions(attrs)} loading="lazy" data-lightbox="true" />`;
 }
 
 function renderImageDimensions(attrs: AdfNode | null): string {

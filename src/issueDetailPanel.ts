@@ -410,6 +410,7 @@ function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): stri
       ${renderAttachmentsSection(detail.attachments)}
       ${renderCloneDialog(issue)}
       ${renderWorklogDialog(issue)}
+      ${renderImageLightboxDialog()}
     </main>
   `;
 }
@@ -503,6 +504,17 @@ function renderWorklogDialog(issue: DashboardIssue): string {
           <button type="submit" class="detail-dialog-primary" data-detail-action="submit-worklog">Log Work</button>
         </div>
       </form>
+    </dialog>
+  `;
+}
+
+function renderImageLightboxDialog(): string {
+  return `
+    <dialog class="detail-image-lightbox-dialog" aria-label="Image viewer">
+      <button class="detail-image-lightbox-close" type="button" aria-label="Close image viewer">&times;</button>
+      <figure class="detail-image-lightbox-figure">
+        <img class="detail-image-lightbox-img" src="" alt="" />
+      </figure>
     </dialog>
   `;
 }

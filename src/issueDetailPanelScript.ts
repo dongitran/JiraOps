@@ -184,6 +184,44 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
         dialog.setAttribute('open', '');
       }
 
+      function getImageLightboxDialog() {
+        const dialog = document.querySelector('.detail-image-lightbox-dialog');
+        return dialog instanceof HTMLDialogElement ? dialog : null;
+      }
+
+      function openImageLightbox(sourceImage) {
+        const dialog = getImageLightboxDialog();
+        const lightboxImage = dialog?.querySelector('.detail-image-lightbox-img');
+        if (dialog === null || !(lightboxImage instanceof HTMLImageElement)) {
+          return;
+        }
+
+        lightboxImage.src = sourceImage.currentSrc || sourceImage.src;
+        lightboxImage.alt = sourceImage.alt;
+        dialog.addEventListener('close', () => clearImageLightbox(dialog), { once: true });
+        if (typeof dialog.showModal === 'function') {
+          dialog.showModal();
+          return;
+        }
+        dialog.setAttribute('open', '');
+      }
+
+      function closeImageLightbox() {
+        const dialog = getImageLightboxDialog();
+        if (dialog !== null && dialog.open) {
+          dialog.close();
+          clearImageLightbox(dialog);
+        }
+      }
+
+      function clearImageLightbox(dialog) {
+        const lightboxImage = dialog.querySelector('.detail-image-lightbox-img');
+        if (lightboxImage instanceof HTMLImageElement) {
+          lightboxImage.removeAttribute('src');
+          lightboxImage.alt = '';
+        }
+      }
+
       function bindExternalLinks() {
         for (const link of document.querySelectorAll('a[href]')) {
           link.addEventListener('click', (event) => {
@@ -296,6 +334,30 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
         });
       }
 
+      function bindImageLightbox() {
+        const dialog = getImageLightboxDialog();
+        if (dialog === null) {
+          return;
+        }
+
+        const closeButton = dialog.querySelector('.detail-image-lightbox-close');
+        if (closeButton instanceof HTMLButtonElement) {
+          closeButton.addEventListener('click', closeImageLightbox);
+        }
+
+        dialog.addEventListener('click', (event) => {
+          if (event.target === dialog) {
+            closeImageLightbox();
+          }
+        });
+        document.addEventListener('click', (event) => {
+          const target = event.target;
+          if (target instanceof HTMLImageElement && target.dataset.lightbox === 'true') {
+            openImageLightbox(target);
+          }
+        });
+      }
+
       function handleStatusActionResult(data) {
         const select = getStatusSelect();
         if (select !== null) {
@@ -357,4 +419,5 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
       bindWorklogForm();
       bindCloneDialog();
       bindCloneForm();
+      bindImageLightbox();
 `;

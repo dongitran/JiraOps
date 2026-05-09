@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.38
+
+### Details
+
+- Add a fullscreen image viewer in issue Details so inline Jira media can be expanded from the existing CSP-safe data URI.
+- Keep native dialog close behavior with close button, backdrop, and Escape support.
+- Preserve inline image placeholders and external-link handling while making only hydrated images clickable.
+
+### Testing
+
+- Add unit coverage that rendered and hydrated Jira images expose the lightbox marker while placeholders remain unchanged.
+- Add e2e coverage for opening, sizing, and closing the image viewer without visible detail status messages.
+- Verify the prototype with MCP Playwright through the local prototype server.
+
 ## 0.1.37
 
 ### Details

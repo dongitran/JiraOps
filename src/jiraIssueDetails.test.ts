@@ -842,7 +842,7 @@ describe('jira issue details', () => {
     });
 
     expect(result.descriptionHtml).toContain(
-      '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,AQID" alt="preview.png" width="640" height="360" loading="lazy" /></figure>'
+      '<figure class="jira-adf-media jira-adf-media-single" data-layout="center"><img src="data:image/png;base64,AQID" alt="preview.png" width="640" height="360" loading="lazy" data-lightbox="true" /></figure>'
     );
     expect(result.attachments[0]?.imageDataUri).toBe('data:image/png;base64,AQID');
   });
@@ -934,10 +934,10 @@ describe('jira issue details', () => {
     });
 
     expect(result.descriptionHtml).toContain(
-      '<img src="data:image/png;base64,AQ==" alt="first-preview.png" loading="lazy" />'
+      '<img src="data:image/png;base64,AQ==" alt="first-preview.png" loading="lazy" data-lightbox="true" />'
     );
     expect(result.descriptionHtml).toContain(
-      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" />'
+      '<img src="data:image/png;base64,Ag==" alt="second-preview.png" loading="lazy" data-lightbox="true" />'
     );
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
   });
@@ -1031,7 +1031,7 @@ describe('jira issue details', () => {
     });
 
     expect(result.descriptionHtml).toContain(
-      '<img src="data:image/png;base64,Ag==" alt="inline-diagram.png" loading="lazy" />'
+      '<img src="data:image/png;base64,Ag==" alt="inline-diagram.png" loading="lazy" data-lightbox="true" />'
     );
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
     expect(result.attachments[0]?.mediaId).toBe(mediaId);
@@ -1134,7 +1134,7 @@ describe('jira issue details', () => {
     });
 
     expect(result.descriptionHtml).toContain(
-      '<img src="data:image/png;base64,iVBORw0KGgo=" alt="inline-diagram.png" loading="lazy" />'
+      '<img src="data:image/png;base64,iVBORw0KGgo=" alt="inline-diagram.png" loading="lazy" data-lightbox="true" />'
     );
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
     expect(result.attachments[0]?.mediaId).toBe(mediaId);
@@ -1211,7 +1211,7 @@ describe('jira issue details', () => {
     });
 
     expect(result.descriptionHtml).toContain(
-      '<img src="data:image/png;base64,Bw==" alt="inline-target.png" loading="lazy" />'
+      '<img src="data:image/png;base64,Bw==" alt="inline-target.png" loading="lazy" data-lightbox="true" />'
     );
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
     expect(result.attachments[0]?.imageDataUri).toBeNull();
@@ -1307,7 +1307,7 @@ describe('jira issue details', () => {
     });
 
     expect(result.descriptionHtml).toContain(
-      '<img src="data:image/png;base64,Ag==" alt="inline-diagram.png" loading="lazy" />'
+      '<img src="data:image/png;base64,Ag==" alt="inline-diagram.png" loading="lazy" data-lightbox="true" />'
     );
     expect(result.descriptionHtml).not.toContain('Image preview unavailable');
     expect(result.attachments[0]?.imageDataUri).toBeNull();

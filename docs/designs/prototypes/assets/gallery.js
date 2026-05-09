@@ -143,14 +143,14 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.37 Release</span>
+        <span>JiraOps 0.1.38 Release</span>
         <h1>What Is New</h1>
-        <p>Inline Jira media now hydrates from full-resolution attachment content.</p>
+        <p>Inline Jira media can now expand into a fullscreen image viewer.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.37</strong>
-          <p>Description screenshots stay sharp when Details expands them across the editor.</p>
+          <strong>Release 0.1.38</strong>
+          <p>Details keeps inline previews compact until you need a closer look.</p>
         </div>
         <span>🚀</span>
       </section>
@@ -158,22 +158,22 @@ function renderWhatsNewPanel() {
         <article>
           <span aria-hidden="true">📌</span>
           <strong>Details</strong>
-          <p>Inline description media prefers original attachment content before thumbnail fallbacks.</p>
+          <p>Click hydrated Jira images in description, comments, or activity to open them fullscreen.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Sharpness</strong>
-          <p>Hydrated images keep enough natural pixels for wide editor tabs.</p>
+          <strong>Viewer</strong>
+          <p>The image viewer reuses the loaded data URI and preserves the original alt text.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>Fallback</strong>
-          <p>Thumbnail hydration remains available when original content is unavailable or too large.</p>
+          <strong>Close</strong>
+          <p>Close with the top-right button, the dark backdrop, or the native Escape dialog behavior.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks content-first hydration and non-upscaled wide previews.</p>
+          <p>Coverage checks open, sizing, close paths, and normal hidden status messages.</p>
         </article>
       </section>
     </article>
@@ -250,6 +250,7 @@ function renderIssueDetail(issue) {
       </section>
       ${renderCloneDialog(issue)}
       ${renderWorklogDialog(issue)}
+      ${renderImageLightboxDialog()}
     </article>
   `;
   bindDetailActions(issue);
@@ -309,6 +310,17 @@ function renderWorklogDialog(issue) {
           <button type="submit" class="detail-dialog-primary">Log Work</button>
         </div>
       </form>
+    </dialog>
+  `;
+}
+
+function renderImageLightboxDialog() {
+  return `
+    <dialog class="detail-image-lightbox-dialog" aria-label="Image viewer">
+      <button class="detail-image-lightbox-close" type="button" aria-label="Close image viewer">&times;</button>
+      <figure class="detail-image-lightbox-figure">
+        <img class="detail-image-lightbox-img" src="" alt="" />
+      </figure>
     </dialog>
   `;
 }
@@ -556,6 +568,64 @@ function bindDetailActions(issue) {
   }
 
   bindCloneMergeRequestActions(issue);
+  bindImageLightbox();
+}
+
+function bindImageLightbox() {
+  if (editorSurface.dataset.imageLightboxBound === 'true') {
+    return;
+  }
+
+  editorSurface.dataset.imageLightboxBound = 'true';
+  editorSurface.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLImageElement && target.dataset.lightbox === 'true') {
+      openPrototypeImageLightbox(target);
+      return;
+    }
+
+    if (target instanceof HTMLButtonElement && target.classList.contains('detail-image-lightbox-close')) {
+      closePrototypeImageLightbox();
+      return;
+    }
+
+    if (target instanceof HTMLDialogElement && target.classList.contains('detail-image-lightbox-dialog')) {
+      target.close();
+    }
+  });
+}
+
+function openPrototypeImageLightbox(sourceImage) {
+  const dialog = editorSurface.querySelector('.detail-image-lightbox-dialog');
+  const lightboxImage = dialog?.querySelector('.detail-image-lightbox-img');
+  if (!(dialog instanceof HTMLDialogElement) || !(lightboxImage instanceof HTMLImageElement)) {
+    return;
+  }
+
+  lightboxImage.src = sourceImage.currentSrc || sourceImage.src;
+  lightboxImage.alt = sourceImage.alt;
+  dialog.addEventListener('close', () => clearPrototypeImageLightbox(dialog), { once: true });
+  if (typeof dialog.showModal === 'function') {
+    dialog.showModal();
+    return;
+  }
+  dialog.setAttribute('open', '');
+}
+
+function closePrototypeImageLightbox() {
+  const dialog = editorSurface.querySelector('.detail-image-lightbox-dialog');
+  if (dialog instanceof HTMLDialogElement) {
+    dialog.close();
+    clearPrototypeImageLightbox(dialog);
+  }
+}
+
+function clearPrototypeImageLightbox(dialog) {
+  const lightboxImage = dialog.querySelector('.detail-image-lightbox-img');
+  if (lightboxImage instanceof HTMLImageElement) {
+    lightboxImage.removeAttribute('src');
+    lightboxImage.alt = '';
+  }
 }
 
 function bindCloneMergeRequestActions(issue) {

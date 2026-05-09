@@ -9,6 +9,17 @@ import {
 
 const CHANGELOG = `# Changelog
 
+## 0.1.38
+
+### Details
+
+- Add a fullscreen image viewer in issue Details.
+- Keep native dialog close behavior for expanded Jira images.
+
+### Testing
+
+- Add unit and e2e coverage for image lightbox behavior.
+
 ## 0.1.37
 
 ### Details
