@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.44
+
+### Details
+
+- Refresh available Jira status transitions immediately after a status change in the open Details tab.
+- Keep the current status dropdown in sync without closing and reopening Details.
+- Disable the status dropdown when Jira returns no next transition choices.
+- Log sanitized transition refresh counts after status changes.
+
+### Testing
+
+- Add unit coverage for deterministic next status transitions in test mode.
+- Add e2e coverage for consecutive status changes inside one Details tab.
+- Verify the prototype with MCP Playwright through the local prototype server.
+
 ## 0.1.43
 
 ### Dashboard

@@ -31,7 +31,7 @@ interface DashboardDetailButtonState {
 }
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.43 release notes', async () => {
+  test('User can review JiraOps 0.1.44 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -45,11 +45,11 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.43 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.44 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'hover'
+        'status transitions'
       );
-      await expect(whatsNewFrame.getByText('0.1.42')).toHaveCount(0);
+      await expect(whatsNewFrame.getByText('0.1.43')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -232,6 +232,15 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         detailFrame.getByRole('combobox', { name: 'Issue status' }).getByRole('option').first()
       ).toHaveText('Code Review');
+      await expectStatusOptions(detailFrame, [
+        { text: 'Code Review', value: '' },
+        { text: 'Done', value: '41' },
+      ]);
+      await expect(detailFrame.getByRole('combobox', { name: 'Issue status' })).toBeEnabled();
+      await detailFrame.getByRole('combobox', { name: 'Issue status' }).selectOption('41');
+      await expect(detailFrame.getByText('Status changed to Done.')).toBeVisible();
+      await expectStatusOptions(detailFrame, [{ text: 'Done', value: '' }]);
+      await expect(detailFrame.getByRole('combobox', { name: 'Issue status' })).toBeDisabled();
 
       const logWorkDialog = detailFrame.getByRole('dialog', { name: 'Log Work' });
       await expect(logWorkDialog).toBeHidden();
@@ -809,6 +818,29 @@ async function expectTableBordersAreVisible(table: Locator): Promise<void> {
     cellBorder: '1px',
     tableBorder: '1px',
   });
+}
+
+async function expectStatusOptions(
+  frame: Frame,
+  expectedOptions: readonly { readonly text: string; readonly value: string }[]
+): Promise<void> {
+  const select = frame.getByRole('combobox', { name: 'Issue status' });
+  await expect(select.getByRole('option')).toHaveText(
+    expectedOptions.map((option) => option.text)
+  );
+  const options = await select.evaluate((node) => {
+    if (!(node instanceof HTMLSelectElement)) {
+      return [];
+    }
+
+    return [...node.options].map((option) => {
+      return {
+        text: option.text,
+        value: option.value,
+      };
+    });
+  });
+  expect(options).toEqual(expectedOptions);
 }
 
 async function expectCompactDetailHeaderActions(frame: Frame): Promise<void> {

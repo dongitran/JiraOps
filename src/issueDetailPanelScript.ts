@@ -41,6 +41,41 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
         }
       }
 
+      function toTransitionOptionData(value) {
+        if (typeof value !== 'object' || value === null) {
+          return null;
+        }
+        if (typeof value.id !== 'string' || typeof value.toStatus !== 'string') {
+          return null;
+        }
+        return {
+          id: value.id,
+          toStatus: value.toStatus,
+        };
+      }
+
+      function replaceStatusOptions(status, transitions) {
+        const select = getStatusSelect();
+        if (select === null) {
+          return;
+        }
+        const currentOption = document.createElement('option');
+        currentOption.value = '';
+        currentOption.textContent = status;
+        currentOption.dataset.status = status;
+        currentOption.selected = true;
+        select.replaceChildren(currentOption);
+        for (const transition of transitions) {
+          const option = document.createElement('option');
+          option.value = transition.id;
+          option.textContent = transition.toStatus;
+          option.dataset.status = transition.toStatus;
+          select.append(option);
+        }
+        select.value = '';
+        select.disabled = transitions.length === 0;
+      }
+
       function setWorklogPending(pending) {
         const submit = document.querySelector('[data-detail-action="submit-worklog"]');
         if (submit instanceof HTMLButtonElement) {
@@ -365,6 +400,10 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
           select.value = '';
         }
         if (data.success === true && typeof data.status === 'string' && data.status.length > 0) {
+          if (Array.isArray(data.transitions)) {
+            replaceStatusOptions(data.status, data.transitions.map(toTransitionOptionData).filter(Boolean));
+            return;
+          }
           updateCurrentStatusOption(data.status);
         }
       }

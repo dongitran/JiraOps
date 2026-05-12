@@ -47,7 +47,10 @@ import {
   webLinkHost,
 } from './jiraOpsPanelSupport';
 import type { RemoteWebLink } from './remoteLinks';
-import { isJiraOpsTestMode } from './testModeData';
+import {
+  isJiraOpsTestMode,
+  resolveTestIssueTransitionsAfterTransition,
+} from './testModeData';
 import { TtlCache, type TtlCacheResult } from './ttlCache';
 
 const JIRA_DETAIL_CACHE_TTL_MS = 5 * 60_000;
@@ -67,6 +70,7 @@ export interface JiraOpsIssueDetailControllerOptions {
 export class JiraOpsIssueDetailController {
   private readonly issueDetailCache = new TtlCache<JiraIssueDetail>(JIRA_DETAIL_CACHE_TTL_MS);
   private readonly remoteLinksCache = new TtlCache<readonly RemoteWebLink[]>(JIRA_REMOTE_LINK_CACHE_TTL_MS);
+  private readonly transitionStatusByIssue = new Map<string, JiraIssueDetail['transitions']>();
 
   public constructor(private readonly options: JiraOpsIssueDetailControllerOptions) {}
 
@@ -104,7 +108,8 @@ export class JiraOpsIssueDetailController {
   public clearCaches(): void {
     this.issueDetailCache.clear();
     this.remoteLinksCache.clear();
-    this.options.outputChannel.appendLine('Cleared cached Jira issue details and remote links.');
+    this.transitionStatusByIssue.clear();
+    this.options.outputChannel.appendLine('Cleared cached Jira issue details, remote links, and transition metadata.');
   }
 
   private async loadBundleWithLoaders(
@@ -146,12 +151,14 @@ export class JiraOpsIssueDetailController {
     const cached = this.issueDetailCache.get(issueKey);
     this.logCacheResult('Jira issue detail', issueKey, cached);
     if (cached.status === 'hit') {
+      this.transitionStatusByIssue.set(issueKey, cached.value.transitions);
       return cached.value;
     }
 
     this.options.outputChannel.appendLine(`Fetching Jira issue detail for ${issueKey}.`);
     const detail = await loadDetail(issueKey);
     this.issueDetailCache.set(issueKey, detail);
+    this.transitionStatusByIssue.set(issueKey, detail.transitions);
     this.options.outputChannel.appendLine(
       `Loaded Jira issue detail for ${issueKey} with ${String(detail.comments.length)} comment(s), ${String(detail.attachments.length)} attachment(s), ${String(countIssueImageAttachments(detail))} image attachment(s), ${String(countIssueDescriptionAdfMediaNodes(detail))} description ADF media node(s), ${String(countInlineIssueDescriptionImages(detail))} inline description image(s), ${String(countInlineIssueCommentImages(detail))} inline comment image(s), ${String(countRenderedInlineIssueDescriptionImageHints(detail))} rendered inline image hint(s), ${String(countCapturedIssueAttachmentMediaIds(detail))} captured media file id hint(s), ${String(countUnavailableInlineIssueDescriptionImages(detail))} unavailable inline description image placeholder(s), and ${String(countUnavailableInlineIssueCommentImages(detail))} unavailable inline comment image placeholder(s).`
     );
@@ -241,13 +248,19 @@ export class JiraOpsIssueDetailController {
   ): Promise<IssueDetailActionResult> {
     const status = this.resolveTransitionStatus(issueKey, transitionId);
     this.options.outputChannel.appendLine(`Changing Jira issue status for ${issueKey} with transition ${transitionId}.`);
-    if (!isJiraOpsTestMode()) {
+    let transitions: JiraIssueDetail['transitions'] = [];
+    if (isJiraOpsTestMode()) {
+      transitions = resolveTestIssueTransitionsAfterTransition(issueKey, transitionId);
+    } else {
       const tokens = await this.requireStoredTokens();
       await transitionJiraIssue({ accessToken: tokens.accessToken, cloudId: tokens.cloudId, issueKey, transitionId });
+      transitions = await this.loadIssueTransitionsWithTokens(tokens, issueKey);
     }
+    this.options.outputChannel.appendLine(`Resolved ${String(transitions.length)} next Jira issue transition(s) for ${issueKey} after status change.`);
+    this.transitionStatusByIssue.set(issueKey, transitions);
     this.issueDetailCache.delete(issueKey);
     await this.refreshDashboardAfterDetailAction();
-    return { message: `Status changed to ${status.length > 0 ? status : 'the selected status'}.`, status };
+    return { message: `Status changed to ${status.length > 0 ? status : 'the selected status'}.`, status, transitions };
   }
 
   private async logWork(
@@ -289,10 +302,11 @@ export class JiraOpsIssueDetailController {
 
   private resolveTransitionStatus(issueKey: string, transitionId: string): string {
     const cached = this.issueDetailCache.get(issueKey);
-    if (cached.status !== 'hit') {
-      return '';
-    }
-    return cached.value.transitions.find((transition) => transition.id === transitionId)?.toStatus ?? '';
+    const transitions =
+      cached.status === 'hit'
+        ? cached.value.transitions
+        : this.transitionStatusByIssue.get(issueKey) ?? [];
+    return transitions.find((transition) => transition.id === transitionId)?.toStatus ?? '';
   }
 
   private async refreshDashboardAfterDetailAction(): Promise<void> {

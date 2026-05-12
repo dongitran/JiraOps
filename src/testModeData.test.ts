@@ -5,6 +5,7 @@ import {
   resolveTestAssignedIssues,
   resolveTestIssueLatestChangelog,
   resolveTestIssueDetail,
+  resolveTestIssueTransitionsAfterTransition,
   resolveTestRemoteLinks,
 } from './testModeData';
 
@@ -199,6 +200,18 @@ describe('testModeData', () => {
       key: 'OPS-000',
       summary: 'Test issue',
     });
+  });
+
+  test('returns deterministic next issue transitions after a status change', () => {
+    expect(resolveTestIssueTransitionsAfterTransition('OPS-123', '31')).toEqual([
+      {
+        id: '41',
+        name: 'Resolve',
+        toStatus: 'Done',
+      },
+    ]);
+    expect(resolveTestIssueTransitionsAfterTransition('OPS-123', '41')).toEqual([]);
+    expect(resolveTestIssueTransitionsAfterTransition('OPS-000', '31')).toEqual([]);
   });
 
   test('reads the JiraOps test mode flag from the environment', () => {

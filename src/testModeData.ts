@@ -1,4 +1,4 @@
-import type { JiraIssueDetail } from './jiraIssueDetails';
+import type { JiraIssueDetail, JiraIssueTransition } from './jiraIssueDetails';
 import type {
   JiraAssignedIssue,
   JiraIssueActivityEntry,
@@ -160,6 +160,18 @@ export function resolveTestIssueDetail(issueKey: string): JiraIssueDetail {
 
   const issue = resolveTestAssignedIssues().find((item) => item.key === issueKey);
   return createDefaultIssueDetail(issueKey, issue?.summary ?? 'Test issue');
+}
+
+export function resolveTestIssueTransitionsAfterTransition(
+  issueKey: string,
+  transitionId: string
+): JiraIssueTransition[] {
+  const detail = resolveTestIssueDetail(issueKey);
+  if (issueKey === 'OPS-123' && transitionId === '31') {
+    return detail.transitions.filter((transition) => transition.id === '41');
+  }
+
+  return [];
 }
 
 export function resolveTestIssueLatestChangelog(

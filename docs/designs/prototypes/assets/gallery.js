@@ -143,37 +143,37 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.43 Release</span>
+        <span>JiraOps 0.1.44 Release</span>
         <h1>What Is New</h1>
-        <p>Dashboard ticket Details stay out of the way until a ticket is in focus.</p>
+        <p>Issue Details now refresh available status choices after a status change.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.43</strong>
-          <p>Assigned ticket cards keep a calmer scan path while Details remains quick to open.</p>
+          <strong>Release 0.1.44</strong>
+          <p>Status workflows stay current inside the already-open Details tab.</p>
         </div>
         <span>🚀</span>
       </section>
       <section class="whats-new-grid" aria-label="Release highlights">
         <article>
           <span aria-hidden="true">📌</span>
-          <strong>Dashboard</strong>
-          <p>Details appears when hovering a ticket card on mouse devices.</p>
+          <strong>Status</strong>
+          <p>Changing status refreshes the next available Jira transitions in place.</p>
         </article>
         <article>
           <span aria-hidden="true">🧾</span>
-          <strong>Keyboard</strong>
-          <p>Details also appears when keyboard focus enters the ticket card.</p>
+          <strong>Details</strong>
+          <p>The open detail tab no longer needs to be closed and reopened for new choices.</p>
         </article>
         <article>
           <span aria-hidden="true">🔁</span>
-          <strong>Touch</strong>
-          <p>Touch devices keep the Details button visible because hover is not available.</p>
+          <strong>Dashboard</strong>
+          <p>Assigned ticket refresh still runs after a detail action completes.</p>
         </article>
         <article>
           <span aria-hidden="true">✅</span>
           <strong>Testing</strong>
-          <p>Coverage checks hover reveal, focus reveal, layout stability, and notification scope.</p>
+          <p>Coverage checks refreshed transition options and deterministic status flows.</p>
         </article>
       </section>
     </article>
@@ -702,18 +702,33 @@ function applyPrototypeStatusTransition(select, issue) {
     return;
   }
 
+  const transitionId = select.value;
   const nextStatus = select.selectedOptions[0]?.dataset.status ?? '';
   select.disabled = true;
   setDetailActionStatus('Updating status…');
   issue.status = nextStatus.length > 0 ? nextStatus : issue.status;
-  const currentOption = select.querySelector('option[value=""]');
-  if (currentOption instanceof HTMLOptionElement) {
-    currentOption.textContent = issue.status;
-    currentOption.dataset.status = issue.status;
+  issue.transitions = resolvePrototypeTransitionsAfterStatusChange(issue, transitionId);
+  replacePrototypeStatusOptions(select, issue.status, issue.transitions);
+  select.disabled = issue.transitions.length === 0;
+  setDetailActionStatus(`Status changed to ${issue.status}.`);
+}
+
+function replacePrototypeStatusOptions(select, currentStatus, transitions) {
+  const currentOption = new Option(currentStatus, '', true, true);
+  currentOption.dataset.status = currentStatus;
+  select.replaceChildren(currentOption);
+  for (const transition of transitions) {
+    const option = new Option(transition.toStatus, transition.id);
+    option.dataset.status = transition.toStatus;
+    select.append(option);
   }
   select.value = '';
-  select.disabled = false;
-  setDetailActionStatus(`Status changed to ${issue.status}.`);
+}
+
+function resolvePrototypeTransitionsAfterStatusChange(issue, transitionId) {
+  return issue.transitions.filter((transition) => {
+    return transition.id !== transitionId && transition.toStatus !== issue.status;
+  });
 }
 
 function openPrototypeWorklogDialog() {

@@ -43,6 +43,7 @@ export interface IssueDetailActionHandlers {
 export interface IssueDetailActionResult {
   readonly message: string;
   readonly status?: string;
+  readonly transitions?: readonly JiraIssueTransition[];
 }
 
 interface IssueDetailPanelHandleOptions {
@@ -232,6 +233,7 @@ async function runDetailAction(
       message: result.message,
       status: result.status ?? '',
       success: true,
+      transitions: result.transitions,
     });
   } catch (error) {
     const message =
@@ -248,7 +250,7 @@ async function runDetailAction(
 
 async function postDetailActionResult(
   webview: vscode.Webview,
-  result: { readonly message: string; readonly status: string; readonly success: boolean }
+  result: { readonly message: string; readonly status: string; readonly success: boolean; readonly transitions?: readonly JiraIssueTransition[] | undefined }
 ): Promise<void> {
   await webview.postMessage({
     type: 'jiraOps.detailActionResult',
