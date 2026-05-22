@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.45
+
+### Notifications
+
+- Improve batch notification toast copy with issue-key coverage plus a short latest-activity preview.
+- Keep single-update toast copy concise by reusing the activity title directly.
+- Add a direct **Open Notifications** toast action so users can jump to the notification list immediately.
+
+### Testing
+
+- Add unit coverage for multi-update toast preview formatting and single-update title behavior.
+- Validate root typecheck/lint/cspell/unit tests and e2e static validation checks.
+
 ## 0.1.44
 
 ### Details

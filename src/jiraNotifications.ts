@@ -166,6 +166,46 @@ export async function rebuildIssueActivityNotificationHistory(options: {
     .map((notification) => ({ ...notification, unread: false }));
 }
 
+
+
+function compactNotificationSnippet(value: string, limit: number): string {
+  const normalized = value.replace(/\s+/gu, ' ').trim();
+  if (normalized.length <= limit) {
+    return normalized;
+  }
+  return `${normalized.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
+}
+
+export function buildNotificationToastMessage(
+  notifications: readonly JiraOpsNotification[]
+): string {
+  if (notifications.length === 0) {
+    return 'JiraOps checked assigned issue updates. No new activity found.';
+  }
+
+  if (notifications.length === 1) {
+    return notifications[0]?.title ?? 'JiraOps found an assigned issue update.';
+  }
+
+  const uniqueIssueKeys = Array.from(
+    new Set(notifications.map((notification) => notification.issueKey))
+  );
+  const previewIssueKeys = uniqueIssueKeys.slice(0, 5).join(', ');
+  const remainingIssues = uniqueIssueKeys.length - 5;
+  const tail =
+    remainingIssues > 0 ? `, and ${String(remainingIssues)} more issue(s)` : '';
+  const latestItems = notifications.slice(0, 2).map((notification) => {
+    const title = compactNotificationSnippet(notification.title, 56);
+    const detail = compactNotificationSnippet(notification.detail, 72);
+    return `• ${title} — ${detail}`;
+  });
+  if (notifications.length > 2) {
+    latestItems.push('• …');
+  }
+  const latestBlock = latestItems.join('\n');
+  return `🔔 JiraOps found ${String(notifications.length)} updates across ${String(uniqueIssueKeys.length)} issue(s).\n📌 Issues: ${previewIssueKeys}${tail}\n🧾 Latest:\n${latestBlock}`;
+}
+
 export function formatNotificationLogSummary(
   notifications: readonly JiraOpsNotification[]
 ): string {

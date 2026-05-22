@@ -16,6 +16,7 @@ import {
   enrichIssueUpdateNotification,
   markAllNotificationsRead,
   normalizeJiraOpsNotificationState,
+  buildNotificationToastMessage,
   readJiraOpsNotificationState,
   rebuildIssueActivityNotificationHistory,
   rebuildAssignedIssueNotificationHistory,
@@ -507,4 +508,44 @@ describe('JiraOps assigned issue notifications', () => {
       notifications: notification.notifications,
     });
   });
+});
+
+
+test('builds detailed toast copy for multi-issue notification batches', () => {
+  const message = buildNotificationToastMessage([
+    { id: 'OPS-100:1', issueKey: 'OPS-100', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-101:1', issueKey: 'OPS-101', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-102:1', issueKey: 'OPS-102', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-103:1', issueKey: 'OPS-103', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-104:1', issueKey: 'OPS-104', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-105:1', issueKey: 'OPS-105', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+  ]);
+  expect(message).toContain('🔔 JiraOps found 6 updates across 6 issue(s).');
+  expect(message).toContain('📌 Issues: OPS-100, OPS-101, OPS-102, OPS-103, OPS-104, and 1 more issue(s)');
+  expect(message).toContain('🧾 Latest:\n• a — a\n• a — a\n• …');
+});
+
+
+test('uses single notification title for one-item toast copy', () => {
+  const message = buildNotificationToastMessage([
+    { id: 'OPS-123:1', issueKey: 'OPS-123', title: 'Current User updated Bug OPS-123', detail: 'd', updated: '2026-05-01T08:24:00.000Z', unread: true },
+  ]);
+  expect(message).toBe('Current User updated Bug OPS-123');
+});
+
+
+test('truncates long latest activity snippets in multi-item toast copy', () => {
+  const message = buildNotificationToastMessage([
+    {
+      id: 'OPS-200:1',
+      issueKey: 'OPS-200',
+      title: 'Current User updated Bug OPS-200 with a very long title that should be shortened for toast readability',
+      detail: 'Changed status to In Progress and included extra operational context that should be shortened for compact toasts',
+      updated: '2026-05-01T08:24:00.000Z',
+      unread: true,
+    },
+    { id: 'OPS-201:1', issueKey: 'OPS-201', title: 'Second', detail: 'Second detail', updated: '2026-05-01T08:24:00.000Z', unread: true },
+  ]);
+  expect(message).toContain('🧾 Latest:\n• Current User updated Bug OPS-200 with a very long title');
+  expect(message).toContain('Changed status to In Progress and included extra operational context');
 });

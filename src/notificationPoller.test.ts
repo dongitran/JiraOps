@@ -192,7 +192,7 @@ describe('NotificationPoller', () => {
       'Logged work · Ticket summary hidden from logs'
     );
     expect(logs.join('\n')).toContain(
-      'Jira activity enrichment finished: attempted=1, activityNotifications=2, fallback=0.'
+      'Jira activity enrichment finished: attempted=1, activityNotifications=2, fallback=0, suppressed=0.'
     );
     expect(logs.join('\n')).not.toContain('Ticket summary hidden from logs');
     expect(logs.join('\n')).not.toContain('Current User');
@@ -230,10 +230,43 @@ describe('NotificationPoller', () => {
       detail: 'Ticket summary hidden from logs',
     });
     expect(logs.join('\n')).toContain(
-      'Jira activity enrichment finished: attempted=1, activityNotifications=0, fallback=1.'
+      'Jira activity enrichment finished: attempted=1, activityNotifications=0, fallback=1, suppressed=0.'
     );
   });
 
+
+
+  test('suppresses updated notifications when Jira activity feed has nothing new', async () => {
+    const logs: string[] = [];
+    const results: IssueUpdateNotificationResult[] = [];
+    const poller = new NotificationPoller({
+      fetchIssueActivities: () => Promise.resolve([]),
+      fetchIssues: () =>
+        Promise.resolve([assignedIssue('OPS-123', '2026-05-01T08:24:00.000Z')]),
+      log: (message) => {
+        logs.push(message);
+      },
+      onError: () => undefined,
+      onIssues: () => undefined,
+      onNotifications: (result) => {
+        results.push(result);
+      },
+      readSettings: () => Promise.resolve(defaultSettings()),
+    });
+    poller.restore({
+      baseline: {
+        'OPS-123': '2026-05-01T08:20:00.000Z',
+      },
+      notifications: [],
+    });
+
+    await expect(poller.pollNow('manual')).resolves.toBe(true);
+
+    expect(results[0]?.newNotifications).toEqual([]);
+    expect(logs.join('\n')).toContain(
+      'Jira activity enrichment finished: attempted=1, activityNotifications=0, fallback=0, suppressed=1.'
+    );
+  });
   test('uses activity copy for newly relevant issues after baseline', async () => {
     const results: IssueUpdateNotificationResult[] = [];
     const fetchIssueActivities = vi.fn(() =>

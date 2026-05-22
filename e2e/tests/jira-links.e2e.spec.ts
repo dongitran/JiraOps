@@ -31,7 +31,7 @@ interface DashboardDetailButtonState {
 }
 
 test.describe('Jira Ops assigned ticket workflow', () => {
-  test('User can review JiraOps 0.1.44 release notes', async () => {
+  test('User can review JiraOps 0.1.45 release notes', async () => {
     const session = await launchExtensionHost({
       env: {
         JIRA_OPS_FORCE_WHATS_NEW: '1',
@@ -45,7 +45,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         whatsNewFrame.getByRole('heading', { name: 'What Is New' })
       ).toBeVisible();
-      await expect(whatsNewFrame.getByText('JiraOps 0.1.44 Release')).toBeVisible();
+      await expect(whatsNewFrame.getByText('JiraOps 0.1.45 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
         'status transitions'
       );

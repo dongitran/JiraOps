@@ -143,13 +143,13 @@ function renderWhatsNewPanel() {
   editorSurface.innerHTML = `
     <article class="editor-whats-new" aria-label="JiraOps release notes">
       <header class="editor-whats-new-header">
-        <span>JiraOps 0.1.44 Release</span>
+        <span>JiraOps 0.1.45 Release</span>
         <h1>What Is New</h1>
         <p>Issue Details now refresh available status choices after a status change.</p>
       </header>
       <section class="whats-new-hero" aria-label="Release summary">
         <div>
-          <strong>Release 0.1.44</strong>
+          <strong>Release 0.1.45</strong>
           <p>Status workflows stay current inside the already-open Details tab.</p>
         </div>
         <span>🚀</span>
