@@ -16,6 +16,7 @@ import {
   enrichIssueUpdateNotification,
   markAllNotificationsRead,
   normalizeJiraOpsNotificationState,
+  buildNotificationToastMessage,
   readJiraOpsNotificationState,
   rebuildIssueActivityNotificationHistory,
   rebuildAssignedIssueNotificationHistory,
@@ -507,4 +508,26 @@ describe('JiraOps assigned issue notifications', () => {
       notifications: notification.notifications,
     });
   });
+});
+
+
+test('builds detailed toast copy for multi-issue notification batches', () => {
+  const message = buildNotificationToastMessage([
+    { id: 'OPS-100:1', issueKey: 'OPS-100', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-101:1', issueKey: 'OPS-101', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-102:1', issueKey: 'OPS-102', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-103:1', issueKey: 'OPS-103', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-104:1', issueKey: 'OPS-104', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+    { id: 'OPS-105:1', issueKey: 'OPS-105', title: 'a', detail: 'a', updated: '2026-05-01T08:24:00.000Z', unread: true },
+  ]);
+  expect(message).toContain('6 new updates across 6 issue(s): OPS-100, OPS-101, OPS-102, OPS-103, OPS-104, and 1 more issue(s).');
+  expect(message).toContain('Latest: a • a • …');
+});
+
+
+test('uses single notification title for one-item toast copy', () => {
+  const message = buildNotificationToastMessage([
+    { id: 'OPS-123:1', issueKey: 'OPS-123', title: 'Current User updated Bug OPS-123', detail: 'd', updated: '2026-05-01T08:24:00.000Z', unread: true },
+  ]);
+  expect(message).toBe('Current User updated Bug OPS-123');
 });

@@ -166,6 +166,33 @@ export async function rebuildIssueActivityNotificationHistory(options: {
     .map((notification) => ({ ...notification, unread: false }));
 }
 
+
+export function buildNotificationToastMessage(
+  notifications: readonly JiraOpsNotification[]
+): string {
+  if (notifications.length === 0) {
+    return 'JiraOps checked assigned issue updates. No new activity found.';
+  }
+
+  if (notifications.length === 1) {
+    return notifications[0]?.title ?? 'JiraOps found an assigned issue update.';
+  }
+
+  const uniqueIssueKeys = Array.from(
+    new Set(notifications.map((notification) => notification.issueKey))
+  );
+  const previewIssueKeys = uniqueIssueKeys.slice(0, 5).join(', ');
+  const remainingIssues = uniqueIssueKeys.length - 5;
+  const tail =
+    remainingIssues > 0 ? `, and ${String(remainingIssues)} more issue(s)` : '';
+  const activityPreview = notifications
+    .slice(0, 2)
+    .map((notification) => notification.title)
+    .join(' • ');
+  const activityTail = notifications.length > 2 ? ' • …' : '';
+  return `JiraOps found ${String(notifications.length)} new updates across ${String(uniqueIssueKeys.length)} issue(s): ${previewIssueKeys}${tail}. Latest: ${activityPreview}${activityTail}`;
+}
+
 export function formatNotificationLogSummary(
   notifications: readonly JiraOpsNotification[]
 ): string {

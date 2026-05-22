@@ -31,6 +31,7 @@ import {
   markIssueNotificationsRead,
   rebuildIssueActivityNotificationHistory,
   seedAssignedIssueNotificationHistory,
+  buildNotificationToastMessage,
   type IssueUpdateBaseline,
   type IssueUpdateNotificationResult,
   type JiraOpsNotification,
@@ -642,16 +643,14 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       return;
     }
 
-    if (count === 1) {
-      void vscode.window.showInformationMessage(
-        result.newNotifications[0]?.title ?? 'JiraOps found an assigned issue update.'
-      );
-      return;
-    }
-
     void vscode.window.showInformationMessage(
-      `JiraOps found ${String(count)} assigned issue updates.`
-    );
+      buildNotificationToastMessage(result.newNotifications),
+      'Open Notifications'
+    ).then((selection) => {
+      if (selection === 'Open Notifications') {
+        void this.handleOpenNotifications();
+      }
+    });
   }
 
   private handleNotificationPollError(error: unknown): void {
