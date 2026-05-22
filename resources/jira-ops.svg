@@ -1,11 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <g transform="translate(-1.2 -1.2) scale(1.1)">
-    <path d="M12 7V4M12 20v-3M7 12H4M20 12h-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-    <circle cx="12" cy="4" r="1.45" fill="currentColor"/>
-    <circle cx="20" cy="12" r="1.45" fill="currentColor"/>
-    <circle cx="12" cy="20" r="1.45" fill="currentColor"/>
-    <circle cx="4" cy="12" r="1.45" fill="currentColor"/>
-    <path d="M9.6 7.8h4.8a1.8 1.8 0 0 1 1.8 1.8v4.8a1.8 1.8 0 0 1-1.8 1.8H9.6a1.8 1.8 0 0 1-1.8-1.8V9.6a1.8 1.8 0 0 1 1.8-1.8Z" stroke="currentColor" stroke-width="1.8"/>
-    <path d="M10 11h4M10 13.5h2.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-  </g>
+  <path d="M12 6.2V3.2M12 20.8v-3M6.2 12H3.2M20.8 12h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="12" cy="1.6" r="1.6" fill="currentColor"/>
+  <circle cx="22.4" cy="12" r="1.6" fill="currentColor"/>
+  <circle cx="12" cy="22.4" r="1.6" fill="currentColor"/>
+  <circle cx="1.6" cy="12" r="1.6" fill="currentColor"/>
+  <path d="M9.2 7.4h5.6a2 2 0 0 1 2 2v5.6a2 2 0 0 1-2 2H9.2a2 2 0 0 1-2-2V9.4a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.9"/>
+  <path d="M9.8 10.8h4.4M9.8 13.8h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
 </svg>
