@@ -47,7 +47,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       ).toBeVisible();
       await expect(whatsNewFrame.getByText('JiraOps 0.1.45 Release')).toBeVisible();
       await expect(whatsNewFrame.getByLabel('Release highlights')).toContainText(
-        'status transitions'
+        'notification toast copy'
       );
       await expect(whatsNewFrame.getByText('0.1.43')).toHaveCount(0);
     } finally {

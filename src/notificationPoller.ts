@@ -41,6 +41,7 @@ interface ActivityEnrichmentResult {
   readonly fallback: boolean;
   readonly notifications: readonly JiraOpsNotification[];
   readonly replaceNotificationId: string;
+  readonly suppressed: boolean;
 }
 
 export class NotificationPoller {
@@ -176,10 +177,20 @@ export class NotificationPoller {
     });
 
     if (notifications.length === 0) {
+      if (candidate.previousUpdated !== undefined) {
+        return {
+          fallback: false,
+          notifications: [],
+          replaceNotificationId: candidate.notification.id,
+          suppressed: true,
+        };
+      }
+
       return {
         fallback: true,
         notifications: [candidate.notification],
         replaceNotificationId: candidate.notification.id,
+        suppressed: false,
       };
     }
 
@@ -190,6 +201,7 @@ export class NotificationPoller {
         unread: candidate.notification.unread,
       })),
       replaceNotificationId: candidate.notification.id,
+      suppressed: false,
     };
   }
 
@@ -268,7 +280,7 @@ function mergeEnrichedNotifications(
 ): IssueUpdateNotificationResult {
   const { replacementsById, stats } = summarizeActivityEnrichment(settled);
   log(
-    `Jira activity enrichment finished: attempted=${String(stats.attempted)}, activityNotifications=${String(stats.activityNotifications)}, fallback=${String(stats.fallback)}.`
+    `Jira activity enrichment finished: attempted=${String(stats.attempted)}, activityNotifications=${String(stats.activityNotifications)}, fallback=${String(stats.fallback)}, suppressed=${String(stats.suppressed)}.`
   );
   return {
     ...result,
@@ -289,11 +301,13 @@ function summarizeActivityEnrichment(
     readonly activityNotifications: number;
     readonly attempted: number;
     readonly fallback: number;
+    readonly suppressed: number;
   };
 } {
   const replacementsById = new Map<string, readonly JiraOpsNotification[]>();
   let activityNotifications = 0;
   let fallback = 0;
+  let suppressed = 0;
   for (const item of settled) {
     if (item.status === 'rejected') {
       fallback += 1;
@@ -302,9 +316,10 @@ function summarizeActivityEnrichment(
     replacementsById.set(item.value.replaceNotificationId, item.value.notifications);
     activityNotifications += item.value.fallback ? 0 : item.value.notifications.length;
     fallback += item.value.fallback ? 1 : 0;
+    suppressed += item.value.suppressed ? 1 : 0;
   }
   return {
     replacementsById,
-    stats: { activityNotifications, attempted: settled.length, fallback },
+    stats: { activityNotifications, attempted: settled.length, fallback, suppressed },
   };
 }
