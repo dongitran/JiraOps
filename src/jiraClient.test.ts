@@ -51,7 +51,16 @@ describe('jiraClient', () => {
     );
     expect(buildAssignedIssuesSearchBody()).toEqual({
       jql: 'assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC',
-      fields: ['summary', 'status', 'priority', 'assignee', 'updated', 'issuetype'],
+      fields: [
+        'summary',
+        'status',
+        'priority',
+        'assignee',
+        'updated',
+        'issuetype',
+        'timetracking',
+        'timespent',
+      ],
       maxResults: 25,
     });
   });
@@ -167,6 +176,7 @@ describe('jiraClient', () => {
                     name: 'Bug',
                   },
                   updated: '2026-05-01T08:20:00.000+0000',
+                  timespent: 9000,
                 },
               },
             ],
@@ -192,6 +202,7 @@ describe('jiraClient', () => {
         assigneeDisplayName: 'Current User',
         issueType: 'Bug',
         updated: '2026-05-01T08:20:00.000+0000',
+        timeSpentSeconds: 9000,
       },
     ]);
     expect(fetchMock).toHaveBeenCalledWith(

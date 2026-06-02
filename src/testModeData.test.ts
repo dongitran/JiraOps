@@ -21,6 +21,7 @@ describe('testModeData', () => {
         priority: 'High',
         assigneeDisplayName: 'Current User',
         updated: '2026-05-01T08:20:00.000+0000',
+        timeSpentSeconds: 12_600,
       },
       {
         key: 'OPS-456',
@@ -31,6 +32,7 @@ describe('testModeData', () => {
         priority: 'Medium',
         assigneeDisplayName: 'Current User',
         updated: '2026-05-01T06:05:00.000+0000',
+        timeSpentSeconds: 3_600,
       },
       {
         key: 'OPS-321',
@@ -41,6 +43,7 @@ describe('testModeData', () => {
         priority: 'High',
         assigneeDisplayName: 'Current User',
         updated: '2026-05-01T05:15:00.000+0000',
+        timeSpentSeconds: 95_400,
       },
       {
         key: 'OPS-900',
@@ -51,6 +54,7 @@ describe('testModeData', () => {
         priority: 'Medium',
         assigneeDisplayName: 'Current User',
         updated: '2026-05-01T04:45:00.000+0000',
+        timeSpentSeconds: null,
       },
       {
         key: 'OPS-789',
@@ -61,6 +65,7 @@ describe('testModeData', () => {
         priority: 'Low',
         assigneeDisplayName: 'Current User',
         updated: '2026-04-30T17:45:00.000+0000',
+        timeSpentSeconds: null,
       },
     ]);
   });

@@ -13,6 +13,7 @@ export interface DashboardIssue {
   readonly statusCategory: string;
   readonly priority: string;
   readonly updated: string;
+  readonly timeSpentSeconds: number | null;
   readonly mergeRequests: readonly MergeRequestLink[];
   readonly cloneMergeRequests: readonly CloneMergeRequestLink[];
   readonly linkedCloneIssues: readonly JiraLinkedCloneIssue[];
@@ -47,6 +48,7 @@ export function createDashboardIssue(
     statusCategory: issue.statusCategory,
     priority: issue.priority ?? 'No priority',
     updated: issue.updated,
+    timeSpentSeconds: issue.timeSpentSeconds ?? null,
     mergeRequests: extractGitLabMergeRequests(webLinks),
     cloneMergeRequests: extractCloneMergeRequests(options.cloneWebLinks ?? []),
     linkedCloneIssues: options.linkedCloneIssues ?? [],

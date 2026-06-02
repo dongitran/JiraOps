@@ -17,6 +17,7 @@ issue details in a wider VS Code editor tab.
 - **GitLab MR focus:** keep assigned-ticket cards compact and show direct plus clone-linked merge requests in Details.
 - **Clone-linked MR porting:** clone a linked GitLab merge request into another group from Details.
 - **Wide issue details:** open a selected issue immediately with a loading state, then show formatted Jira content, inline description images, comments, image attachments, merge requests, and Jira web links.
+- **Total logged work:** surface the total work logged on each assigned ticket card and in the Details header, formatted with the Jira working calendar.
 - **Detail actions:** change available Jira statuses and log focused work time from the wide Details tab.
 - **Assigned issue update notifications:** poll Jira in the background, refresh assigned tickets from the same result, persist local unread history, and surface unread updates in the sidebar.
 - **Cached detail reopen:** reuse fresh issue detail and remote-link cache entries so recently opened Details can reopen without another loading state.

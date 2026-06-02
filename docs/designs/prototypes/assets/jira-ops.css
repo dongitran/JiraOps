@@ -582,6 +582,20 @@ a:focus-visible {
   color: var(--success-color);
 }
 
+.issue-meta-row .issue-meta-worklog {
+  flex: 0 0 auto;
+  color: var(--accent-color);
+  border-color: color-mix(in oklab, var(--accent-color) 42%, var(--border-color));
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.issue-meta-row .issue-meta-worklog::before {
+  content: '\23F1\FE0E';
+  margin-right: 3px;
+  opacity: 0.85;
+}
+
 .mr-section {
   display: grid;
   gap: 4px;
@@ -1344,6 +1358,30 @@ a:focus-visible {
 .detail-log-work-button:hover,
 .detail-dialog-primary:hover {
   filter: brightness(1.05);
+}
+
+.detail-meta-key-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.detail-logged-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-color);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-logged-time::before {
+  content: '\23F1\FE0E';
+  opacity: 0.85;
 }
 
 .detail-dialog-secondary:hover,

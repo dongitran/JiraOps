@@ -17,6 +17,7 @@ function dashboardIssue(): DashboardIssue {
     statusCategory: 'In Progress',
     summary: 'Stabilize payment reconciliation alerts',
     updated: '2026-05-01T08:20:00.000Z',
+    timeSpentSeconds: 12_600,
     webLinks: [],
   };
 }
@@ -41,6 +42,7 @@ function issueDetail(): JiraIssueDetail {
     status: 'In Progress',
     statusCategory: 'In Progress',
     summary: 'Stabilize payment reconciliation alerts',
+    timeSpentSeconds: 12_600,
     transitions: [],
     updated: '2026-05-01T08:20:00.000Z',
   };

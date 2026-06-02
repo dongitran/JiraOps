@@ -41,6 +41,7 @@ const MOCK_ISSUES = [
     statusCategory: 'In Progress',
     priority: 'High',
     updated: '2026-05-01T08:20:00.000Z',
+    timeSpentSeconds: 12600,
     description:
       'Reconciliation alerts fire too late when settlement batches arrive after the normal processing window. Tighten thresholds and keep on-call context visible.',
     descriptionHtml:
@@ -149,6 +150,7 @@ const MOCK_ISSUES = [
     statusCategory: 'In Progress',
     priority: 'Medium',
     updated: '2026-05-01T06:05:00.000Z',
+    timeSpentSeconds: 3600,
     description:
       'Confirm the checkout release has rollout toggles, rollback notes, and deployment observability before approving the release MR.',
     technicalNotesHtml: '',
@@ -199,6 +201,7 @@ const MOCK_ISSUES = [
     statusCategory: 'In Progress',
     priority: 'High',
     updated: '2026-05-01T05:15:00.000Z',
+    timeSpentSeconds: 95400,
     description:
       'This ticket tracks the cloned inventory cleanup task. The active implementation MR is attached to the cloned work item.',
     technicalNotesHtml: '',
@@ -783,6 +786,11 @@ function renderEmptyDashboard() {
 }
 
 function renderIssueCard(issue) {
+  const loggedTime = formatTimeSpent(issue.timeSpentSeconds);
+  const worklogChip =
+    loggedTime === null
+      ? ''
+      : `<span class="issue-meta-worklog" title="Total work logged">${escapeHtml(loggedTime)}</span>`;
   return `
     <article class="issue-card" aria-label="${escapeAttribute(issue.key)} assigned ticket">
       <div class="issue-card-header">
@@ -794,6 +802,7 @@ function renderIssueCard(issue) {
       </div>
       <div class="issue-meta-row" aria-label="${escapeAttribute(issue.key)} metadata">
         <span class="issue-meta-status status-chip" data-category="${escapeAttribute(issue.statusCategory)}">${escapeHtml(issue.status)}</span>
+        ${worklogChip}
         <span class="issue-meta-priority">${escapeHtml(issue.priority)}</span>
         <span class="issue-meta-updated">${escapeHtml(formatUpdated(issue.updated))}</span>
       </div>
@@ -1346,6 +1355,36 @@ function formatIssueSummary(summary) {
     .join('');
 }
 
+const WORKLOG_TIME_UNITS = [
+  { label: 'w', minutes: 60 * 8 * 5 },
+  { label: 'd', minutes: 60 * 8 },
+  { label: 'h', minutes: 60 },
+  { label: 'm', minutes: 1 },
+];
+
+function formatTimeSpent(totalSeconds, maxUnits = 2) {
+  if (typeof totalSeconds !== 'number' || !Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+    return null;
+  }
+
+  let remainingMinutes = Math.round(totalSeconds / 60);
+  if (remainingMinutes <= 0) {
+    return null;
+  }
+
+  const parts = [];
+  for (const unit of WORKLOG_TIME_UNITS) {
+    const value = Math.floor(remainingMinutes / unit.minutes);
+    if (value > 0) {
+      parts.push(`${String(value)}${unit.label}`);
+      remainingMinutes -= value * unit.minutes;
+    }
+  }
+
+  const limited = typeof maxUnits === 'number' && maxUnits > 0 ? parts.slice(0, maxUnits) : parts;
+  return limited.length > 0 ? limited.join(' ') : null;
+}
+
 function escapeHtml(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
@@ -1384,6 +1423,9 @@ function isDashboardIssue(value) {
     typeof value.statusCategory === 'string' &&
     typeof value.priority === 'string' &&
     typeof value.updated === 'string' &&
+    (value.timeSpentSeconds === null ||
+      value.timeSpentSeconds === undefined ||
+      typeof value.timeSpentSeconds === 'number') &&
     Array.isArray(value.mergeRequests) &&
     value.mergeRequests.every(isMergeRequestLink) &&
     Array.isArray(value.cloneMergeRequests) &&

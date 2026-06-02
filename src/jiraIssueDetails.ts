@@ -12,6 +12,7 @@ import {
   renderAdfHtmlSections,
   type AdfMediaImage,
 } from './jiraAdfRenderer';
+import { resolveTimeSpentSeconds } from './worklogFormat';
 
 export { extractTextFromAdf } from './jiraAdfRenderer';
 export {
@@ -69,6 +70,7 @@ export interface JiraIssueDetail {
   readonly statusCategory: string;
   readonly priority: string | null;
   readonly updated: string;
+  readonly timeSpentSeconds: number | null;
   readonly descriptionAdf?: unknown;
   readonly descriptionMediaAttachmentIds?: readonly string[];
   readonly descriptionText: string;
@@ -96,6 +98,8 @@ const ISSUE_DETAIL_FIELDS = [
   'comment',
   'attachment',
   'issuelinks',
+  'timetracking',
+  'timespent',
 ] as const;
 const DEFAULT_ATTACHMENT_IMAGE_LIMIT = 6;
 const IMAGE_TAG_PATTERN = /<img\b[^>]*>/giu;
@@ -173,6 +177,12 @@ const JiraIssueDetailResponseSchema = z.object({
     comment: z.union([z.array(CommentSchema), z.object({ comments: z.array(CommentSchema) })]).optional(),
     attachment: z.array(AttachmentSchema).optional(),
     issuelinks: z.array(IssueLinkSchema).optional(),
+    timespent: z.number().nullable().optional(),
+    timetracking: z
+      .object({
+        timeSpentSeconds: z.number().nonnegative().optional(),
+      })
+      .optional(),
   }),
 });
 
@@ -313,6 +323,10 @@ function parseJiraIssueDetail(responseBody: unknown): JiraIssueDetail {
     statusCategory: fields.status.statusCategory.name,
     priority: fields.priority?.name ?? null,
     updated: fields.updated,
+    timeSpentSeconds: resolveTimeSpentSeconds(
+      fields.timespent,
+      fields.timetracking?.timeSpentSeconds
+    ),
     descriptionAdf: fields.description ?? null,
     descriptionText: extractTextFromAdf(fields.description),
     descriptionHtml: descriptionSections.mainHtml,

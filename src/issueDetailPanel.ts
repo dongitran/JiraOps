@@ -9,6 +9,7 @@ import {
 import { ISSUE_DETAIL_SCRIPT_BODY } from './issueDetailPanelScript';
 import type { JiraIssueAttachment, JiraIssueComment, JiraIssueDetail, JiraIssueTransition } from './jiraIssueDetails';
 import { isCloneMergeRequestMessage, isLogWorkMessage, isOpenExternalLinkMessage, isTransitionIssueMessage } from './webviewMessages';
+import { formatJiraTimeSpent } from './worklogFormat';
 
 const WEBVIEW_ASSET_PATH = ['docs', 'designs', 'prototypes', 'assets'] as const;
 
@@ -424,7 +425,10 @@ function renderIssueDetailHeader(issue: DashboardIssue, detail: JiraIssueDetail)
         <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
       </div>
       <div class="detail-page-meta-row">
-        <span class="issue-key">${escapeHtml(issue.key)}</span>
+        <div class="detail-meta-key-group">
+          <span class="issue-key">${escapeHtml(issue.key)}</span>
+          ${renderLoggedTime(detail.timeSpentSeconds)}
+        </div>
         ${renderHeaderActions(issue, detail)}
       </div>
     </header>
@@ -462,6 +466,15 @@ function renderHeaderActions(issue: DashboardIssue, detail: JiraIssueDetail): st
       <p class="detail-action-status" role="status" aria-live="polite"></p>
     </div>
   `;
+}
+
+function renderLoggedTime(timeSpentSeconds: number | null): string {
+  const loggedTime = formatJiraTimeSpent(timeSpentSeconds);
+  if (loggedTime === null) {
+    return '';
+  }
+
+  return `<span class="detail-logged-time" title="Total work logged on this issue">${escapeHtml(loggedTime)} logged</span>`;
 }
 
 function renderTransitionOptions(

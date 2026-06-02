@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.46
+
+### Dashboard
+
+- Show the total work logged on each assigned ticket card as a compact `⏱ 3h 30m` chip beside the status.
+- Hide the worklog chip on tickets that have no logged time so cards without work stay clean.
+
+### Details
+
+- Show the total logged work next to the issue key in the wide Details header (`3h 30m logged`).
+- Request the Jira `timetracking` and `timespent` fields for assigned issues and issue details, preferring `timespent` and falling back to `timetracking.timeSpentSeconds`.
+- Format durations with the Jira working calendar (1d = 8h, 1w = 5d) so the totals match what Jira reports.
+
+### Testing
+
+- Add unit coverage for worklog duration formatting and time-spent field resolution.
+- Add e2e coverage asserting per-card worklog chips and the Details logged-work indicator.
+- Validate root typecheck/lint/cspell/unit tests and e2e static validation checks.
+
 ## 0.1.45
 
 ### Notifications

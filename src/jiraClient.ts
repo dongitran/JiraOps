@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 
 import { parseRemoteLinksResponse, type RemoteWebLink } from './remoteLinks';
+import { resolveTimeSpentSeconds } from './worklogFormat';
 
 export {
   buildJiraIssueCommentsUrl,
@@ -83,6 +84,7 @@ export interface JiraAssignedIssue {
   readonly priority: string | null;
   readonly assigneeDisplayName: string | null;
   readonly updated: string;
+  readonly timeSpentSeconds?: number | null;
 }
 
 export interface JiraIssueChangelogItem {
@@ -137,6 +139,8 @@ const ASSIGNED_ISSUE_FIELDS = [
   'assignee',
   'updated',
   'issuetype',
+  'timetracking',
+  'timespent',
 ] as const;
 const DEFAULT_ASSIGNED_ISSUE_LIMIT = 25;
 
@@ -166,6 +170,12 @@ const JiraAssignedIssueSchema = z.object({
       name: z.string().min(1),
     }),
     updated: z.string().min(1),
+    timespent: z.number().nullable().optional(),
+    timetracking: z
+      .object({
+        timeSpentSeconds: z.number().nonnegative().optional(),
+      })
+      .optional(),
   }),
 });
 
@@ -486,6 +496,10 @@ function parseAssignedIssuesResponse(responseBody: unknown): JiraAssignedIssue[]
       priority: issue.fields.priority?.name ?? null,
       assigneeDisplayName: issue.fields.assignee?.displayName ?? null,
       updated: issue.fields.updated,
+      timeSpentSeconds: resolveTimeSpentSeconds(
+        issue.fields.timespent,
+        issue.fields.timetracking?.timeSpentSeconds
+      ),
     };
   });
 }

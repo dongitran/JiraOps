@@ -97,6 +97,23 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
+  test('User can see total logged work on assigned ticket cards and details', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await expectIssueCardWorklog(frame);
+
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      await expect(
+        detailFrame.getByLabel('OPS-123 details').getByText('3h 30m logged')
+      ).toBeVisible();
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
   test('User can reveal dashboard Details controls on ticket hover', async () => {
     const session = await launchExtensionHost();
 
@@ -727,6 +744,20 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
     priority: 'none',
     updated: 'none',
   });
+}
+
+async function expectIssueCardWorklog(frame: Frame): Promise<void> {
+  const worklogText = (key: string): Promise<string[]> => {
+    return frame
+      .getByLabel(`${key} assigned ticket`)
+      .locator('.issue-meta-worklog')
+      .allTextContents();
+  };
+
+  expect(await worklogText('OPS-123')).toEqual(['3h 30m']);
+  expect(await worklogText('OPS-456')).toEqual(['1h']);
+  expect(await worklogText('OPS-321')).toEqual(['3d 2h']);
+  expect(await worklogText('OPS-900')).toEqual([]);
 }
 
 async function expectDashboardDetailButtonHoverReveal(frame: Frame): Promise<void> {

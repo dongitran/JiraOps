@@ -23,6 +23,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
       priority: 'High',
       assigneeDisplayName: 'Current User',
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: 12_600,
     },
     {
       key: 'OPS-456',
@@ -33,6 +34,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
       priority: 'Medium',
       assigneeDisplayName: 'Current User',
       updated: '2026-05-01T06:05:00.000+0000',
+      timeSpentSeconds: 3_600,
     },
     {
       key: 'OPS-321',
@@ -43,6 +45,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
       priority: 'High',
       assigneeDisplayName: 'Current User',
       updated: '2026-05-01T05:15:00.000+0000',
+      timeSpentSeconds: 95_400,
     },
     {
       key: 'OPS-900',
@@ -53,6 +56,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
       priority: 'Medium',
       assigneeDisplayName: 'Current User',
       updated: '2026-05-01T04:45:00.000+0000',
+      timeSpentSeconds: null,
     },
     {
       key: 'OPS-789',
@@ -63,6 +67,7 @@ export function resolveTestAssignedIssues(): JiraAssignedIssue[] {
       priority: 'Low',
       assigneeDisplayName: 'Current User',
       updated: '2026-04-30T17:45:00.000+0000',
+      timeSpentSeconds: null,
     },
   ];
   if (process.env['JIRA_OPS_TEST_MODE_NOTIFICATION_UPDATE'] !== '1') {
@@ -422,6 +427,7 @@ function createDefaultIssueDetail(issueKey: string, summary: string): JiraIssueD
     statusCategory: assignedIssue?.statusCategory ?? 'To Do',
     priority: assignedIssue?.priority ?? null,
     updated: assignedIssue?.updated ?? '2026-05-01T00:00:00.000+0000',
+    timeSpentSeconds: assignedIssue?.timeSpentSeconds ?? null,
     descriptionText: 'No description was provided for this test issue.',
     descriptionHtml: '<p>No description was provided for this test issue.</p>',
     activityHtml: '',

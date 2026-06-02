@@ -19,6 +19,7 @@ function createHydrationDetail(overrides: Partial<JiraIssueDetail> = {}): JiraIs
     statusCategory: 'In Progress',
     priority: null,
     updated: '2026-05-01T08:20:00.000+0000',
+    timeSpentSeconds: null,
     descriptionAdf: {
       type: 'doc',
       version: 1,
@@ -62,7 +63,7 @@ function createMediaDocument(filename: string, mediaId: string): unknown {
 describe('jira issue details', () => {
   test('builds issue detail and attachment thumbnail URLs safely', () => {
     expect(buildJiraIssueDetailUrl('cloud-123', 'OPS-123')).toBe(
-      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary%2Cstatus%2Cpriority%2Cupdated%2Cdescription%2Ccomment%2Cattachment%2Cissuelinks&expand=renderedFields'
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary%2Cstatus%2Cpriority%2Cupdated%2Cdescription%2Ccomment%2Cattachment%2Cissuelinks%2Ctimetracking%2Ctimespent&expand=renderedFields'
     );
     expect(buildJiraAttachmentThumbnailUrl('cloud-123', '10001')).toBe(
       'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/attachment/thumbnail/10001'
@@ -115,6 +116,7 @@ describe('jira issue details', () => {
               },
               priority: { name: 'High' },
               updated: '2026-05-01T08:20:00.000+0000',
+              timespent: 7200,
               description: {
                 type: 'doc',
                 version: 1,
@@ -178,6 +180,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: 'High',
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: 7200,
       descriptionAdf: {
         type: 'doc',
         version: 1,
@@ -220,7 +223,7 @@ describe('jira issue details', () => {
       transitions: [],
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary%2Cstatus%2Cpriority%2Cupdated%2Cdescription%2Ccomment%2Cattachment%2Cissuelinks&expand=renderedFields',
+      'https://api.atlassian.com/ex/jira/cloud-123/rest/api/3/issue/OPS-123?fields=summary%2Cstatus%2Cpriority%2Cupdated%2Cdescription%2Ccomment%2Cattachment%2Cissuelinks%2Ctimetracking%2Ctimespent&expand=renderedFields',
       {
         headers: {
           Accept: 'application/json',
@@ -783,6 +786,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionText: '',
       descriptionHtml: '',
       comments: [],
@@ -836,6 +840,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionAdf: {
         type: 'doc',
         version: 1,
@@ -1078,6 +1083,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionAdf: {
         type: 'doc',
         version: 1,
@@ -1174,6 +1180,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionAdf: {
         type: 'doc',
         version: 1,
@@ -1279,6 +1286,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionAdf: {
         type: 'doc',
         version: 1,
@@ -1381,6 +1389,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionAdf: {
         type: 'doc',
         version: 1,
@@ -1455,6 +1464,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionAdf: {
         type: 'doc',
         version: 1,
@@ -1546,6 +1556,7 @@ describe('jira issue details', () => {
       statusCategory: 'In Progress',
       priority: null,
       updated: '2026-05-01T08:20:00.000+0000',
+      timeSpentSeconds: null,
       descriptionAdf: {
         type: 'doc',
         version: 1,

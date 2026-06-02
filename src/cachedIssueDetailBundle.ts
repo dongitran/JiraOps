@@ -89,5 +89,6 @@ function toAssignedIssue(issue: DashboardIssue): JiraAssignedIssue {
     statusCategory: issue.statusCategory,
     summary: issue.summary,
     updated: issue.updated,
+    timeSpentSeconds: issue.timeSpentSeconds,
   };
 }
