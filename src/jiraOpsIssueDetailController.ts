@@ -52,6 +52,7 @@ import {
   resolveTestIssueTransitionsAfterTransition,
 } from './testModeData';
 import { TtlCache, type TtlCacheResult } from './ttlCache';
+import type { RecordWorklogInput, WorklogEntry } from './worklogStore';
 
 const JIRA_DETAIL_CACHE_TTL_MS = 5 * 60_000;
 const JIRA_REMOTE_LINK_CACHE_TTL_MS = 5 * 60_000;
@@ -63,6 +64,7 @@ export interface JiraOpsIssueDetailControllerOptions {
     source: string
   ) => void;
   readonly loadAssignedIssues: () => Promise<readonly JiraAssignedIssue[]>;
+  readonly recordWorklog: (input: RecordWorklogInput) => Promise<WorklogEntry>;
   readonly outputChannel: OutputChannel;
   readonly tokenProvider: JiraTokenProvider;
 }
@@ -273,6 +275,7 @@ export class JiraOpsIssueDetailController {
       const tokens = await this.requireStoredTokens();
       await addJiraIssueWorklog({ accessToken: tokens.accessToken, cloudId: tokens.cloudId, comment, issueKey, minutes });
     }
+    await this.options.recordWorklog({ comment, issueKey, minutes });
     this.issueDetailCache.delete(issueKey);
     await this.refreshDashboardAfterDetailAction();
     return { message: `Logged ${String(minutes)} minute${minutes === 1 ? '' : 's'}.` };

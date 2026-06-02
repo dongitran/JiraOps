@@ -12,6 +12,7 @@ const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
 const CONNECTION_LOADING_MESSAGE_TYPE = 'jiraOps.connectionLoading';
 const CONNECTION_CHANGED_MESSAGE_TYPE = 'jiraOps.connectionChanged';
 const NOTIFICATIONS_CHANGED_MESSAGE_TYPE = 'jiraOps.notificationsChanged';
+const WORKLOGS_CHANGED_MESSAGE_TYPE = 'jiraOps.worklogsChanged';
 const SETTINGS_CHANGED_MESSAGE_TYPE = 'jiraOps.settingsChanged';
 const UPDATE_SETTINGS_MESSAGE_TYPE = 'jiraOps.updateSettings';
 const CLEAR_NOTIFICATIONS_MESSAGE_TYPE = 'jiraOps.clearNotifications';
@@ -314,6 +315,31 @@ const MOCK_ISSUES = [
   },
 ];
 
+
+const MOCK_WORKLOGS = [
+  {
+    id: 'worklog-ops-123-2026-06-01',
+    issueKey: 'OPS-123',
+    loggedAt: '2026-06-01T15:40:00.000Z',
+    minutes: 90,
+    comment: 'Validated reconciliation alert thresholds before review.',
+  },
+  {
+    id: 'worklog-ops-456-2026-05-29',
+    issueKey: 'OPS-456',
+    loggedAt: '2026-05-29T10:20:00.000Z',
+    minutes: 120,
+    comment: 'Reviewed checkout release dashboard links.',
+  },
+  {
+    id: 'worklog-ops-777-2026-05-28',
+    issueKey: 'OPS-777',
+    loggedAt: '2026-05-28T09:05:00.000Z',
+    minutes: 60,
+    comment: 'Captured incident timeline notes.',
+  },
+];
+
 const MOCK_NOTIFICATIONS = [
   {
     id: 'ops-123-2026-05-01T08-24',
@@ -377,6 +403,7 @@ const state = {
   cloudName: '',
   screen: 'home',
   notifications: [],
+  worklogs: MOCK_WORKLOGS,
   notificationSettings: {
     enabled: true,
     intervalMinutes: 1,
@@ -431,6 +458,11 @@ window.addEventListener('message', (event) => {
     return;
   }
 
+  if (event.data.type === WORKLOGS_CHANGED_MESSAGE_TYPE) {
+    handleWorklogsChangedMessage(event.data);
+    return;
+  }
+
   if (event.data.type === SETTINGS_CHANGED_MESSAGE_TYPE) {
     handleSettingsChangedMessage(event.data);
     return;
@@ -473,8 +505,11 @@ function renderHomeScreen() {
   return `
     ${renderDashboardToolbar()}
     ${renderStatusLine()}
-    <section class="issues-region" aria-label="Assigned Jira tickets">
-      ${renderDashboardContent()}
+    <section class="dashboard-workspace" aria-label="JiraOps dashboard and daily worklogs">
+      <section class="issues-region" aria-label="Assigned Jira tickets">
+        ${renderDashboardContent()}
+      </section>
+      ${renderDailyWorklogPanel()}
     </section>
   `;
 }
@@ -651,6 +686,57 @@ function renderNotificationItem(notification) {
       </div>
       <button class="detail-button notification-detail-button" data-notification-action="open-detail" data-detail-key="${escapeAttribute(notification.issueKey)}" type="button">Details</button>
     </article>
+  `;
+}
+
+function renderDailyWorklogPanel() {
+  const workdays = getVisibleWorkdays(new Date());
+  const totalMinutes = workdays.reduce((total, day) => total + sumMinutesForDate(day), 0);
+  const groupedRows = workdays.map((day) => renderWorklogDay(day)).join('');
+
+  return `
+    <section class="daily-worklog-panel" aria-label="Logged work for today and previous workdays">
+      <div class="daily-worklog-heading">
+        <div>
+          <strong>Work logged</strong>
+          <span>Today + 2 prior workdays</span>
+        </div>
+        <output aria-label="Total visible worklog hours">${escapeHtml(formatHours(totalMinutes))}</output>
+      </div>
+      <div class="daily-worklog-days">
+        ${groupedRows}
+      </div>
+    </section>
+  `;
+}
+
+function renderWorklogDay(day) {
+  const entries = state.worklogs
+    .filter((entry) => getLocalDateKey(entry.loggedAt) === day.key)
+    .sort((left, right) => new Date(right.loggedAt).getTime() - new Date(left.loggedAt).getTime());
+  const total = entries.reduce((sum, entry) => sum + entry.minutes, 0);
+
+  return `
+    <article class="worklog-day" aria-label="${escapeAttribute(day.label)} worklogs">
+      <header class="worklog-day-header">
+        <span>${escapeHtml(day.label)}</span>
+        <strong>${escapeHtml(formatHours(total))}</strong>
+      </header>
+      ${entries.length === 0 ? '<p class="worklog-empty">No work logged.</p>' : `<div class="worklog-entry-list">${entries.map((entry) => renderWorklogEntry(entry)).join('')}</div>`}
+    </article>
+  `;
+}
+
+function renderWorklogEntry(entry) {
+  return `
+    <div class="worklog-entry">
+      <div class="worklog-entry-main">
+        <strong>${escapeHtml(entry.issueKey)}</strong>
+        <span>${escapeHtml(formatWorklogTime(entry.loggedAt))}</span>
+      </div>
+      <div class="worklog-entry-hours">${escapeHtml(formatHours(entry.minutes))}</div>
+      ${entry.comment.length > 0 ? `<p>${escapeHtml(entry.comment)}</p>` : ''}
+    </div>
   `;
 }
 
@@ -1122,6 +1208,11 @@ function handleNotificationsChangedMessage(message) {
   render();
 }
 
+function handleWorklogsChangedMessage(message) {
+  state.worklogs = Array.isArray(message.worklogs) ? message.worklogs.filter(isWorklogEntry) : [];
+  render();
+}
+
 function handleSettingsChangedMessage(message) {
   const enabled =
     typeof message.notificationsEnabled === 'boolean'
@@ -1196,6 +1287,56 @@ function formatUpdated(value) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+}
+
+function getVisibleWorkdays(today) {
+  const previousDays = [];
+  const cursor = new Date(today);
+  while (previousDays.length < 2) {
+    cursor.setDate(cursor.getDate() - 1);
+    const weekday = cursor.getDay();
+    if (weekday === 0 || weekday === 6) {
+      continue;
+    }
+    previousDays.push(toWorklogDay(cursor, new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(cursor)));
+  }
+  return [toWorklogDay(today, 'Today'), ...previousDays.reverse()];
+}
+
+function toWorklogDay(date, labelPrefix) {
+  return {
+    key: getLocalDateKey(date),
+    label: `${labelPrefix} · ${new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)}`,
+  };
+}
+
+function getLocalDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const year = String(date.getFullYear()).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function sumMinutesForDate(day) {
+  return state.worklogs
+    .filter((entry) => getLocalDateKey(entry.loggedAt) === day.key)
+    .reduce((sum, entry) => sum + entry.minutes, 0);
+}
+
+function formatHours(minutes) {
+  return `${(minutes / 60).toFixed(2).replace(/\.00$/u, '')}h`;
+}
+
+function formatWorklogTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
 function formatIssueSummary(summary) {
@@ -1290,6 +1431,18 @@ function isRemoteWebLink(value) {
     typeof value.url === 'string' &&
     typeof value.relationship === 'string' &&
     typeof value.host === 'string'
+  );
+}
+
+function isWorklogEntry(value) {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.issueKey === 'string' &&
+    typeof value.loggedAt === 'string' &&
+    typeof value.minutes === 'number' &&
+    Number.isInteger(value.minutes) &&
+    typeof value.comment === 'string'
   );
 }
 

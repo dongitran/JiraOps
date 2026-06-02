@@ -338,10 +338,145 @@ a:focus-visible {
   color: var(--success-color);
 }
 
+.dashboard-workspace {
+  display: grid;
+  grid-template-rows: minmax(0, 3fr) minmax(140px, 1fr);
+  min-height: 0;
+}
+
 .issues-region {
   min-height: 0;
   overflow: auto;
   padding: 4px;
+}
+
+.daily-worklog-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  border-top: 1px solid var(--border-color);
+  background: var(--surface-bg);
+}
+
+.daily-worklog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.daily-worklog-heading div {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.daily-worklog-heading strong,
+.daily-worklog-heading span,
+.daily-worklog-heading output {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-worklog-heading strong {
+  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-worklog-heading span {
+  color: var(--muted-color);
+  font-size: 11px;
+}
+
+.daily-worklog-heading output {
+  flex: 0 0 auto;
+  color: var(--accent-color);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-worklog-days {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px;
+}
+
+.worklog-day {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--page-bg);
+}
+
+.worklog-day-header,
+.worklog-entry-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+.worklog-day-header span,
+.worklog-day-header strong,
+.worklog-entry-main strong,
+.worklog-entry-main span,
+.worklog-entry p,
+.worklog-entry-hours {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worklog-day-header span,
+.worklog-entry-main span,
+.worklog-empty,
+.worklog-entry p {
+  color: var(--muted-color);
+  font-size: 11px;
+}
+
+.worklog-day-header strong,
+.worklog-entry-main strong,
+.worklog-entry-hours {
+  color: var(--text-color);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.worklog-entry-list {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.worklog-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 6px;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+
+.worklog-entry p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.worklog-empty {
+  margin: 0;
 }
 
 .issue-list {
