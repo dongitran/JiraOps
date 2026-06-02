@@ -18,6 +18,7 @@ export const DASHBOARD_ERROR_MESSAGE_TYPE = 'jiraOps.dashboardError';
 export const CONNECTION_LOADING_MESSAGE_TYPE = 'jiraOps.connectionLoading';
 export const CONNECTION_CHANGED_MESSAGE_TYPE = 'jiraOps.connectionChanged';
 export const NOTIFICATIONS_CHANGED_MESSAGE_TYPE = 'jiraOps.notificationsChanged';
+export const WORKLOGS_CHANGED_MESSAGE_TYPE = 'jiraOps.worklogsChanged';
 export const SETTINGS_CHANGED_MESSAGE_TYPE = 'jiraOps.settingsChanged';
 
 export interface WebviewReadyMessage {

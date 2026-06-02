@@ -69,7 +69,9 @@ import {
   NOTIFICATIONS_CHANGED_MESSAGE_TYPE,
   OPEN_SETTINGS_MESSAGE_TYPE,
   SETTINGS_CHANGED_MESSAGE_TYPE,
+  WORKLOGS_CHANGED_MESSAGE_TYPE,
 } from './webviewMessages';
+import { WorklogStore, type RecordWorklogInput, type WorklogEntry } from './worklogStore';
 
 export const LINKS_VIEW_ID = 'jiraOps.linksView';
 
@@ -86,13 +88,15 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
   private notificationBaseline: IssueUpdateBaseline = {};
   private notifications: readonly JiraOpsNotification[] = [];
   private notificationsReloading = false;
+  private worklogs: readonly WorklogEntry[] = [];
   private testModeConnected = false;
 
   public constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly outputChannel: vscode.OutputChannel,
     private readonly globalState: vscode.Memento,
-    private readonly tokenProvider = new OAuthJiraTokenProvider()
+    private readonly tokenProvider = new OAuthJiraTokenProvider(),
+    private readonly worklogStore = new WorklogStore()
   ) {
     this.notificationService = new JiraOpsPanelNotificationService({
       isTestModeConnected: () => this.testModeConnected,
@@ -122,6 +126,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       },
       loadAssignedIssues: () => this.loadAssignedIssues(),
       outputChannel: this.outputChannel,
+      recordWorklog: (input) => this.recordWorklog(input),
       tokenProvider: this.tokenProvider,
     });
     const state = restorePanelNotificationState(
@@ -234,6 +239,7 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
   private async handleWebviewReady(): Promise<void> {
     this.outputChannel.appendLine('Jira Ops webview is ready.');
     this.postSettingsChanged();
+    await this.loadAndPostWorklogs();
     this.postNotificationsChanged('Notification polling is ready.');
     const status = await this.loadConnectionStatus();
     this.postConnectionChanged(status, initialConnectionMessage(status));
@@ -460,6 +466,22 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
     await this.notificationPoller.pollNow('notifications view');
   }
 
+  private async recordWorklog(input: RecordWorklogInput): Promise<WorklogEntry> {
+    const entry = await this.worklogStore.recordWorklog(input);
+    this.outputChannel.appendLine(`Saved JiraOps worklog entry for ${input.issueKey} in ${this.worklogStore.storageDirectory}.`);
+    await this.loadAndPostWorklogs();
+    return entry;
+  }
+
+  private async loadAndPostWorklogs(): Promise<void> {
+    try {
+      this.worklogs = await this.worklogStore.readVisibleWorklogs();
+      this.postWorklogsChanged();
+    } catch {
+      this.outputChannel.appendLine('JiraOps worklog entries could not be loaded from temporary storage.');
+    }
+  }
+
   private async handleOpenExternalLink(url: string): Promise<void> {
     this.outputChannel.appendLine(`Opening Jira dashboard link on ${webLinkHost(url)}.`);
     await vscode.env.openExternal(vscode.Uri.parse(url));
@@ -607,6 +629,13 @@ export class JiraOpsPanelProvider implements vscode.WebviewViewProvider, vscode.
       connected: status.connected,
       cloudName: status.cloudName ?? '',
       message,
+    });
+  }
+
+  private postWorklogsChanged(): void {
+    this.postMessage({
+      type: WORKLOGS_CHANGED_MESSAGE_TYPE,
+      worklogs: this.worklogs,
     });
   }
 
