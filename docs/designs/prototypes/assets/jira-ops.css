@@ -340,7 +340,7 @@ a:focus-visible {
 
 .dashboard-workspace {
   display: grid;
-  grid-template-rows: minmax(0, 3fr) minmax(140px, 1fr);
+  grid-template-rows: minmax(0, 65fr) minmax(0, 35fr);
   min-height: 0;
 }
 

@@ -68,7 +68,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expectLoadedDashboard(frame);
       await expect(frame.getByText('Assigned to me (5)')).toBeVisible();
       await expect(frame.getByText('5 tickets', { exact: true })).toHaveCount(0);
-      await expect(frame.getByRole('status')).toHaveCount(0);
+      await expect(frame.locator('.status-line')).toHaveCount(0);
       await expect(frame.getByRole('button', { name: 'Disconnect' })).toHaveCount(0);
       await expect(frame.getByText('Jira Cloud')).toHaveCount(0);
       await expect(frame.getByText('Tickets and merge requests')).toHaveCount(0);
@@ -109,6 +109,19 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(
         detailFrame.getByLabel('OPS-123 details').getByText('3h 30m logged')
       ).toBeVisible();
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User sees the daily Work logged panel at about 35% height with a scrollable issue list', async () => {
+    const session = await launchExtensionHost();
+    const testInfo = test.info();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await captureDashboardScreenshot(session.window, testInfo, 'daily-worklog-panel.png');
+      await expectDailyWorklogPanelLayout(frame);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -542,14 +555,14 @@ test.describe('Jira Ops assigned ticket workflow', () => {
         );
       });
 
-      await expect(frame.getByRole('status')).toContainText(
+      await expect(frame.locator('.status-line')).toContainText(
         'Assigned tickets could not be loaded.'
       );
       await expect(frame.getByLabel('OPS-123 assigned ticket')).toHaveCount(0);
       await clickWithFallback(frame.getByRole('button', { name: 'Refresh' }));
 
       await expect(frame.getByLabel('OPS-123 assigned ticket')).toBeVisible();
-      await expect(frame.getByRole('status')).toHaveCount(0);
+      await expect(frame.locator('.status-line')).toHaveCount(0);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -744,6 +757,43 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
     priority: 'none',
     updated: 'none',
   });
+}
+
+async function expectDailyWorklogPanelLayout(frame: Frame): Promise<void> {
+  const layout = await frame.evaluate(() => {
+    const workspace = document.querySelector('.dashboard-workspace');
+    const panel = document.querySelector('.daily-worklog-panel');
+    const issues = document.querySelector('.issues-region');
+    if (
+      !(workspace instanceof HTMLElement) ||
+      !(panel instanceof HTMLElement) ||
+      !(issues instanceof HTMLElement)
+    ) {
+      return null;
+    }
+
+    const workspaceBox = workspace.getBoundingClientRect();
+    const panelBox = panel.getBoundingClientRect();
+    const issuesBox = issues.getBoundingClientRect();
+    return {
+      workspaceHeight: Math.round(workspaceBox.height),
+      panelFraction: panelBox.height / workspaceBox.height,
+      issuesFraction: issuesBox.height / workspaceBox.height,
+      issuesOverflowY: window.getComputedStyle(issues).overflowY,
+      issuesStaysAbovePanel: issuesBox.bottom <= panelBox.top + 1,
+    };
+  });
+
+  if (layout === null) {
+    throw new Error('Expected the daily worklog panel layout to be measurable.');
+  }
+
+  expect(layout.workspaceHeight).toBeGreaterThan(200);
+  expect(layout.panelFraction).toBeGreaterThanOrEqual(0.31);
+  expect(layout.panelFraction).toBeLessThanOrEqual(0.39);
+  expect(layout.issuesFraction).toBeGreaterThanOrEqual(0.55);
+  expect(['auto', 'scroll']).toContain(layout.issuesOverflowY);
+  expect(layout.issuesStaysAbovePanel).toBe(true);
 }
 
 async function expectIssueCardWorklog(frame: Frame): Promise<void> {
@@ -1247,8 +1297,8 @@ async function readImageLightboxState(frame: Frame): Promise<Record<string, unkn
       closeVisible: closeBox !== null && closeBox.width > 0 && closeBox.height > 0,
       dialogDisplay: window.getComputedStyle(dialog).display,
       dialogFullscreen:
-        Math.round(dialogBox.width) === window.innerWidth &&
-        Math.round(dialogBox.height) === window.innerHeight &&
+        Math.round(dialogBox.width) === document.documentElement.clientWidth &&
+        Math.round(dialogBox.height) === document.documentElement.clientHeight &&
         Math.round(dialogBox.left) === 0 &&
         Math.round(dialogBox.top) === 0,
       dialogOpen: dialog.open,

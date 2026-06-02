@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.46
+## 0.1.47
 
 ### Dashboard
 
@@ -12,6 +12,10 @@
 - Show the total logged work next to the issue key in the wide Details header (`3h 30m logged`).
 - Request the Jira `timetracking` and `timespent` fields for assigned issues and issue details, preferring `timespent` and falling back to `timetracking.timeSpentSeconds`.
 - Format durations with the Jira working calendar (1d = 8h, 1w = 5d) so the totals match what Jira reports.
+
+### Notifications
+
+- Suppress false-positive assigned-issue update toasts when a refreshed issue has no genuinely new Jira activity.
 
 ### Testing
 
