@@ -45,6 +45,12 @@ export interface FetchAssignedJiraIssuesOptions {
   readonly fetchImpl?: typeof fetch;
 }
 
+export interface FetchJiraSiteBaseUrlOptions {
+  readonly accessToken: string;
+  readonly cloudId: string;
+  readonly fetchImpl?: typeof fetch;
+}
+
 export interface FetchJiraIssueTransitionsOptions {
   readonly accessToken: string;
   readonly cloudId: string;
@@ -128,6 +134,8 @@ export interface JiraOAuthClientLike {
 export type JiraOAuthClientFactory = () => JiraOAuthClientLike | Promise<JiraOAuthClientLike>;
 
 const ATLASSIAN_API_ROOT = 'https://api.atlassian.com/ex/jira';
+const ATLASSIAN_ACCESSIBLE_RESOURCES_URL =
+  'https://api.atlassian.com/oauth/token/accessible-resources';
 const TOKEN_REFRESH_SAFETY_WINDOW_MS = 60_000;
 const DEFAULT_TOKEN_STORE_PATH = join(homedir(), '.jira-oauth', 'tokens.json');
 const ASSIGNED_ISSUES_JQL =
@@ -182,6 +190,13 @@ const JiraAssignedIssueSchema = z.object({
 const JiraAssignedIssuesResponseSchema = z.object({
   issues: z.array(JiraAssignedIssueSchema),
 });
+
+const AccessibleResourcesResponseSchema = z.array(
+  z.object({
+    id: z.string().min(1),
+    url: z.url().optional(),
+  })
+);
 
 const JiraIssueTransitionsResponseSchema = z.object({
   transitions: z.array(
@@ -397,6 +412,42 @@ export async function fetchAssignedJiraIssues(
 
   const responseBody: unknown = await response.json();
   return parseAssignedIssuesResponse(responseBody);
+}
+
+export function buildJiraIssueBrowseUrl(siteBaseUrl: string, issueKey: string): string {
+  const trimmedBase = siteBaseUrl.replace(/\/+$/u, '');
+  return `${trimmedBase}/browse/${encodeURIComponent(issueKey)}`;
+}
+
+export async function fetchJiraSiteBaseUrl(
+  options: FetchJiraSiteBaseUrlOptions
+): Promise<string | null> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  try {
+    const response = await fetchImpl(ATLASSIAN_ACCESSIBLE_RESOURCES_URL, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${options.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const responseBody: unknown = await response.json();
+    const parseResult = AccessibleResourcesResponseSchema.safeParse(responseBody);
+    if (!parseResult.success) {
+      return null;
+    }
+
+    const matchedResource = parseResult.data.find(
+      (resource) => resource.id === options.cloudId
+    );
+    return matchedResource?.url ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchJiraIssueLatestChangelog(

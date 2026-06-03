@@ -210,6 +210,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       await expect(detailFrame.getByText(/Clone ticket OPS-111/u)).toBeVisible();
       await expect(detailFrame.getByText('https://')).toHaveCount(0);
       await expectDetailLinksUseWebviewOpenPath(detailFrame);
+      await expectDetailIssueWebLinks(detailFrame, 'OPS-123');
       await expect(detailFrame.getByRole('combobox', { name: 'Issue status' })).toHaveValue('');
       await expect(
         detailFrame.getByRole('combobox', { name: 'Issue status' }).getByRole('option').first()
@@ -761,10 +762,12 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
 
 async function expectDailyWorklogPanelLayout(frame: Frame): Promise<void> {
   const layout = await frame.evaluate(() => {
+    const shell = document.querySelector('.jira-shell');
     const workspace = document.querySelector('.dashboard-workspace');
     const panel = document.querySelector('.daily-worklog-panel');
     const issues = document.querySelector('.issues-region');
     if (
+      !(shell instanceof HTMLElement) ||
       !(workspace instanceof HTMLElement) ||
       !(panel instanceof HTMLElement) ||
       !(issues instanceof HTMLElement)
@@ -772,15 +775,56 @@ async function expectDailyWorklogPanelLayout(frame: Frame): Promise<void> {
       return null;
     }
 
+    const shellBox = shell.getBoundingClientRect();
     const workspaceBox = workspace.getBoundingClientRect();
     const panelBox = panel.getBoundingClientRect();
     const issuesBox = issues.getBoundingClientRect();
+
+    const today = new Date();
+    const dayLabels = [...panel.querySelectorAll('.worklog-day-header span')]
+      .map((node) => node.textContent.trim())
+      .filter((label) => label.length > 0);
+    const dayTimes = dayLabels.map((label) => {
+      const datePart = label.split('·').pop()?.trim() ?? '';
+      const parsed = new Date(`${datePart} ${String(today.getFullYear())}`);
+      if (parsed.getTime() - today.getTime() > 2 * 86_400_000) {
+        parsed.setFullYear(today.getFullYear() - 1);
+      }
+      return parsed.getTime();
+    });
+
+    const entryKey = panel.querySelector('.worklog-entry .worklog-entry-main > strong');
+    const entryHours = panel.querySelector('.worklog-entry .worklog-entry-main > .worklog-entry-hours');
+    const entryMain = panel.querySelector('.worklog-entry .worklog-entry-main');
+    const entryHoursSharesIdRow =
+      entryKey instanceof HTMLElement && entryHours instanceof HTMLElement
+        ? Math.abs(entryKey.getBoundingClientRect().top - entryHours.getBoundingClientRect().top) <= 3
+        : null;
+    const entryHoursFlushRight =
+      entryHours instanceof HTMLElement && entryMain instanceof HTMLElement
+        ? Math.abs(entryHours.getBoundingClientRect().right - entryMain.getBoundingClientRect().right) <= 2
+        : null;
+
     return {
       workspaceHeight: Math.round(workspaceBox.height),
       panelFraction: panelBox.height / workspaceBox.height,
       issuesFraction: issuesBox.height / workspaceBox.height,
       issuesOverflowY: window.getComputedStyle(issues).overflowY,
       issuesStaysAbovePanel: issuesBox.bottom <= panelBox.top + 1,
+      workspaceFillsToShellBottom: Math.abs(workspaceBox.bottom - shellBox.bottom) <= 2,
+      panelReachesShellBottom: Math.abs(panelBox.bottom - shellBox.bottom) <= 2,
+      entryHoursSharesIdRow,
+      entryHoursFlushRight,
+      dayCount: dayLabels.length,
+      firstDayIsToday: dayLabels[0]?.startsWith('Today') ?? false,
+      dayOrderDescending: dayTimes.every((time, index) => {
+        if (index === 0) {
+          return true;
+        }
+        const previous = dayTimes[index - 1];
+        return previous !== undefined && previous > time;
+      }),
+      headerHasTotalOutput: panel.querySelector('.daily-worklog-heading output') !== null,
     };
   });
 
@@ -794,6 +838,18 @@ async function expectDailyWorklogPanelLayout(frame: Frame): Promise<void> {
   expect(layout.issuesFraction).toBeGreaterThanOrEqual(0.55);
   expect(['auto', 'scroll']).toContain(layout.issuesOverflowY);
   expect(layout.issuesStaysAbovePanel).toBe(true);
+  // The workspace must fill the available height so the 65/35 split is of the
+  // viewport, not of the (short) content — otherwise the panel drifts toward 50%.
+  expect(layout.workspaceFillsToShellBottom).toBe(true);
+  expect(layout.panelReachesShellBottom).toBe(true);
+  // Days run Today -> older, and the header no longer shows a total-hours output.
+  expect(layout.dayCount).toBe(3);
+  expect(layout.firstDayIsToday).toBe(true);
+  expect(layout.dayOrderDescending).toBe(true);
+  expect(layout.headerHasTotalOutput).toBe(false);
+  // Worklog hours sit on the same row as the ticket id, flush right.
+  expect(layout.entryHoursSharesIdRow).toBe(true);
+  expect(layout.entryHoursFlushRight).toBe(true);
 }
 
 async function expectIssueCardWorklog(frame: Frame): Promise<void> {
@@ -1422,6 +1478,22 @@ async function expectTechnicalNotesNearAttachments(frame: Frame): Promise<void> 
     maxHeight: '220px',
     scrollable: true,
   });
+}
+
+async function expectDetailIssueWebLinks(frame: Frame, issueKey: string): Promise<void> {
+  const links = await frame.evaluate(() => {
+    const title = document.querySelector('.detail-title-link');
+    const key = document.querySelector('.issue-key.detail-issue-link');
+    return {
+      titleHref: title instanceof HTMLAnchorElement ? title.href : null,
+      keyHref: key instanceof HTMLAnchorElement ? key.href : null,
+      keyText: key instanceof HTMLAnchorElement ? key.textContent.trim() : null,
+    };
+  });
+
+  expect(links.keyText).toBe(issueKey);
+  expect(links.keyHref).toContain(`/browse/${issueKey}`);
+  expect(links.titleHref).toContain(`/browse/${issueKey}`);
 }
 
 async function expectDetailLinksUseWebviewOpenPath(frame: Frame): Promise<void> {

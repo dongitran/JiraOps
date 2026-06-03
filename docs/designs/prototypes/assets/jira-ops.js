@@ -694,7 +694,6 @@ function renderNotificationItem(notification) {
 
 function renderDailyWorklogPanel() {
   const workdays = getVisibleWorkdays(new Date());
-  const totalMinutes = workdays.reduce((total, day) => total + sumMinutesForDate(day), 0);
   const groupedRows = workdays.map((day) => renderWorklogDay(day)).join('');
 
   return `
@@ -704,7 +703,6 @@ function renderDailyWorklogPanel() {
           <strong>Work logged</strong>
           <span>Today + 2 prior workdays</span>
         </div>
-        <output aria-label="Total visible worklog hours">${escapeHtml(formatHours(totalMinutes))}</output>
       </div>
       <div class="daily-worklog-days">
         ${groupedRows}
@@ -735,9 +733,8 @@ function renderWorklogEntry(entry) {
     <div class="worklog-entry">
       <div class="worklog-entry-main">
         <strong>${escapeHtml(entry.issueKey)}</strong>
-        <span>${escapeHtml(formatWorklogTime(entry.loggedAt))}</span>
+        <span class="worklog-entry-hours">${escapeHtml(formatHours(entry.minutes))}</span>
       </div>
-      <div class="worklog-entry-hours">${escapeHtml(formatHours(entry.minutes))}</div>
       ${entry.comment.length > 0 ? `<p>${escapeHtml(entry.comment)}</p>` : ''}
     </div>
   `;
@@ -1309,7 +1306,7 @@ function getVisibleWorkdays(today) {
     }
     previousDays.push(toWorklogDay(cursor, new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(cursor)));
   }
-  return [toWorklogDay(today, 'Today'), ...previousDays.reverse()];
+  return [toWorklogDay(today, 'Today'), ...previousDays];
 }
 
 function toWorklogDay(date, labelPrefix) {
@@ -1330,22 +1327,8 @@ function getLocalDateKey(value) {
   return `${year}-${month}-${day}`;
 }
 
-function sumMinutesForDate(day) {
-  return state.worklogs
-    .filter((entry) => getLocalDateKey(entry.loggedAt) === day.key)
-    .reduce((sum, entry) => sum + entry.minutes, 0);
-}
-
 function formatHours(minutes) {
   return `${(minutes / 60).toFixed(2).replace(/\.00$/u, '')}h`;
-}
-
-function formatWorklogTime(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
 function formatIssueSummary(summary) {

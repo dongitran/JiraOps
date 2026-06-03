@@ -8,9 +8,11 @@ import {
   buildNotificationIssuesSearchBody,
   buildJiraIssueLatestChangelogUrl,
   buildJiraIssueTransitionsUrl,
+  buildJiraIssueBrowseUrl,
   buildJiraIssueWorklogUrl,
   buildJiraRemoteLinksUrl,
   fetchAssignedJiraIssues,
+  fetchJiraSiteBaseUrl,
   fetchJiraIssueActivityEntries,
   fetchJiraIssueRecentComments,
   fetchJiraIssueLatestChangelog,
@@ -286,6 +288,69 @@ describe('jiraClient', () => {
         fetchImpl: fetchMock,
       })
     ).rejects.toThrow('Assigned Jira issues could not be loaded.');
+  });
+
+  test('builds a Jira issue browse URL from the site base URL', () => {
+    expect(buildJiraIssueBrowseUrl('https://example.atlassian.net', 'OPS-123')).toBe(
+      'https://example.atlassian.net/browse/OPS-123'
+    );
+    expect(buildJiraIssueBrowseUrl('https://example.atlassian.net/', 'OPS 9')).toBe(
+      'https://example.atlassian.net/browse/OPS%209'
+    );
+  });
+
+  test('resolves the Jira site base URL for the connected cloud id', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify([
+            { id: 'other-cloud', url: 'https://other.atlassian.net' },
+            { id: 'cloud-123', url: 'https://example.atlassian.net' },
+          ]),
+          { status: 200 }
+        )
+      )
+    );
+
+    await expect(
+      fetchJiraSiteBaseUrl({
+        accessToken: 'sample-access-value',
+        cloudId: 'cloud-123',
+        fetchImpl: fetchMock,
+      })
+    ).resolves.toBe('https://example.atlassian.net');
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.atlassian.com/oauth/token/accessible-resources',
+      {
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer sample-access-value',
+        },
+      }
+    );
+  });
+
+  test('returns null when the Jira site base URL cannot be resolved', async () => {
+    const noMatch = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify([{ id: 'x', url: 'https://x.atlassian.net' }]), {
+          status: 200,
+        })
+      )
+    );
+    await expect(
+      fetchJiraSiteBaseUrl({ accessToken: 'a', cloudId: 'cloud-123', fetchImpl: noMatch })
+    ).resolves.toBeNull();
+
+    const denied = vi.fn(() => Promise.resolve(new Response('denied', { status: 403 })));
+    await expect(
+      fetchJiraSiteBaseUrl({ accessToken: 'a', cloudId: 'cloud-123', fetchImpl: denied })
+    ).resolves.toBeNull();
+
+    const invalid = vi.fn(() => Promise.resolve(new Response('{', { status: 200 })));
+    await expect(
+      fetchJiraSiteBaseUrl({ accessToken: 'a', cloudId: 'cloud-123', fetchImpl: invalid })
+    ).resolves.toBeNull();
   });
 
   test('fetches the latest expanded Jira issue changelog entry defensively', async () => {

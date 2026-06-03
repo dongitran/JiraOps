@@ -419,20 +419,37 @@ function renderIssueDetail(issue: DashboardIssue, detail: JiraIssueDetail): stri
 }
 
 function renderIssueDetailHeader(issue: DashboardIssue, detail: JiraIssueDetail): string {
+  const webUrl = typeof detail.webUrl === 'string' && detail.webUrl.length > 0 ? detail.webUrl : null;
   return `
     <header class="detail-page-header">
       <div class="detail-page-title">
-        <h1 title="${escapeAttribute(issue.summary)}">${escapeHtml(issue.summary)}</h1>
+        <h1 title="${escapeAttribute(issue.summary)}">${renderIssueWebLink(issue.summary, webUrl, 'detail-title-link')}</h1>
       </div>
       <div class="detail-page-meta-row">
         <div class="detail-meta-key-group">
-          <span class="issue-key">${escapeHtml(issue.key)}</span>
+          ${renderIssueKey(issue.key, webUrl)}
           ${renderLoggedTime(detail.timeSpentSeconds)}
         </div>
         ${renderHeaderActions(issue, detail)}
       </div>
     </header>
   `;
+}
+
+function renderIssueWebLink(text: string, webUrl: string | null, className: string): string {
+  if (webUrl === null) {
+    return escapeHtml(text);
+  }
+
+  return `<a class="${className}" href="${escapeAttribute(webUrl)}" data-url="${escapeAttribute(webUrl)}" title="Open ${escapeAttribute(text)} in Jira">${escapeHtml(text)}</a>`;
+}
+
+function renderIssueKey(issueKey: string, webUrl: string | null): string {
+  if (webUrl === null) {
+    return `<span class="issue-key">${escapeHtml(issueKey)}</span>`;
+  }
+
+  return `<a class="issue-key detail-issue-link" href="${escapeAttribute(webUrl)}" data-url="${escapeAttribute(webUrl)}" title="Open ${escapeAttribute(issueKey)} in Jira">${escapeHtml(issueKey)}</a>`;
 }
 
 function renderIssueContentSection(detail: JiraIssueDetail): string {

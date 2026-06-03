@@ -428,6 +428,7 @@ function createDefaultIssueDetail(issueKey: string, summary: string): JiraIssueD
     priority: assignedIssue?.priority ?? null,
     updated: assignedIssue?.updated ?? '2026-05-01T00:00:00.000+0000',
     timeSpentSeconds: assignedIssue?.timeSpentSeconds ?? null,
+    webUrl: `https://example.atlassian.net/browse/${issueKey}`,
     descriptionText: 'No description was provided for this test issue.',
     descriptionHtml: '<p>No description was provided for this test issue.</p>',
     activityHtml: '',

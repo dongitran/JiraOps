@@ -2,8 +2,10 @@ import type { OutputChannel } from 'vscode';
 
 import {
   addJiraIssueWorklog,
+  buildJiraIssueBrowseUrl,
   fetchJiraIssueTransitions,
   fetchJiraRemoteLinks,
+  fetchJiraSiteBaseUrl,
   transitionJiraIssue,
   type JiraAssignedIssue,
   type JiraTokenProvider,
@@ -73,6 +75,7 @@ export class JiraOpsIssueDetailController {
   private readonly issueDetailCache = new TtlCache<JiraIssueDetail>(JIRA_DETAIL_CACHE_TTL_MS);
   private readonly remoteLinksCache = new TtlCache<readonly RemoteWebLink[]>(JIRA_REMOTE_LINK_CACHE_TTL_MS);
   private readonly transitionStatusByIssue = new Map<string, JiraIssueDetail['transitions']>();
+  private siteBaseUrl: string | null = null;
 
   public constructor(private readonly options: JiraOpsIssueDetailControllerOptions) {}
 
@@ -111,6 +114,7 @@ export class JiraOpsIssueDetailController {
     this.issueDetailCache.clear();
     this.remoteLinksCache.clear();
     this.transitionStatusByIssue.clear();
+    this.siteBaseUrl = null;
     this.options.outputChannel.appendLine('Cleared cached Jira issue details, remote links, and transition metadata.');
   }
 
@@ -199,6 +203,7 @@ export class JiraOpsIssueDetailController {
       issueKey,
     });
     const transitions = await this.loadIssueTransitionsWithTokens(tokens, issueKey);
+    const webUrl = await this.resolveIssueWebUrl(tokens, issueKey);
     this.options.outputChannel.appendLine(`Hydrating Jira issue detail image previews for ${issueKey}.`);
     const hydrated = await hydrateIssueAttachmentImages(detail, {
       accessToken: tokens.accessToken,
@@ -212,7 +217,28 @@ export class JiraOpsIssueDetailController {
     this.options.outputChannel.appendLine(
       `Hydrated ${String(countInlineIssueDescriptionImages(hydrated))} inline Jira description image(s) and ${String(countInlineIssueCommentImages(hydrated))} inline Jira comment image(s) for ${issueKey} from ${String(countHydratedIssueAttachmentImages(hydrated))} hydrated image attachment(s), ${String(countRenderedInlineIssueDescriptionImageHints(hydrated))} rendered inline image hint(s), and ${String(countCapturedIssueAttachmentMediaIds(hydrated))} captured media file id hint(s); ${String(countUnavailableInlineIssueDescriptionImages(hydrated))} inline description image placeholder(s) and ${String(countUnavailableInlineIssueCommentImages(hydrated))} inline comment image placeholder(s) remain unavailable.`
     );
-    return { ...hydrated, transitions };
+    return { ...hydrated, transitions, webUrl };
+  }
+
+  private async resolveIssueWebUrl(
+    tokens: JiraTokens,
+    issueKey: string
+  ): Promise<string | null> {
+    if (this.siteBaseUrl === null) {
+      this.siteBaseUrl = await fetchJiraSiteBaseUrl({
+        accessToken: tokens.accessToken,
+        cloudId: tokens.cloudId,
+      });
+      this.options.outputChannel.appendLine(
+        this.siteBaseUrl === null
+          ? 'Jira site base URL could not be resolved for issue web links.'
+          : 'Resolved Jira site base URL for issue web links.'
+      );
+    }
+
+    return this.siteBaseUrl === null
+      ? null
+      : buildJiraIssueBrowseUrl(this.siteBaseUrl, issueKey);
   }
 
   private async loadIssueTransitionsWithTokens(

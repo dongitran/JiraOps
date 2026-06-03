@@ -71,6 +71,7 @@ export interface JiraIssueDetail {
   readonly priority: string | null;
   readonly updated: string;
   readonly timeSpentSeconds: number | null;
+  readonly webUrl?: string | null;
   readonly descriptionAdf?: unknown;
   readonly descriptionMediaAttachmentIds?: readonly string[];
   readonly descriptionText: string;

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.48
+
+### Dashboard
+
+- Pin the assigned-ticket list to 65% and the Work logged panel to a fixed 35% of the sidebar height so the panel no longer drifts toward 50% once a short ticket list loads; the ticket list scrolls above it.
+- Show each Work logged entry's hours on the same row as the ticket id (flush right) and drop the per-entry time-of-day.
+- Remove the total-hours output from the Work logged header.
+- Order Work logged days from Today down through the two prior workdays.
+
+### Details
+
+- Open the Jira issue in the browser when its title or key is clicked, resolving the site base URL from the OAuth accessible-resources endpoint.
+
+### Testing
+
+- Add unit coverage for Jira browse-URL building and site-base-URL resolution.
+- Extend e2e coverage for the fixed-height Work logged panel, day ordering, entry alignment, and the detail title/key web links.
+
 ## 0.1.47
 
 ### Dashboard
