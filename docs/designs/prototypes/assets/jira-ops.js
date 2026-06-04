@@ -788,15 +788,21 @@ function renderIssueCard(issue) {
     loggedTime === null
       ? ''
       : `<span class="issue-meta-worklog" title="Total work logged">${escapeHtml(loggedTime)}</span>`;
+  const reporterName = typeof issue.reporter === 'string' ? issue.reporter.trim() : '';
+  const reporterTag =
+    reporterName.length === 0
+      ? ''
+      : `<span class="issue-reporter" title="Reporter: ${escapeAttribute(reporterName)}">${escapeHtml(reporterName)}</span>`;
   return `
     <article class="issue-card" aria-label="${escapeAttribute(issue.key)} assigned ticket">
       <div class="issue-card-header">
-        <div class="issue-heading">
+        <div class="issue-key-row">
           <span class="issue-key">${escapeHtml(issue.key)}</span>
-          <h2 title="${escapeAttribute(issue.summary)}">${escapeHtml(formatIssueSummary(issue.summary))}</h2>
+          ${reporterTag}
         </div>
         <button class="detail-button" data-detail-key="${escapeAttribute(issue.key)}" type="button">Details</button>
       </div>
+      <h2 class="issue-summary" title="${escapeAttribute(issue.summary)}">${escapeHtml(formatIssueSummary(issue.summary))}</h2>
       <div class="issue-meta-row" aria-label="${escapeAttribute(issue.key)} metadata">
         <span class="issue-meta-status status-chip" data-category="${escapeAttribute(issue.statusCategory)}">${escapeHtml(issue.status)}</span>
         ${worklogChip}

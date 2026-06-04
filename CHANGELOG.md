@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.49
+
+### Dashboard
+
+- Show each assigned ticket's reporter name on the same row as the ticket id, aligned flush right, so you can see who raised the ticket at a glance.
+- Shrink the Work logged panel to a fixed 20% of the sidebar height (was 35%) and grow the assigned-ticket list to 80%, giving the ticket list more room.
+- Keep the assigned-ticket list scrolling inside its own region so a long list never pushes the Work logged panel off-screen.
+
+### Testing
+
+- Request the Jira `reporter` field for assigned and notification issues and thread the reporter display name through the dashboard model.
+- Add e2e coverage asserting the reporter sits on the ticket id row flush right, and update the Work logged panel layout test for the 20% height.
+
 ## 0.1.48
 
 ### Dashboard

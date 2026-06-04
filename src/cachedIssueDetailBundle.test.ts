@@ -13,6 +13,7 @@ function dashboardIssue(): DashboardIssue {
     linkedCloneIssues: [],
     mergeRequests: [],
     priority: 'High',
+    reporter: 'Priya Sharma',
     status: 'In Progress',
     statusCategory: 'In Progress',
     summary: 'Stabilize payment reconciliation alerts',

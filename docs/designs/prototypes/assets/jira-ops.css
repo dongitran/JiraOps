@@ -340,7 +340,7 @@ a:focus-visible {
 
 .dashboard-workspace {
   display: grid;
-  grid-template-rows: minmax(0, 65fr) minmax(0, 35fr);
+  grid-template-rows: minmax(0, 80fr) minmax(0, 20fr);
   flex: 1;
   min-height: 0;
 }
@@ -498,19 +498,22 @@ a:focus-visible {
 
 .issue-card-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 6px;
   min-width: 0;
 }
 
-.issue-heading {
-  display: grid;
-  gap: 4px;
+.issue-key-row {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
 }
 
 .issue-key {
+  flex: 0 1 auto;
   overflow: hidden;
   color: var(--accent-color);
   font-size: 12px;
@@ -519,7 +522,19 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-.issue-heading h2 {
+.issue-reporter {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--muted-color);
+  font-size: 11px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-summary {
   display: -webkit-box;
   margin: 0;
   max-width: 100%;

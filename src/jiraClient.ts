@@ -89,6 +89,7 @@ export interface JiraAssignedIssue {
   readonly statusCategory: string;
   readonly priority: string | null;
   readonly assigneeDisplayName: string | null;
+  readonly reporterDisplayName: string | null;
   readonly updated: string;
   readonly timeSpentSeconds?: number | null;
 }
@@ -145,6 +146,7 @@ const ASSIGNED_ISSUE_FIELDS = [
   'status',
   'priority',
   'assignee',
+  'reporter',
   'updated',
   'issuetype',
   'timetracking',
@@ -169,6 +171,12 @@ const JiraAssignedIssueSchema = z.object({
       .nullable()
       .optional(),
     assignee: z
+      .object({
+        displayName: z.string().min(1),
+      })
+      .nullable()
+      .optional(),
+    reporter: z
       .object({
         displayName: z.string().min(1),
       })
@@ -546,6 +554,7 @@ function parseAssignedIssuesResponse(responseBody: unknown): JiraAssignedIssue[]
       statusCategory: issue.fields.status.statusCategory.name,
       priority: issue.fields.priority?.name ?? null,
       assigneeDisplayName: issue.fields.assignee?.displayName ?? null,
+      reporterDisplayName: issue.fields.reporter?.displayName ?? null,
       updated: issue.fields.updated,
       timeSpentSeconds: resolveTimeSpentSeconds(
         issue.fields.timespent,

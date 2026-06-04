@@ -315,6 +315,7 @@ function createNotificationsForIssueActivities(
 function createUnknownIssue(): JiraAssignedIssue {
   return {
     assigneeDisplayName: null,
+    reporterDisplayName: null,
     issueType: 'Issue',
     key: 'UNKNOWN',
     priority: null,

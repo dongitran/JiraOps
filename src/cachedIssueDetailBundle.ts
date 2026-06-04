@@ -82,6 +82,7 @@ function readCachedRemoteLinks(
 function toAssignedIssue(issue: DashboardIssue): JiraAssignedIssue {
   return {
     assigneeDisplayName: null,
+    reporterDisplayName: issue.reporter,
     issueType: 'Issue',
     key: issue.key,
     priority: issue.priority,

@@ -58,6 +58,7 @@ describe('jiraClient', () => {
         'status',
         'priority',
         'assignee',
+        'reporter',
         'updated',
         'issuetype',
         'timetracking',
@@ -70,7 +71,7 @@ describe('jiraClient', () => {
   test('builds the notification issue search request for related Jira activity', () => {
     expect(buildNotificationIssuesSearchBody(30)).toEqual({
       jql: 'updated >= -30d AND (assignee = currentUser() OR reporter = currentUser() OR watcher = currentUser()) ORDER BY updated DESC',
-      fields: ['summary', 'status', 'priority', 'assignee', 'updated', 'issuetype'],
+      fields: ['summary', 'status', 'priority', 'assignee', 'reporter', 'updated', 'issuetype'],
       maxResults: 30,
     });
   });
@@ -174,6 +175,9 @@ describe('jiraClient', () => {
                   assignee: {
                     displayName: 'Current User',
                   },
+                  reporter: {
+                    displayName: 'Priya Sharma',
+                  },
                   issuetype: {
                     name: 'Bug',
                   },
@@ -202,6 +206,7 @@ describe('jiraClient', () => {
         statusCategory: 'In Progress',
         priority: 'High',
         assigneeDisplayName: 'Current User',
+        reporterDisplayName: 'Priya Sharma',
         issueType: 'Bug',
         updated: '2026-05-01T08:20:00.000+0000',
         timeSpentSeconds: 9000,

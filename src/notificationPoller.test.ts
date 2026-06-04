@@ -8,6 +8,7 @@ import type { IssueUpdateNotificationResult } from './jiraNotifications';
 function assignedIssue(key: string, updated: string): JiraAssignedIssue {
   return {
     assigneeDisplayName: null,
+    reporterDisplayName: null,
     issueType: 'Bug',
     key,
     summary: 'Ticket summary hidden from logs',

@@ -12,6 +12,7 @@ export interface DashboardIssue {
   readonly status: string;
   readonly statusCategory: string;
   readonly priority: string;
+  readonly reporter: string | null;
   readonly updated: string;
   readonly timeSpentSeconds: number | null;
   readonly mergeRequests: readonly MergeRequestLink[];
@@ -47,6 +48,7 @@ export function createDashboardIssue(
     status: issue.status,
     statusCategory: issue.statusCategory,
     priority: issue.priority ?? 'No priority',
+    reporter: issue.reporterDisplayName,
     updated: issue.updated,
     timeSpentSeconds: issue.timeSpentSeconds ?? null,
     mergeRequests: extractGitLabMergeRequests(webLinks),

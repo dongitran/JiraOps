@@ -13,6 +13,7 @@ describe('dashboard issue mapping', () => {
         statusCategory: 'In Progress',
         priority: 'High',
         assigneeDisplayName: 'Current User',
+        reporterDisplayName: 'Priya Sharma',
         updated: '2026-05-01T08:20:00.000+0000',
       },
       [
@@ -49,6 +50,7 @@ describe('dashboard issue mapping', () => {
         statusCategory: 'In Progress',
         priority: 'High',
         assigneeDisplayName: 'Current User',
+        reporterDisplayName: 'Aiko Tanaka',
         updated: '2026-05-01T05:15:00.000+0000',
       },
       [],

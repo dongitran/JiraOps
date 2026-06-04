@@ -114,7 +114,7 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
-  test('User sees the daily Work logged panel at about 35% height with a scrollable issue list', async () => {
+  test('User sees the daily Work logged panel at about 20% height with a scrollable issue list', async () => {
     const session = await launchExtensionHost();
     const testInfo = test.info();
 
@@ -122,6 +122,17 @@ test.describe('Jira Ops assigned ticket workflow', () => {
       const frame = await openLoadedDashboard(session.window);
       await captureDashboardScreenshot(session.window, testInfo, 'daily-worklog-panel.png');
       await expectDailyWorklogPanelLayout(frame);
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
+  test('User sees the reporter name on the ticket id row, flush right', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await expectReporterAlignedWithKey(frame);
     } finally {
       await cleanupExtensionHost(session);
     }
@@ -760,6 +771,42 @@ async function expectMetadataHidesAsCardNarrows(issue: Locator): Promise<void> {
   });
 }
 
+async function expectReporterAlignedWithKey(frame: Frame): Promise<void> {
+  const card = frame.getByLabel('OPS-123 assigned ticket');
+  const reporter = card.locator('.issue-reporter');
+  await expect(reporter).toHaveText('Priya Sharma');
+
+  const layout = await card.evaluate((node) => {
+    const keyRow = node.querySelector('.issue-key-row');
+    const key = node.querySelector('.issue-key');
+    const reporterNode = node.querySelector('.issue-reporter');
+    if (
+      !(keyRow instanceof HTMLElement) ||
+      !(key instanceof HTMLElement) ||
+      !(reporterNode instanceof HTMLElement)
+    ) {
+      return null;
+    }
+
+    const keyRowBox = keyRow.getBoundingClientRect();
+    const keyBox = key.getBoundingClientRect();
+    const reporterBox = reporterNode.getBoundingClientRect();
+    return {
+      sharesKeyRow: Math.abs(keyBox.top - reporterBox.top) <= 4,
+      reporterRightOfKey: reporterBox.left >= keyBox.right,
+      reporterFlushRight: Math.abs(keyRowBox.right - reporterBox.right) <= 2,
+    };
+  });
+
+  if (layout === null) {
+    throw new Error('Expected the reporter layout to be measurable.');
+  }
+
+  expect(layout.sharesKeyRow).toBe(true);
+  expect(layout.reporterRightOfKey).toBe(true);
+  expect(layout.reporterFlushRight).toBe(true);
+}
+
 async function expectDailyWorklogPanelLayout(frame: Frame): Promise<void> {
   const layout = await frame.evaluate(() => {
     const shell = document.querySelector('.jira-shell');
@@ -833,9 +880,9 @@ async function expectDailyWorklogPanelLayout(frame: Frame): Promise<void> {
   }
 
   expect(layout.workspaceHeight).toBeGreaterThan(200);
-  expect(layout.panelFraction).toBeGreaterThanOrEqual(0.31);
-  expect(layout.panelFraction).toBeLessThanOrEqual(0.39);
-  expect(layout.issuesFraction).toBeGreaterThanOrEqual(0.55);
+  expect(layout.panelFraction).toBeGreaterThanOrEqual(0.16);
+  expect(layout.panelFraction).toBeLessThanOrEqual(0.24);
+  expect(layout.issuesFraction).toBeGreaterThanOrEqual(0.72);
   expect(['auto', 'scroll']).toContain(layout.issuesOverflowY);
   expect(layout.issuesStaysAbovePanel).toBe(true);
   // The workspace must fill the available height so the 65/35 split is of the

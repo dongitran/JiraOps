@@ -62,6 +62,7 @@ const NOTIFICATION_ISSUE_FIELDS = [
   'status',
   'priority',
   'assignee',
+  'reporter',
   'updated',
   'issuetype',
 ] as const;
@@ -83,6 +84,12 @@ const JiraNotificationIssueSchema = z.object({
       .nullable()
       .optional(),
     assignee: z
+      .object({
+        displayName: z.string().min(1),
+      })
+      .nullable()
+      .optional(),
+    reporter: z
       .object({
         displayName: z.string().min(1),
       })
@@ -252,6 +259,7 @@ function parseNotificationIssuesResponse(responseBody: unknown): JiraAssignedIss
 
   return parseResult.data.issues.map((issue) => ({
     assigneeDisplayName: issue.fields.assignee?.displayName ?? null,
+    reporterDisplayName: issue.fields.reporter?.displayName ?? null,
     issueType: issue.fields.issuetype.name,
     key: issue.key,
     priority: issue.fields.priority?.name ?? null,

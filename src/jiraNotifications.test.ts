@@ -32,6 +32,7 @@ function assignedIssue(
 ): JiraAssignedIssue {
   return {
     assigneeDisplayName: null,
+    reporterDisplayName: null,
     issueType,
     key,
     summary,
