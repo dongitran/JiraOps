@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.50
+
+### Details
+
+- Open the Jira ticket in a single browser tab when its id or title is clicked from issue details; VS Code's built-in webview link opener was running alongside the JiraOps handler, so every click opened the link twice.
+- Apply the same single-open guard to merge request, web link, cloned merge request, and description links in issue details, and to the dashboard link handler.
+
+### Testing
+
+- Add e2e coverage asserting detail link clicks stay on the JiraOps open path and never bubble to the webview's built-in opener, and extend the link checks to the detail title and ticket id links.
+
 ## 0.1.49
 
 ### Dashboard

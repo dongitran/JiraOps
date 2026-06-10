@@ -884,6 +884,9 @@ function bindExternalLinks() {
       }
 
       event.preventDefault();
+      // VS Code's built-in webview link opener ignores preventDefault; stop the
+      // bubble so the URL is opened once, by the extension only.
+      event.stopPropagation();
       vscodeApi.postMessage({
         type: OPEN_EXTERNAL_LINK_MESSAGE_TYPE,
         url: event.currentTarget.href,

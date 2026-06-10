@@ -240,6 +240,21 @@ test.describe('Jira Ops assigned ticket workflow', () => {
     }
   });
 
+  test('User can open the ticket id and title from details in a single browser tab', async () => {
+    const session = await launchExtensionHost();
+
+    try {
+      const frame = await openLoadedDashboard(session.window);
+      await openIssueDetailFromCard(frame.getByLabel('OPS-123 assigned ticket'));
+
+      const detailFrame = await resolveLoadedIssueDetailFrame(session.window, 'OPS-123');
+      await expectSingleOpenPathOnClick(detailFrame, '.issue-key.detail-issue-link');
+      await expectSingleOpenPathOnClick(detailFrame, '.detail-title-link');
+    } finally {
+      await cleanupExtensionHost(session);
+    }
+  });
+
   test('User can enlarge inline Jira images from issue details', async () => {
     const session = await launchExtensionHost();
 
@@ -1545,7 +1560,11 @@ async function expectDetailIssueWebLinks(frame: Frame, issueKey: string): Promis
 
 async function expectDetailLinksUseWebviewOpenPath(frame: Frame): Promise<void> {
   const linkTargets = await frame.evaluate(() => {
-    return [...document.querySelectorAll('.detail-link, .detail-clone-mr-link')]
+    return [
+      ...document.querySelectorAll(
+        '.detail-link, .detail-clone-mr-link, .detail-title-link, .detail-issue-link'
+      ),
+    ]
       .filter((node): node is HTMLAnchorElement => node instanceof HTMLAnchorElement)
       .map((link) => {
         return {
@@ -1558,6 +1577,41 @@ async function expectDetailLinksUseWebviewOpenPath(frame: Frame): Promise<void> 
   expect(linkTargets.length).toBeGreaterThan(0);
   expect(linkTargets.every((link) => link.href.startsWith('https://'))).toBe(true);
   expect(linkTargets.every((link) => link.target === null)).toBe(true);
+}
+
+async function expectSingleOpenPathOnClick(frame: Frame, selector: string): Promise<void> {
+  await frame.evaluate((linkSelector) => {
+    const link = document.querySelector(linkSelector);
+    if (!(link instanceof HTMLAnchorElement)) {
+      throw new Error(`Expected ${linkSelector} to be an anchor.`);
+    }
+
+    // Point the href at the page itself so the test click cannot launch a real
+    // browser; the propagation accounting below ignores the href value.
+    link.setAttribute('href', '#');
+    const audit = { anchor: 0, window: 0 };
+    const auditHost = window as unknown as Record<string, { anchor: number; window: number }>;
+    auditHost[`jiraOpsClickAudit:${linkSelector}`] = audit;
+    link.addEventListener('click', () => {
+      audit.anchor += 1;
+    });
+    // Mirrors VS Code's built-in webview link opener, which listens on window and
+    // opens a second browser tab for any anchor click that bubbles up to it.
+    window.addEventListener('click', (event) => {
+      if (event.composedPath().includes(link)) {
+        audit.window += 1;
+      }
+    });
+  }, selector);
+
+  await clickWithFallback(frame.locator(selector));
+
+  const audit = await frame.evaluate((linkSelector) => {
+    const auditHost = window as unknown as Record<string, { anchor: number; window: number }>;
+    return auditHost[`jiraOpsClickAudit:${linkSelector}`] ?? null;
+  }, selector);
+
+  expect(audit).toEqual({ anchor: 1, window: 0 });
 }
 
 async function expectCloneButtonHoverReveal(

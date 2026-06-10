@@ -174,6 +174,9 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
           link.textContent = message;
           link.addEventListener('click', (event) => {
             event.preventDefault();
+            // VS Code's built-in webview link opener ignores preventDefault; stop the
+            // bubble so the URL is opened once, by the extension only.
+            event.stopPropagation();
             vscode.postMessage({ type: 'jiraOps.openExternalLink', url: link.href });
           });
           status.replaceChildren('Cloned as ', link);
@@ -261,6 +264,9 @@ export const ISSUE_DETAIL_SCRIPT_BODY = `
         for (const link of document.querySelectorAll('a[href]')) {
           link.addEventListener('click', (event) => {
             event.preventDefault();
+            // VS Code's built-in webview link opener ignores preventDefault; stop the
+            // bubble so the URL is opened once, by the extension only.
+            event.stopPropagation();
             vscode.postMessage({ type: 'jiraOps.openExternalLink', url: link.href });
           });
         }
